@@ -1,0 +1,1148 @@
+12个月每日学习与项目实践计划
+适用方向：测试工程师 → 机器人系统测试 / 自动化测试 / 硬件软件联调 / ROS2 / 机器人系统工程
+
+一、执行说明
+============
+
+适合当前状态：
+- 在职测试工程师
+- 工作日时间有限
+- 已接触 Jetson / Ubuntu / ROS2 Jazzy
+- 已接触 CAN / SocketCAN / CANopen / CiA402 / 电机
+- 已接触 Vue / Web Gateway
+- 希望长期提升系统与硬件联调能力
+
+建议时间：
+
+工作日：
+19:30-19:50  理论学习
+19:50-20:20  动手实验
+20:20-20:50  项目实践 / Debug
+20:50-21:00  总结 + Git
+
+如果当天只有1小时：
+20分钟理论 + 30分钟实践 + 10分钟记录。
+
+周末：
+2～4小时完整项目实践。
+
+核心原则：
+理论只是手段，项目实践才是主线。
+
+每一天至少留下一个成果：
+- 一个命令实验
+- 一段代码
+- 一个 Debug 结论
+- 一张架构图
+- 一条 Git commit
+- 一份学习记录
+
+
+二、12个月总路线
+================
+
+第1个月：Linux 基础与系统诊断
+第2个月：C++ 基础与 CMake
+第3个月：Git / GitHub + Python 自动化
+第4个月：ROS2 基础
+第5个月：ROS2 C++ 与系统通信
+第6个月：CAN / SocketCAN
+第7个月：CANopen
+第8个月：CiA 402 + 电机控制
+第9个月：ros2_control + 硬件接口
+第10个月：自动化测试 + HIL
+第11个月：Docker + Jenkins + CI/CD
+第12个月：完整机器人系统项目
+
+全年主线：
+
+Linux
+→ C++
+→ Git
+→ Python
+→ ROS2
+→ SocketCAN
+→ CANopen
+→ CiA402
+→ ros2_control
+→ 自动化测试
+→ HIL
+→ Docker / CI/CD
+→ 完整机器人系统
+
+
+三、第一阶段：第1个月 Linux
+===========================
+
+本月目标：
+能够独立检查 Jetson / Ubuntu 的进程、网络、设备、服务和日志。
+
+第1周：Linux 文件系统与 Shell
+------------------------------
+
+周一
+19:30-19:50 理论：Linux 文件系统结构
+重点：/, /home, /etc, /var, /usr, /opt, /tmp, /dev
+19:50-20:20 实验：pwd / ls / cd / tree
+20:20-20:50 项目：建立 robot-system-learning 目录
+20:50-21:00 记录目录结构
+
+周二
+理论：文件与目录
+实验：touch / mkdir / cp / mv / rm
+项目：建立 linux/cmd-notes
+成果：第一个 Linux 学习仓库目录
+
+周三
+理论：find / grep
+实验：搜索 ROS2、CAN、日志文件
+项目：写一个 find + grep 的日志搜索脚本
+成果：find_logs.sh
+
+周四
+理论：管道和重定向
+实验：| > >> 2>
+项目：把系统检查结果保存成日志
+成果：system_check.sh
+
+周五
+理论：环境变量和 PATH
+实验：echo $PATH / export / source
+项目：创建自己的环境变量文件
+成果：robot_env.sh
+
+周六
+2～3小时项目：
+Robot Linux Diagnostic Tool v0.1
+功能：
+- 当前目录
+- Ubuntu 版本
+- Kernel
+- ROS_DISTRO
+- hostname
+- IP
+- CAN 状态
+- 磁盘
+- 内存
+- CPU
+输出 robot_diagnostic.log
+
+周日
+整理：
+- Git init
+- README
+- commit
+- 总结本周10个命令
+
+
+第2周：权限、进程、服务
+------------------------
+
+周一
+理论：用户、组、权限
+实验：chmod / chown / ls -l
+项目：创建测试目录和权限
+
+周二
+理论：进程
+实验：ps / top / htop
+项目：找到 ROS2 节点进程
+
+周三
+理论：kill / signal
+实验：kill / pkill
+项目：写 process_check.sh
+
+周四
+理论：systemd
+实验：systemctl status / start / stop
+项目：查看 CAN、SSH、相关服务
+
+周五
+理论：journalctl
+实验：journalctl -u / -f / --since
+项目：写日志收集脚本
+
+周六
+项目：
+Robot Service Monitor
+功能：
+- 检查指定服务
+- 检查进程
+- 收集日志
+- 输出失败原因
+
+周日
+复盘：
+回答：
+1. 进程和服务有什么区别？
+2. systemd 干什么？
+3. journalctl 从哪里读取日志？
+
+
+第3周：网络与设备
+------------------
+
+周一
+理论：IP / 网卡 / 路由
+实验：ip addr / ip link / ip route
+项目：写 network_check.sh
+
+周二
+理论：TCP / UDP / port
+实验：ss / ping
+项目：检查 Gateway 网络
+
+周三
+理论：/dev / /sys / /proc
+实验：查看 USB、串口、设备
+项目：写 device_check.sh
+
+周四
+理论：udev
+实验：查看设备规则
+项目：记录设备识别流程
+
+周五
+理论：Linux Debug 方法
+实验：从现象到证据
+项目：模拟一个设备不存在问题
+
+周六
+项目：
+Robot Environment Diagnostic Tool v1.0
+整合：
+Linux + Network + Device + Process + Service + Log
+
+周日
+GitHub：
+整理 README
+上传代码
+记录 Debug 流程
+
+
+第4周：Linux 综合实战
+----------------------
+
+周一
+复习 Shell
+
+周二
+复习进程
+
+周三
+复习网络
+
+周四
+复习设备
+
+周五
+模拟故障：
+- ROS2 环境变量错误
+- CAN 未启动
+- 服务未启动
+- 进程退出
+
+周六
+月度项目：
+Robot System Diagnostic Tool v1.0
+
+周日
+月度总结：
+写一份：
+“我的 Jetson 机器人系统启动与故障排查流程”
+
+
+四、第二个月：C++ + CMake
+=========================
+
+目标：
+能够阅读和修改实际 ROS2 / 驱动工程。
+
+第5周：C++ 基础
+----------------
+周一：变量、类型、输入输出
+项目：写 system_info.cpp
+
+周二：if / switch / loop
+项目：写设备状态判断
+
+周三：函数
+项目：把系统检查拆成多个函数
+
+周四：struct / enum
+项目：定义 MotorStatus
+
+周五：class
+项目：实现 Motor 类
+
+周六：
+项目：RobotDeviceSimulator
+功能：
+enable()
+disable()
+setPosition()
+getPosition()
+
+周日：
+Git commit + README
+
+
+第6周：指针、引用、内存
+------------------------
+
+周一：pointer
+项目：简单指针实验
+
+周二：reference
+项目：函数参数传递
+
+周三：const
+项目：修改之前代码
+
+周四：stack / heap
+项目：观察对象生命周期
+
+周五：RAII
+项目：模拟 CAN 资源管理类
+
+周六：
+项目：DeviceResourceManager
+
+周日：
+总结：
+pointer / reference / smart pointer / RAII
+
+
+第7周：STL
+----------
+
+周一：vector
+项目：保存 CAN Frame
+
+周二：map / unordered_map
+项目：CAN ID → Device 映射
+
+周三：string
+项目：解析设备信息
+
+周四：optional
+项目：模拟“设备可能没有响应”
+
+周五：lambda / algorithm
+项目：过滤 CAN Frame
+
+周六：
+项目：CAN Log Parser v0.1
+
+周日：
+整理代码 + README
+
+
+第8周：CMake
+------------
+
+周一：基本编译
+周二：CMakeLists.txt
+周三：多文件项目
+周四：静态库 / 动态库
+周五：Debug / Release
+
+周六：
+项目：
+robot_core/
+- include/
+- src/
+- test/
+- CMakeLists.txt
+
+周日：
+月度总结。
+
+
+五、第三个月：GitHub + Python 自动化
+====================================
+
+第9周：Git
+----------
+
+周一：commit / log
+周二：branch
+周三：merge
+周四：rebase
+周五：stash / diff
+
+周六：
+项目：建立正式 GitHub 学习仓库
+
+周日：
+学习如何写 README。
+
+
+第10周：GitHub 工程阅读
+-----------------------
+
+每天选择一个真实项目。
+
+每天回答：
+- 项目解决什么问题？
+- 入口在哪里？
+- 模块怎么划分？
+- 如何编译？
+- 如何运行？
+- Issue 在讨论什么？
+
+周六：
+完整编译一个开源项目。
+
+周日：
+写项目源码分析。
+
+
+第11周：Python
+--------------
+
+周一：Python 基础
+周二：文件
+周三：subprocess
+周四：JSON
+周五：日志
+周六：写 robot_check.py
+周日：整理
+
+
+第12周：pytest
+--------------
+
+周一：pytest 基础
+周二：assert
+周三：fixture
+周四：参数化
+周五：测试报告
+周六：
+项目：
+Robot Diagnostic Test Suite
+
+周日：
+月度总结。
+
+
+六、第四个月：ROS2 基础
+=======================
+
+第13周：Node
+------------
+
+周一：ROS2 架构
+周二：创建 workspace
+周三：package
+周四：Node
+周五：launch
+
+周六：
+项目：robot_status_node
+
+周日：
+画 ROS2 系统架构图。
+
+
+第14周：Topic
+--------------
+
+周一：Publisher
+周二：Subscriber
+周三：msg
+周四：QoS
+周五：ros2 topic CLI
+
+周六：
+项目：
+Motor State Publisher
+发布：
+position
+velocity
+current
+status
+
+周日：
+录制 rosbag。
+
+
+第15周：Service / Action
+------------------------
+
+周一：Service
+周二：Client
+周三：Action
+周四：Action feedback
+周五：选择 Service 和 Action 的场景
+
+周六：
+项目：
+Motor Control Interface
+
+支持：
+enable
+disable
+stop
+move
+
+周日：
+测试。
+
+
+第16周：Parameter / Launch / TF
+-------------------------------
+
+周一：Parameter
+周二：Launch
+周三：TF
+周四：rosbag
+周五：综合
+
+周六：
+项目：
+Robot Demo System
+
+周日：
+月度总结。
+
+
+七、第五个月：ROS2 C++ 与系统通信
+==================================
+
+第17周：
+ROS2 C++ Node
+
+第18周：
+ROS2 多节点通信
+
+第19周：
+Executor / callback
+
+第20周：
+ROS2 日志、参数、Launch、Lifecycle
+
+每周都要求：
+- 写代码
+- Debug
+- ros2 CLI 验证
+- Git commit
+
+月度项目：
+
+ROS2 Robot Controller
+
+架构：
+
+Command Node
+→ Controller Node
+→ Hardware Simulator
+
+
+八、第六个月：CAN / SocketCAN
+=============================
+
+第21周：CAN 基础
+----------------
+周一：CAN_H / CAN_L
+周二：CAN Frame
+周三：CAN ID
+周四：bitrate
+周五：终端电阻
+
+周六：
+用真实 can0 做基础检查。
+
+周日：
+画 CAN 总线拓扑。
+
+
+第22周：SocketCAN
+-----------------
+
+周一：ip link set can0 up
+周二：candump
+周三：cansend
+周四：过滤
+周五：错误状态
+
+周六：
+项目：
+CAN Monitor Tool
+
+周日：
+整理 CAN Debug 手册。
+
+
+第23周：CAN 数据分析
+---------------------
+
+周一：解析 Byte
+周二：大小端
+周三：有符号数
+周四：缩放
+周五：时间戳
+
+周六：
+项目：
+CAN Log Analyzer
+
+周日：
+分析真实日志。
+
+
+第24周：CAN 综合
+----------------
+
+月度项目：
+CAN Diagnostic Tool
+
+功能：
+- CAN 状态
+- 实时接收
+- 发送
+- 过滤
+- 保存日志
+- 基础报文解析
+
+
+九、第七个月：CANopen
+=====================
+
+第25周：CANopen 基础
+--------------------
+
+周一：Node ID
+周二：COB-ID
+周三：NMT
+周四：Heartbeat
+周五：状态管理
+
+周六：
+项目：
+CANopen Monitor
+
+周日：
+画 CANopen 通信结构。
+
+
+第26周：SDO
+-----------
+
+周一：SDO 请求
+周二：Upload
+周三：Download
+周四：Index / Subindex
+周五：错误码
+
+周六：
+项目：
+SDO Tool
+
+周日：
+分析真实 SDO 报文。
+
+
+第27周：PDO
+-----------
+
+周一：PDO 基础
+周二：RPDO
+周三：TPDO
+周四：Mapping
+周五：COB-ID
+
+周六：
+项目：
+PDO Monitor
+
+周日：
+整理 PDO 映射。
+
+
+第28周：CANopen 综合
+--------------------
+
+项目：
+CANopen Device Diagnostic Tool
+
+支持：
+- NMT
+- Heartbeat
+- SDO
+- PDO
+- 错误诊断
+
+月度成果：
+能够独立分析一个 CANopen 设备的通信。
+
+
+十、第八个月：CiA 402 + 电机
+============================
+
+第29周：CiA 402 状态机
+----------------------
+
+每天研究一个状态。
+
+项目：
+CiA402 State Machine Simulator
+
+目标：
+看到 Statusword 可以判断状态。
+
+
+第30周：Controlword / Statusword
+--------------------------------
+
+重点：
+6040
+6041
+
+每天：
+- 看一个 bit
+- 发送控制字
+- 观察状态变化
+
+项目：
+Motor State Controller
+
+
+第31周：位置 / 速度 / 电流
+--------------------------
+
+重点：
+6064
+607A
+6078
+60FF
+
+项目：
+Motor Monitor
+
+
+第32周：完整电机控制
+--------------------
+
+项目：
+
+CAN
+→ CANopen
+→ CiA402
+→ Motor
+
+实现：
+- Enable
+- Disable
+- Position
+- Velocity
+- Stop
+- Fault Reset
+
+月度目标：
+能够独立调试一个 CANopen 电机。
+
+
+十一、第九个月：ros2_control
+============================
+
+第33周：
+ros2_control 架构
+
+第34周：
+hardware_interface
+
+第35周：
+Controller
+
+第36周：
+ROS2 + CANopen
+
+最终项目：
+
+ROS2
+→ ros2_control
+→ Hardware Interface
+→ CANopen
+→ Motor
+
+这是全年最重要的技术节点之一。
+
+
+十二、第十个月：自动化测试 + HIL
+================================
+
+第37周：
+pytest + ROS2
+
+第38周：
+Integration Test
+
+第39周：
+CAN 自动化测试
+
+第40周：
+HIL
+
+项目：
+
+Robot Hardware Test Framework
+
+测试：
+- 电机启动
+- 电机停止
+- 位置
+- 速度
+- 电流
+- Fault
+- CAN 通信
+- ROS2 通信
+
+
+十三、第十一个月：Docker + Jenkins + CI/CD
+==========================================
+
+第41周：
+Docker 基础
+
+第42周：
+Docker + ROS2
+
+第43周：
+Jenkins
+
+第44周：
+CI/CD
+
+项目：
+
+Robot CI Pipeline
+
+流程：
+
+Git push
+→ Build
+→ Unit Test
+→ ROS2 Test
+→ Integration Test
+→ Report
+
+
+十四、第十二个月：完整机器人系统
+================================
+
+第45周：
+需求设计
+
+第46周：
+系统架构
+
+第47周：
+实现与联调
+
+第48周：
+自动化测试 + 文档
+
+最终项目：
+
+Robot System Integration Platform
+
+架构：
+
+Vue
+↓
+Web Gateway
+↓
+ROS2
+├── Camera
+├── Motor
+└── IO
+↓
+ros2_control
+↓
+CANopen
+↓
+CAN
+↓
+Motor
+
+同时：
+
+pytest
+↓
+自动化测试
+↓
+Test Report
+
+GitHub
+↓
+CI/CD
+↓
+Build / Test / Report
+
+
+十五、每天的固定学习流程
+========================
+
+第一步：理论 20分钟
+
+只学习今天需要的知识。
+
+第二步：实验 30分钟
+
+必须打开终端实际执行。
+
+第三步：项目 20～30分钟
+
+把知识放进当前项目。
+
+第四步：总结 10分钟
+
+记录：
+
+今天学了什么？
+今天遇到什么问题？
+问题原因是什么？
+如何验证？
+以后遇到类似问题怎么处理？
+
+第五步：Git
+
+至少做到：
+git status
+git diff
+git add
+git commit
+
+
+十六、社区学习安排
+==================
+
+GitHub：
+每周研究1个真实项目。
+
+ROS Discourse：
+每周阅读2～3个和 ROS2 / ros2_control / hardware interface 有关的讨论。
+
+Robotics Stack Exchange：
+每周研究2～3个真实问题。
+
+学习社区不是为了刷帖子，而是为了：
+- 学别人怎么排障
+- 学别人怎么设计
+- 学真实项目怎么解决问题
+- 发现自己不知道的知识
+
+
+十七、每个月必须产生一个成果
+============================
+
+第1个月：
+Linux Robot Diagnostic Tool
+
+第2个月：
+C++ Robot Device Simulator
+
+第3个月：
+Robot Diagnostic Test Suite
+
+第4个月：
+ROS2 Robot Demo
+
+第5个月：
+ROS2 Robot Controller
+
+第6个月：
+CAN Diagnostic Tool
+
+第7个月：
+CANopen Diagnostic Tool
+
+第8个月：
+CiA402 Motor Controller
+
+第9个月：
+ROS2 + ros2_control + CANopen
+
+第10个月：
+Robot Hardware Test Framework
+
+第11个月：
+Robot CI Pipeline
+
+第12个月：
+完整 Robot System Integration Platform
+
+
+十八、职业能力检查表
+====================
+
+3个月：
+[ ] Linux 基础
+[ ] C++ 基础
+[ ] Git
+[ ] Python
+[ ] ROS2 基础
+
+6个月：
+[ ] ROS2 C++
+[ ] CAN
+[ ] SocketCAN
+[ ] CANopen
+[ ] 自动化测试基础
+
+9个月：
+[ ] CiA402
+[ ] 电机控制
+[ ] ros2_control
+[ ] 硬件接口
+[ ] 系统联调
+
+12个月：
+[ ] 自动化测试
+[ ] HIL
+[ ] Docker
+[ ] Jenkins
+[ ] CI/CD
+[ ] 完整机器人项目
+
+
+十九、每季度职业复盘
+====================
+
+每3个月回答一次：
+
+1. 我现在能独立解决什么问题？
+2. 哪些问题还必须依赖别人？
+3. 我是否能读懂真实项目源码？
+4. 我是否能独立 Debug？
+5. 我是否有新的 GitHub 项目成果？
+6. 我是否能够解释完整的数据链路？
+7. 我是否能够自动化测试？
+8. 我是否比三个月前更接近机器人系统工程师？
+
+如果答案多数为“是”，继续当前路线。
+
+如果多数为“否”，减少新知识，增加项目实践。
+
+
+二十、最终职业目标
+==================
+
+最终不要把自己定位成：
+
+“只会测试的人”
+
+也不要急着定位成：
+
+“什么都学一点的软件开发者”
+
+而应该形成：
+
+“懂测试、懂 Linux、懂 C++、懂 ROS2、懂 CAN/CANopen、懂自动化、能够进行机器人硬件软件联调的系统工程师。”
+
+最终核心竞争力：
+
+测试经验
++
+Linux
++
+C++
++
+ROS2
++
+CAN/CANopen
++
+电机控制
++
+自动化测试
++
+HIL
++
+CI/CD
++
+系统联调
+
+
+二十一、最重要的执行原则
+========================
+
+第一：
+不要追求每天学很多。
+
+第二：
+每天必须动手。
+
+第三：
+每周必须有一个小成果。
+
+第四：
+每月必须有一个项目成果。
+
+第五：
+每三个月必须进行一次职业复盘。
+
+第六：
+遇到工作问题，优先把它转化成学习机会。
+
+例如：
+
+“CANopen initialization failed”
+不是一次普通报错。
+
+应该变成：
+
+Linux
+→ CAN
+→ SocketCAN
+→ CANopen
+→ NMT
+→ SDO
+→ PDO
+→ CiA402
+→ 驱动器状态
+→ 根因分析
+
+“Web 控制电机不工作”
+也不是单纯业务 Bug。
+
+应该变成：
+
+Vue
+→ Web Gateway
+→ ROS2
+→ Node
+→ Driver
+→ ros2_control
+→ CANopen
+→ CAN
+→ Motor
+
+这就是系统工程能力。
+
+
+二十二、一句话长期路线
+======================
+
+用一年的时间，把“测试工程师”训练成：
+
+能够理解、运行、测试、Debug 和联调一套完整机器人软硬件系统的人。
+
+核心路线：
+
+Linux
+→ C++
+→ Git
+→ Python
+→ ROS2
+→ CAN
+→ SocketCAN
+→ CANopen
+→ CiA402
+→ ros2_control
+→ 自动化测试
+→ HIL
+→ Docker
+→ CI/CD
+→ 机器人系统工程师

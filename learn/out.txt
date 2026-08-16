@@ -1,0 +1,68 @@
+1.buff@buff:~/Workspace/learn$ pwd
+/home/buff/Workspace/learn
+buff@buff:~/Workspace/learn$ cd ..
+buff@buff:~/Workspace$ ls
+deepseek  learn  learn_ros2
+buff@buff:~/Workspace$ cd ..
+buff@buff:~$ ls
+公共的  模板  视频  图片  文档  下载  音乐  bin  snap  Workspace
+buff@buff:~$ pwd
+/home/buff
+buff@buff:~$ cd ..
+buff@buff:/home$ ls
+buff
+buff@buff:/home$ pwd
+/home
+buff@buff:/home$ 
+
+
+2.
+buff@buff:/home$ ls /
+bin   cdrom  etc   lib    lib64   lost+found  mnt  proc  run   snap  swapfile  tmp  var
+boot  dev    home  lib32  libx32  media       opt  root  sbin  srv   sys       usr
+buff@buff:/home$ 
+
+
+3.buff@buff:/home$ ls
+buff
+buff@buff:/home$ cd buff/
+buff@buff:~$ ls
+公共的  模板  视频  图片  文档  下载  音乐  bin  snap  Workspace
+buff@buff:~$ cd wo
+bash: cd: wo: 没有那个文件或目录
+buff@buff:~$ ls
+公共的  模板  视频  图片  文档  下载  音乐  bin  snap  Workspace
+buff@buff:~$ cd Workspace/
+buff@buff:~/Workspace$ ls
+deepseek  learn  learn_ros2
+buff@buff:~/Workspace$ cd learn
+buff@buff:~/Workspace/learn$ ls
+12个月每日学习与项目实践计划_机器人系统方向.txt  365天机器人系统学习实战手册_完整版.txt  daily-learn
+365天机器人系统每日理论知识点手册.txt            AGENTS.md                               out.txt
+buff@buff:~/Workspace/learn$ mkdir -p robot-system-learning/{linux,ros2,cpp,can}
+buff@buff:~/Workspace/learn$ ls
+12个月每日学习与项目实践计划_机器人系统方向.txt  365天机器人系统学习实战手册_完整版.txt  daily-learn  robot-system-learning
+365天机器人系统每日理论知识点手册.txt            AGENTS.md                               out.txt
+buff@buff:~/Workspace/learn$ cd robot-system-learning/
+buff@buff:~/Workspace/learn/robot-system-learning$ ls
+can  cpp  linux  ros2
+buff@buff:~/Workspace/learn/robot-system-learning$ ls
+can  cpp  linux  ros2
+buff@buff:~/Workspace/learn/robot-system-learning$ 
+
+
+4.ff@buff:~/Workspace/learn$ cd robot-system-learning/
+buff@buff:~/Workspace/learn/robot-system-learning$ ls
+can  cpp  linux  ros2
+buff@buff:~/Workspace/learn/robot-system-learning$ ls -R
+.:
+can  cpp  linux  ros2
+
+./can:
+
+./cpp:
+
+./linux:
+
+./ros2:
+buff@buff:~/Workspace/learn/robot-system-learning$ 
