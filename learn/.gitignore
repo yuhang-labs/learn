@@ -75,3 +75,13 @@ Thumbs.db
 
 # out.txt (execution output)
 out.txt
+
+# 学习笔记
+/learn
+
+# C/C++ executables
+*.exe
+*.out
+a.out
+# Ignore specific cpp build outputs
+robot-system-learning/cpp/hello
