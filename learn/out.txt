@@ -66,3 +66,58 @@ can  cpp  linux  ros2
 
 ./ros2:
 buff@buff:~/Workspace/learn/robot-system-learning$ 
+
+/是系统根目录
+home 存放用户个人文件
+etc 系统配置文件目录，系统设置中心
+var 变化数据目录
+usr 用户程序目录（系统安装的程序目录）
+opt 安装额外的软件
+tmp 临时数据目录
+dev 设备文件目录（硬件设备）
+| 目录      | 作用    | 机器人开发例子          |
+| ------- | ----- | ---------------- |
+| `/`     | 根目录   | 整个系统             |
+| `/home` | 用户文件  | 代码、工程            |
+| `/etc`  | 系统配置  | 网络、服务、启动         |
+| `/var`  | 变化数据  | 日志、缓存            |
+| `/usr`  | 系统软件  | python、git、ros工具 |
+| `/opt`  | 第三方软件 | CUDA、ROS         |
+| `/tmp`  | 临时文件  | 编译缓存             |
+| `/dev`  | 设备文件  | 串口、摄像头、磁盘        |
+
+
+buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./hello
+hello day1
+buff@buff:~/workspace/learn/robot-system-learning/cpp$ 
+
+buff@buff:~/workspace/learn$ cd robot-system-learning/
+buff@buff:~/workspace/learn/robot-system-learning$ ls
+can  cpp  linux  ros2
+buff@buff:~/workspace/learn/robot-system-learning$ cd cpp/
+buff@buff:~/workspace/learn/robot-system-learning/cpp$ g++ hello.cpp -o hello
+buff@buff:~/workspace/learn/robot-system-learning/cpp$ ls
+hello  hello.cpp
+
+buff@buff:~/workspace/learn/robot-system-learning$ cat linux/README.md 
+本文件存放每日学习笔记，项目实践
+
+buff@buff:~/workspace/learn/robot-system-learning$ cd can
+buff@buff:~/workspace/learn/robot-system-learning/can$ touch README.md
+buff@buff:~/workspace/learn/robot-system-learning/can$ cp README.md ../cpp
+buff@buff:~/workspace/learn/robot-system-learning/can$ cp README.md ../ros2
+buff@buff:~/workspace/learn/robot-system-learning/can$ 
+
+
+
+commit f1e04c73941805ad77cb9b244a817eb28641ba32 (HEAD -> main, origin/main)
+Merge: 45aaebb ce2ebf8
+Author: liang686 <3218058764@qq.com>
+Date:   Sun Aug 16 19:12:58 2026 +0800
+
+    Merge branch 'main' of https://github.com/user189397lyh/learn
+
+commit 45aaebbffbc89f6b76ceebc8481178020d51283b
+Author: liang686 <3218058764@qq.com>
+Date:   Sun Aug 16 19:10:15 2026 +0800
+buff@buff:~/workspace/learn/robot-system-learning/can$ 
