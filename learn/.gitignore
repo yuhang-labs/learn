@@ -73,8 +73,6 @@ Thumbs.db
 ../deepseek/
 ../learn_ros2/
 
-# out.txt (execution output)
-out.txt
 
 # 学习笔记
 /learn
@@ -85,3 +83,7 @@ out.txt
 a.out
 # Ignore specific cpp build outputs
 robot-system-learning/cpp/hello
+
+
+# 当前学习任务安排
+当前学习任务安排.txt
