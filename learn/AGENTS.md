@@ -1,10 +1,52 @@
 # 项目结构
 - 根目录learn
 - robot-system-learning 长期学习目录结构
-- robot-system-learning/linux/README.md存放 学习笔记记录
+- robot-system-learning/linux/README.md存放linux学习笔记记录
 - out.md存放用户根据《当前学习任务安排.txt》实际操作输出的内容
 - 当前学习任务安排.txt 存放用户当前学习内容
 - 学习任务模板.md存放学习任务的模板
+- AGENTS.md文件的优先级最高，必须优先遵守
+
+## 项目文件树
+
+├── 12个月每日学习与项目实践计划_机器人系统方向.txt
+├── 365天机器人系统每日理论知识点手册.txt
+├── 365天机器人系统学习实战手册_完整版.txt
+├── 当前学习任务安排.txt
+├── 学习任务模板.md
+├── 学习问题记录模板.md
+├── AGENTS.md
+├── out.md
+└── robot-system-learning
+    ├── can
+    │   └── README.md
+    ├── cpp
+    │   ├── add
+    │   ├── add.cpp
+    │   ├── condition
+    │   ├── condition.cpp
+    │   ├── hello
+    │   ├── hello.cpp
+    │   ├── hello_day2
+    │   ├── hello_day2.cpp
+    │   └── README.md
+    ├── linux
+    │   ├── day2-demo
+    │   │   ├── a.txt
+    │   │   ├── demo.sh
+    │   │   ├── renamed.txt
+    │   │   └── subdir
+    │   ├── day2_demo_if_for.sh
+    │   ├── day2_demo.sh
+    │   ├── demo
+    │   │   └── day3
+    │   │       ├── a.txt
+    │   │       └── subdir
+    │   ├── files.txt
+    │   ├── README.md
+    │   └── somefile
+    └── ros2
+        └── README.md
 
 # 身份
 ## 做事原则
@@ -20,14 +62,21 @@
 
 # workflow（学习流程）
 
+- 用户已经学习过的内容禁止再重复出现了
 - 当用户给出检查的指令时，你必须先检查用户当前学习完成情况
 - 针对out.txt,这只是用户用来做实践练习的输出文件，会长期保存
 - 每次用户会把练习结果放在out.md中，必须你自己读取检查
 - 你必须根据用户操作输出自己判断用户的学习进展,用户操作输出存放在out.md
 - 检查完成之后必须给出做的好的任务，必须给出做的不好的以及没有完成的
-- 最后必须提示用户要完成的任务
+- 你必须仔细检查out.md,不能迎合用户，必须客观判断用户做的以及说的是否正确
+- 最后必须提示用户要完成却没有完成的任务
 - 最后与学习项目无关的事情禁止思考
 - 其中学习任务模板.md文件是每次给出学习任务的模板，每次新任务都必须遵循此模板去写
+- 学习问题记录模板.md文件是用户每次学习过程中提出的问题，遇到的问题，以及你给出的答案，你必须遵守此模板去把用户提出的问题记录到应该在的模块readme.md中，例如linux相关问题放在linux模块中，cpp问题放在cpp文件中，can问题放在can中，ros2问题放在ros2中
+- 你必须回答与讲解用户在学习过程中提出的问题，且必须将回答根据《学习问题记录模板.md》放在对应的模块readme.md中，必须要区分day1,day2,day3...等去记录
+
+
+
 # 做事的必须准则
 
 ## 解决方案

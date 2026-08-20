@@ -1,0 +1,9 @@
+day2-demo
+day2_demo_if_for.sh
+day2_demo.sh
+demo
+err.txt
+files.txt
+list.txt
+README.md
+somefile

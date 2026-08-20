@@ -21,3 +21,13 @@ dev 设备文件目录（硬件设备）
 
 练习linux基础操作指令
 cd ls cat mkdir ./文件运行 cp touch 
+
+
+# day2学习记录
+完成了 Linux 基础命令练习：
+ls -a / ls -h / ls -lh
+mkdir / touch / cp / mv / cat / head / tail / grep / wc
+完成了 Shell 脚本练习：
+day2_demo.sh
+day2_demo_if_for.sh
+以及执行了脚本输出

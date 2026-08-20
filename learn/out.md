@@ -548,3 +548,283 @@ buff@buff:~/workspace/learn/robot-system-learning/cpp$
 函数可以反复调用，增加可读性和复用性
 参数有什么作用
 返回值可以作为另一个函数的输入参数
+
+
+buff@buff:~/workspace/learn$ git add .
+buff@buff:~/workspace/learn$ git commit -m 'day2:linux shell and cpp basics'
+[main 8f4060e] day2:linux shell and cpp basics
+ 17 files changed, 848 insertions(+), 7 deletions(-)
+ create mode 100644 learn/out.md
+ create mode 100755 learn/robot-system-learning/cpp/add
+ create mode 100644 learn/robot-system-learning/cpp/add.cpp
+ create mode 100755 learn/robot-system-learning/cpp/condition
+ create mode 100644 learn/robot-system-learning/cpp/condition.cpp
+ create mode 100755 learn/robot-system-learning/cpp/hello_day2
+ create mode 100644 learn/robot-system-learning/cpp/hello_day2.cpp
+ rename learn/robot-system-learning/linux/{day1.txt => README.md} (87%)
+ create mode 100644 learn/robot-system-learning/linux/day2-demo/a.txt
+ create mode 100755 learn/robot-system-learning/linux/day2-demo/demo.sh
+ create mode 100644 learn/robot-system-learning/linux/day2-demo/renamed.txt
+ create mode 100755 learn/robot-system-learning/linux/day2_demo_if_for.sh
+ create mode 100644 learn/robot-system-learning/linux/files.txt
+ create mode 100644 learn/robot-system-learning/linux/somefile
+ create mode 100644 "learn/\345\255\246\344\271\240\344\273\273\345\212\241\346\250\241\346\235\277.md"
+buff@buff:~/workspace/learn$ git push
+枚举对象中: 38, 完成.
+对象计数中: 100% (38/38), 完成.
+使用 8 个线程进行压缩
+压缩对象中: 100% (26/26), 完成.
+写入对象中: 100% (30/30), 19.35 KiB | 4.84 MiB/s, 完成.
+总共 30（差异 7），复用 0（差异 0），包复用 0
+remote: Resolving deltas: 100% (7/7), completed with 3 local objects.
+To https://github.com/user189397lyh/learn.git
+   eaa8d16..8f4060e  main -> main
+buff@buff:~/workspace/learn$ 
+
+仔细查看，我忘记加忽略文件了，将cpp的编译文件提交到远程了，如何可以直接忽略所有的编译程序 
+
+# day3用户操作输出记录
+
+
+buff@buff:~/workspace/learn$ pwd
+/home/buff/workspace/learn
+buff@buff:~/workspace/learn$ pwd -p
+bash: pwd: -p: 无效的选项
+pwd: 用法： pwd [-LP]
+buff@buff:~/workspace/learn$ pwd -P
+/home/buff/workspace/learn
+buff@buff:~/workspace/learn$ ls -d
+.
+buff@buff:~/workspace/learn$ ls -ld
+drwxrwxr-x 3 buff buff 4096  8月 18 10:25 .
+buff@buff:~/workspace/learn$ ls
+12个月每日学习与项目实践计划_机器人系统方向.txt  当前学习任务安排.txt  AGENTS.md
+365天机器人系统每日理论知识点手册.txt            学习任务模板.md       out.md
+365天机器人系统学习实战手册_完整版.txt           学习问题记录模板.md   robot-system-learning
+buff@buff:~/workspace/learn$ ls -ld .
+drwxrwxr-x 3 buff buff 4096  8月 18 10:25 .
+buff@buff:~/workspace/learn$ ls -ld ..
+drwxrwxr-x 6 buff buff 4096  8月 16 19:12 ..
+buff@buff:~/workspace/learn$ ls -ld /home/buff/
+drwxr-x--- 32 buff buff 4096  8月 18 10:45 /home/buff/
+buff@buff:~/workspace/learn$ ls -ld /home
+drwxr-xr-x 3 root root 4096  3月 26 23:56 /home
+buff@buff:~/workspace/learn$ 
+
+pwd与pwd -P区别是是什么我不懂
+.是当前目录，..是上级目录
+相对路径是基于当前文件路径地址开始的路径
+绝对路径是基于/目录开始的路径
+
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ tree
+.
+├── day2-demo
+│   ├── a.txt
+│   ├── demo.sh
+│   ├── renamed.txt
+│   └── subdir
+├── day2_demo_if_for.sh
+├── day2_demo.sh
+├── demo
+│   └── day3
+│       ├── a.txt
+│       └── subdir
+├── files.txt
+├── README.md
+└── somefile
+
+5 directories, 9 files
+
+mkdir 创建文件夹 touch创建文本文件 cp复制 mv移动、改名  rm删除
+
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo 'first line' > demo/day3/log.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo 'second line' >> demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt 
+first line
+second line
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo 'third line' > demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt 
+third line
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+
+我已经清楚 > 是覆盖写入 >> 是追加写入
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ ls > list.txt 2> err.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ ls
+day2-demo  day2_demo_if_for.sh  day2_demo.sh  demo  err.txt  files.txt  list.txt  README.md  somefile
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat list.txt 
+day2-demo
+day2_demo_if_for.sh
+day2_demo.sh
+demo
+err.txt
+files.txt
+list.txt
+README.md
+somefile
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat err.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+为什么err.txt中没有内容
+
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ ls notexist >  out.txt 2> err.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat err.txt 
+ls: 无法访问 'notexist': 没有那个文件或目录
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat out.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+
+下面三个我都不能理解，也不懂，需要你讲解与说明
+- 能理解标准输出和标准错误
+- 能知道 1>、2>、2>&1 分别是什么意思
+- 能说明重定向用于记录日志的意义
+
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ grep 'day3' demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ grep -n 'day3' demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ sort demo/day3/log.txt 
+third line
+buff@buff:~/workspace/learn/robot-system-learning/linux$ uniq demo/day3/log.txt 
+third line
+buff@buff:~/workspace/learn/robot-system-learning/linux$ sed -n '1.5p' demo/day3/log.txt 
+sed: -e 表达式 #1, 字符 2: 未知的命令：“.”↵
+buff@buff:~/workspace/learn/robot-system-learning/linux$ sed -n '1,5p' demo/day3/log.txt 
+third line
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt 
+third line
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+
+
+grep 是过滤出自己想要的内容
+sort不知道，uniq不知道，sed不知道，需要你讲解基本用途
+buff@buff:~/workspace/learn/robot-system-learning/linux$ grep 't*' -n demo/day3/log.txt 
+1:third line
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+已经理解grep -n 可以显示出行号
+
+不理解过滤文本与排序文本的区别,需要你讲解
+
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ VAR_NAME='day3'
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $VAR_NAME 
+day3
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $HO
+$HOME      $HOSTNAME  $HOSTTYPE  
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $HOME
+/home/buff
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $PATH 
+/home/buff/bin:/home/buff/.config/Code/User/globalStorage/github.copilot-chat/debugCommand:/home/buff/.config/Code/User/globalStorage/github.copilot-chat/copilotCli:/home/buff/bin:/home/buff/bin:/home/buff/.nvm/versions/node/v24.19.0/bin:/home/buff/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin
+buff@buff:~/workspace/learn/robot-system-learning/linux$ export TEST_VAR='hello'
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $TEST_VAR 
+hello
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+
+我不理解变量和环境变量的区别，需要讲解与回答
+我不能说明 $HOME、$PATH 是什么，需要讲解与回答
+我不能说出 shell 中变量的引用方式，需要讲解与回答
+
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ ls
+day2-demo  day2_demo_if_for.sh  day2_demo.sh  demo  err.txt  files.txt  list.txt  out.txt  README.md  somefile
+buff@buff:~/workspace/learn/robot-system-learning/linux$ touch day3_args.sh
+buff@buff:~/workspace/learn/robot-system-learning/linux$ ls
+day2-demo  day2_demo_if_for.sh  day2_demo.sh  day3_args.sh  demo  err.txt  files.txt  list.txt  out.txt  README.md  somefile
+buff@buff:~/workspace/learn/robot-system-learning/linux$ chmod +x day3_args.sh 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ ./day3_args.sh robot linux
+脚本名: ./day3_args.sh
+第一个参数: robot
+第二个参数: linux
+全部参数: robot linux
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+
+下面两个问题需要你回答与讲解，我做完操作之后没懂：
+- 解释 $0、$1、$2、$@ 的意义
+- 说明脚本参数如何传递
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ arr=("linux" "cpp" "ros2")
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo ${arr[0]}
+linux
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo ${arr[*]}
+linux cpp ros2
+buff@buff:~/workspace/learn/robot-system-learning/linux$ for item in ${arr[*]}; do echo $item; done
+linux
+cpp
+ros2
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+arr[0]是数组中下标序号为0数，通常是数组中的第一个数
+arr[*]是数组中所有的数
+for 循环遍历输出：
+#!/bin/bash
+
+arr=("apple" "banana" "orange" "hello world")
+
+for item in "${arr[@]}"; do
+    echo "$item"
+done
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ num=10
+buff@buff:~/workspace/learn/robot-system-learning/linux$ if [ $num -gt 5 ]; then echo "大于5"; else echo "不大于5"; fi
+大于5
+buff@buff:~/workspace/learn/robot-system-learning/linux$ if [ -f "a.txt" ]; then echo "文件存在"; elif [ -d "a.txt" ]; then echo " 是目录"; else echo "都不是"; fi
+都不是
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+
+我能理解 if/else/elif 结构
+我不知道 -gt、-lt、-eq 的含义，需要回答与讲解
+我能说明条件判断用于筛选逻辑
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ i=1
+buff@buff:~/workspace/learn/robot-system-learning/linux$ while [ $i -le 3 ]; do echo $i; i=$((i+1)); done
+1
+2
+3
+buff@buff:~/workspace/learn/robot-system-learning/linux$ V
+V：未找到命令
+buff@buff:~/workspace/learn/robot-system-learning/linux$ count=1
+buff@buff:~/workspace/learn/robot-system-learning/linux$ until [ $count -gt 3 ]; do echo $count; count=$((count+1)); done
+1
+2
+3
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+我能区分 while 和 until
+我能理解循环退出条件
+我能说出什么情况下用循环
+
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git branch
+* main
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git branch day3-practice
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git checkout day3-practice 
+M       learn/AGENTS.md
+M       learn/out.md
+M       learn/robot-system-learning/can/README.md
+M       learn/robot-system-learning/cpp/README.md
+M       learn/robot-system-learning/linux/README.md
+M       learn/robot-system-learning/ros2/README.md
+切换到分支 'day3-practice'
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git branch
+* day3-practice
+  main
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+
+每个人都有自己的开发分支，方便同时协作开发，又能隔离代码，最后合入主分支进行存档
+checkout与switch都是用于切换分支的
+
+
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo "day3 branch note" > day3_note.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git add day3_note.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git commit -m "day3: add branch note"
+[day3-practice 1cc8c46] day3: add branch note
+ 1 file changed, 1 insertion(+)
+ create mode 100644 learn/robot-system-learning/linux/day3_note.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git log --oneline -n 3
+1cc8c46 (HEAD -> day3-practice) day3: add branch note
+8f4060e (origin/main, main) day2:linux shell and cpp basics
+4a53db3 day2: add linux shell practice
+buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+提交记录可以清晰的知道本次提交的是什么内容，哪个分支修改的，哪个分支提交的，清晰定位问题
+
+commit信息写本次修改主要内容
+工作区、暂存区、提交区
+工作区是当前编辑区域，暂存区是add 之后的区域，提交区是push上去之后的区域
