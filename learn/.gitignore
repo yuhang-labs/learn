@@ -74,8 +74,6 @@ Thumbs.db
 ../learn_ros2/
 
 
-# 学习笔记
-/learn
 
 # C/C++ executables
 *.exe
@@ -83,7 +81,3 @@ Thumbs.db
 a.out
 # Ignore specific cpp build outputs
 robot-system-learning/cpp/hello
-
-
-# 当前学习任务安排
-当前学习任务安排.txt

@@ -1,0 +1,281 @@
+下面给你 Day3 的详细学习清单，按“任务 + 练习命令 + 验证标准”来写，方便你直接拿去执行，并把结果记录到 `robot-system-learning/` 对应目录里。
+
+目标
+- Day3 重点：Linux 文件系统与重定向、Shell 脚本进阶、Git 分支、C++ 数组与循环
+- 要求：
+  - 每个练习都要自己在终端执行
+  - 记录命令与输出到 out.md 或对应目录笔记
+  - 不要求一次性全部做完，但每个任务都要有验证结果
+
+一、Linux 进阶：文件系统、重定向、目录管理
+任务 1：理解目录结构与路径
+练习命令：
+- pwd
+- pwd -P
+- ls -ld .
+- ls -ld ..
+- ls -ld /home
+- ls -ld /home/buff
+验证标准：
+- 能说出相对路径和绝对路径的区别
+- 能解释 . 和 .. 的意义
+- 能说明 pwd 和 pwd -P 的区别
+
+任务 2：文件与目录操作进阶
+练习命令：
+- mkdir -p demo/day3/subdir
+- touch demo/day3/a.txt
+- echo "hello day3" > demo/day3/a.txt
+- cp demo/day3/a.txt demo/day3/b.txt
+- mv demo/day3/b.txt demo/day3/renamed.txt
+- rm demo/day3/renamed.txt
+验证标准：
+- 能说出 mkdir、touch、cp、mv、rm 的作用
+- 能解释“复制”和“移动/重命名”的不同
+- 能知道删除文件是危险操作，需要谨慎
+
+任务 3：重定向与追加
+练习命令：
+- echo "first line" > demo/day3/log.txt
+- echo "second line" >> demo/day3/log.txt
+- cat demo/day3/log.txt
+- echo "third line" > demo/day3/log.txt
+- cat demo/day3/log.txt
+验证标准：
+- 能解释 > 是覆盖写入
+- 能解释 >> 是追加写入
+- 能说明为什么第二次使用 > 会覆盖之前内容
+
+任务 4：输入输出重定向与错误重定向
+练习命令：
+- ls > list.txt 2> err.txt
+- ls notexist > out.txt 2> err.txt
+- cat err.txt
+- cat out.txt
+验证标准：
+- 能理解标准输出和标准错误
+- 能知道 1>、2>、2>&1 分别是什么意思
+- 能说明重定向用于记录日志的意义
+
+任务 5：文本处理进阶
+练习命令：
+- grep "day3" demo/day3/log.txt
+- grep -n "day3" demo/day3/log.txt
+- sort demo/day3/log.txt
+- uniq demo/day3/log.txt
+- sed -n '1,5p' demo/day3/log.txt
+验证标准：
+- 能说明 grep、sort、uniq、sed 的基本用途
+- 能说出 grep -n 会显示行号
+- 能说明过滤文本和排序文本的区别
+
+二、Shell 脚本进阶：变量、数组、循环、参数
+任务 6：变量与环境变量
+练习命令：
+- VAR_NAME="day3"
+- echo $VAR_NAME
+- echo $HOME
+- echo $PATH
+- export TEST_VAR="hello"
+- echo $TEST_VAR
+验证标准：
+- 能理解变量和环境变量的区别
+- 能说明 $HOME、$PATH 是什么
+- 能说出 shell 中变量的引用方式
+
+任务 7：脚本参数
+练习命令：
+- 写脚本 day3_args.sh：
+  - #!/bin/bash
+  - echo "脚本名: $0"
+  - echo "第一个参数: $1"
+  - echo "第二个参数: $2"
+  - echo "全部参数: $@"
+- chmod +x day3_args.sh
+- ./day3_args.sh robot linux
+验证标准：
+- 能解释 $0、$1、$2、$@ 的意义
+- 能说明脚本参数如何传递
+
+任务 8：数组
+练习命令：
+- arr=("linux" "cpp" "ros2")
+- echo ${arr[0]}
+- echo ${arr[*]}
+- for item in ${arr[*]}; do echo $item; done
+验证标准：
+- 能解释数组是什么
+- 能说明 arr[0] 和 arr[*] 的区别
+- 能写一个简单 for 循环读取数组
+
+任务 9：条件判断与多分支
+练习命令：
+- num=10
+- if [ $num -gt 5 ]; then echo "大于5"; else echo "不大于5"; fi
+- if [ -f "a.txt" ]; then echo "文件存在"; elif [ -d "a.txt" ]; then echo "是目录"; else echo "都不是"; fi
+验证标准：
+- 能理解 if/else/elif 结构
+- 能知道 -gt、-lt、-eq 的含义
+- 能说明条件判断用于筛选逻辑
+
+任务 10：while 与 until
+练习命令：
+- i=1
+- while [ $i -le 3 ]; do echo $i; i=$((i+1)); done
+- count=1
+- until [ $count -gt 3 ]; do echo $count; count=$((count+1)); done
+验证标准：
+- 能区分 while 和 until
+- 能理解循环退出条件
+- 能说出什么情况下用循环
+
+三、Git 进阶：分支、暂存、与提交管理
+任务 11：查看分支与创建分支
+练习命令：
+- git branch
+- git branch day3-practice
+- git checkout day3-practice
+- git branch
+验证标准：
+- 能解释分支的作用
+- 能说明为什么分支有利于开发隔离
+- 能知道 checkout/switch 的目的
+
+任务 12：在分支上提交
+练习命令：
+- echo "day3 branch note" > day3_note.txt
+- git add day3_note.txt
+- git commit -m "day3: add branch note"
+- git log --oneline -n 3
+验证标准：
+- 能说明提交记录的重要性
+- 能说明 commit message 要写什么
+- 能区分 工作区、暂存区、提交区
+
+任务 13：恢复与回退
+练习命令：
+- echo "testing restore" >> sample.txt
+- git restore sample.txt
+- 或：
+  - git checkout -- sample.txt
+- git status
+验证标准：
+- 能说明 restore 是恢复工作区文件
+- 能知道 restore 只对 Git 管理的文件有效
+- 能解释为什么未跟踪文件不能 restore
+
+任务 14：git stash 试验
+练习命令：
+- echo "temp work" >> temp.txt
+- git stash push -m "temp save"
+- git status
+- git stash list
+- git stash pop
+验证标准：
+- 能说明 stash 的用途
+- 能知道它适合临时保存修改
+- 能理解 “保存现场 → 后续恢复” 的思路
+
+四、C++ 进阶：数组、循环、函数
+任务 15：数组基础
+文件：
+- robot-system-learning/cpp/day3_array.cpp
+内容示例：
+- #include <iostream>
+- using namespace std;
+- int main() {
+    int arr[5] = {1, 2, 3, 4, 5};
+    for (int i = 0; i < 5; i++) {
+        cout << arr[i] << " ";
+    }
+    cout << endl;
+    return 0;
+  }
+编译与运行：
+- g++ day3_array.cpp -o day3_array
+- ./day3_array
+验证标准：
+- 能解释数组是什么
+- 能理解下标从 0 开始
+- 能说明 for 循环和数组结合可以遍历所有元素
+
+任务 16：for 循环与条件判断
+文件：
+- robot-system-learning/cpp/day3_loop.cpp
+内容示例：
+- int main() {
+    for (int i = 1; i <= 5; i++) {
+        if (i % 2 == 0) cout << i << " is even" << endl;
+        else cout << i << " is odd" << endl;
+    }
+    return 0;
+  }
+编译与运行：
+- g++ day3_loop.cpp -o day3_loop
+- ./day3_loop
+验证标准：
+- 能解释 for 循环的三部分：初始化 / 条件 / 更新
+- 能理解 if/else 判断
+- 能说出 % 是取模运算
+
+任务 17：函数与循环结合
+文件：
+- robot-system-learning/cpp/day3_func.cpp
+内容示例：
+- int sum(int a, int b) { return a + b; }
+- int main() {
+    int total = 0;
+    for (int i = 1; i <= 5; i++) {
+        total += i;
+    }
+    cout << "sum = " << total << endl;
+    cout << "function sum: " << sum(3, 5) << endl;
+    return 0;
+  }
+验证标准：
+- 能说明函数是为了复用逻辑
+- 能解释 total += i 的意思
+- 能区分参数和返回值
+
+五、Day3 最终产出要求
+你至少需要完成以下内容，并写到对应目录：
+- Linux 进阶练习记录：
+  - robot-system-learning/linux/day3.txt
+- Shell 脚本：
+  - robot-system-learning/linux/day3_args.sh
+  - robot-system-learning/linux/day3_loop.sh
+- C++ 示例：
+  - robot-system-learning/cpp/day3_array.cpp
+  - robot-system-learning/cpp/day3_loop.cpp
+  - robot-system-learning/cpp/day3_func.cpp
+- Git 练习：
+  - git branch day3-practice
+  - commit 一条关于 Day3 的说明
+- out.md 中保留命令输出
+
+六、Day3 的简短执行计划
+1. Linux 文件与重定向 → 验证：能解释 >、>>、grep、sed
+2. Shell 参数与循环 → 验证：脚本能成功运行并输出参数
+3. Git 分支与恢复 → 验证：git branch / git status / git restore 可用
+4. C++ 数组与循环 → 验证：两个程序编译并运行正常
+5. 总结 → 验证：写出 Day3 学习总结和疑问
+
+Day3 的完成标准
+如果你满足下面几条，就说明 Day3 基本完成：
+- 你做了 Linux 重定向与文本处理练习
+- 你写了至少 2 个 Shell 脚本并能执行
+- 你使用过 git branch 和 git restore
+- 你写了至少 2 个 C++ 程序并能编译运行
+- 你有一份 Day3 学习总结
+
+如果你愿意，我下一步可以直接继续给你：
+- Day3 的“一键命令脚本”
+- 或者 Day3 的“学习笔记模板”
+- 或者 Day4 的详细学习清单
+
+你可以直接回复其中一个：
+- “给我 Day3 一键脚本”
+- “给我 Day3 笔记模板”
+- “继续 Day4”
+
+这样我就继续按你的节奏发给你最实用的内容。
