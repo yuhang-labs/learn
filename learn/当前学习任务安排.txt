@@ -1,281 +1,312 @@
-下面给你 Day3 的详细学习清单，按“任务 + 练习命令 + 验证标准”来写，方便你直接拿去执行，并把结果记录到 `robot-system-learning/` 对应目录里。
+Day4 详细学习安排：Linux 系统信息与诊断脚本
 
-目标
-- Day3 重点：Linux 文件系统与重定向、Shell 脚本进阶、Git 分支、C++ 数组与循环
-- 要求：
-  - 每个练习都要自己在终端执行
-  - 记录命令与输出到 out.md 或对应目录笔记
-  - 不要求一次性全部做完，但每个任务都要有验证结果
+一、今日目标
 
-一、Linux 进阶：文件系统、重定向、目录管理
-任务 1：理解目录结构与路径
-练习命令：
-- pwd
-- pwd -P
-- ls -ld .
-- ls -ld ..
-- ls -ld /home
-- ls -ld /home/buff
+- 使用 file、stat 查看文件类型与元数据。
+- 使用 uname、hostname、df、du、free、uptime 获取系统状态。
+- 理解命令退出状态 `$?`。
+- 使用 `command -v` 检查命令是否存在。
+- 编写并验证 Robot System Diagnostic Tool v0.1。
+- 把命令、输出、自己的解释和异常场景记录到 out.md。
+
+说明：
+- Day4 原手册主题是 mkdir、touch、cp、mv，但这些内容已经在 Day2、Day3 完成，因此不再重复。
+- 今天只学习 Linux 与 Shell，不新增 C++、CAN、ROS2 内容。
+- 建议用时 60～90 分钟。
+- 所有操作由用户亲自在终端完成。
+
+二、Linux 文件信息
+
+任务 1：查看文件类型与元数据
+
+先进入学习目录：
+
+```bash
+cd ~/workspace/learn/learn
+```
+
+执行：
+
+```bash
+file robot-system-learning/linux/day3_args.sh
+stat robot-system-learning/linux/day3_args.sh
+stat -c '名称=%n 类型=%F 大小=%s 权限=%A 所有者=%U:%G inode=%i' robot-system-learning/linux/day3_args.sh
+```
+
+重点理解：
+
+- `file` 根据文件内容判断文件类型。
+- `stat` 显示文件大小、权限、所有者、时间和 inode 等元数据。
+- inode 是文件在文件系统中的标识，不等于文件名。
+
 验证标准：
-- 能说出相对路径和绝对路径的区别
-- 能解释 . 和 .. 的意义
-- 能说明 pwd 和 pwd -P 的区别
 
-任务 2：文件与目录操作进阶
-练习命令：
-- mkdir -p demo/day3/subdir
-- touch demo/day3/a.txt
-- echo "hello day3" > demo/day3/a.txt
-- cp demo/day3/a.txt demo/day3/b.txt
-- mv demo/day3/b.txt demo/day3/renamed.txt
-- rm demo/day3/renamed.txt
+- 能说明 `file` 和 `stat` 的区别。
+- 能在 `stat` 输出中找到大小、权限、所有者、修改时间和 inode。
+- 在 out.md 中写出自己的解释，不能只粘贴输出。
+
+三、Linux 系统与资源状态
+
+任务 2：查看系统身份
+
+执行：
+
+```bash
+uname -r
+uname -m
+hostname
+cat /etc/os-release
+```
+
+重点理解：
+
+- `uname -r` 显示 Linux 内核版本。
+- `uname -m` 显示硬件架构，例如 x86_64 或 aarch64。
+- `hostname` 显示主机名。
+- `/etc/os-release` 保存 Ubuntu 等发行版的信息。
+
 验证标准：
-- 能说出 mkdir、touch、cp、mv、rm 的作用
-- 能解释“复制”和“移动/重命名”的不同
-- 能知道删除文件是危险操作，需要谨慎
 
-任务 3：重定向与追加
-练习命令：
-- echo "first line" > demo/day3/log.txt
-- echo "second line" >> demo/day3/log.txt
-- cat demo/day3/log.txt
-- echo "third line" > demo/day3/log.txt
-- cat demo/day3/log.txt
+- 能说出自己的内核版本、硬件架构、主机名和发行版。
+- 能解释 Linux 内核与 Ubuntu 发行版不是同一个概念。
+
+任务 3：查看磁盘、内存和负载
+
+执行：
+
+```bash
+df -h /
+du -sh robot-system-learning
+free -h
+uptime
+```
+
+重点理解：
+
+- `df` 查看文件系统整体容量和剩余空间。
+- `du` 统计指定文件或目录占用的空间。
+- `free` 查看物理内存和交换空间。
+- `uptime` 显示开机时长、登录用户数和平均负载。
+- `uptime` 的三个负载值不是 CPU 使用百分比，分别表示过去 1、5、15 分钟的平均负载。
+
 验证标准：
-- 能解释 > 是覆盖写入
-- 能解释 >> 是追加写入
-- 能说明为什么第二次使用 > 会覆盖之前内容
 
-任务 4：输入输出重定向与错误重定向
-练习命令：
-- ls > list.txt 2> err.txt
-- ls notexist > out.txt 2> err.txt
-- cat err.txt
-- cat out.txt
+- 能说明 `df` 与 `du` 的区别。
+- 能在 `free -h` 中找到 total、used、available。
+- 能指出 `uptime` 中哪个是 1 分钟、5 分钟、15 分钟负载。
+
+四、Shell 退出状态与命令检测
+
+任务 4：理解 `$?` 和 `command -v`
+
+以下命令必须逐组执行。`echo $?` 必须紧跟在被检查的命令后：
+
+```bash
+true
+echo $?
+
+false
+echo $?
+
+command -v uname
+echo $?
+
+command -v day4_missing_command
+echo $?
+```
+
+重点理解：
+
+- `$?` 保存上一条命令的退出状态。
+- 退出状态 `0` 表示成功，非 `0` 表示失败。
+- `command -v 命令名` 用于检查 Shell 能否找到该命令。
+- 如果在目标命令和 `echo $?` 之间执行了其他命令，`$?` 就会变成其他命令的退出状态。
+
 验证标准：
-- 能理解标准输出和标准错误
-- 能知道 1>、2>、2>&1 分别是什么意思
-- 能说明重定向用于记录日志的意义
 
-任务 5：文本处理进阶
-练习命令：
-- grep "day3" demo/day3/log.txt
-- grep -n "day3" demo/day3/log.txt
-- sort demo/day3/log.txt
-- uniq demo/day3/log.txt
-- sed -n '1,5p' demo/day3/log.txt
+- `true` 后的退出状态是 `0`。
+- `false` 后的退出状态不是 `0`。
+- `command -v uname` 能输出路径或命令信息。
+- 不存在的命令没有路径，退出状态不是 `0`。
+
+五、项目实践：Robot System Diagnostic Tool v0.1
+
+任务 5：编写完整诊断脚本
+
+创建文件：
+
+```text
+robot-system-learning/linux/day4_system_check.sh
+```
+
+完整代码：
+
+```bash
+#!/bin/bash
+
+output_file="${1:-day4_system_check.log}"
+required_commands=(date uname hostname df free uptime)
+
+check_command() {
+    local command_name="$1"
+
+    if command -v "$command_name" >/dev/null 2>&1; then
+        echo "[OK] $command_name"
+        return 0
+    fi
+
+    echo "[ERROR] missing command: $command_name" >&2
+    return 1
+}
+
+if [ "${DAY4_TEST_MISSING:-0}" = "1" ]; then
+    required_commands+=(day4_missing_command)
+fi
+
+for command_name in "${required_commands[@]}"; do
+    check_command "$command_name" || exit 1
+done
+
+{
+    echo "=== Robot System Diagnostic ==="
+    echo "Time: $(date '+%F %T')"
+    echo "Host: $(hostname)"
+    echo "Kernel: $(uname -r)"
+    echo "Architecture: $(uname -m)"
+    echo
+    echo "--- Root Filesystem ---"
+    df -h /
+    echo
+    echo "--- Memory ---"
+    free -h
+    echo
+    echo "--- Uptime And Load ---"
+    uptime
+} > "$output_file" 2>&1
+
+echo "Report saved to: $output_file"
+```
+
+要求：
+
+- 必须由用户自己创建并检查脚本内容。
+- 不理解的代码先记录问题，不要直接写“已经理解”。
+- 日志文件是运行产物，不提交到 Git。
+
+任务 6：正常场景验证
+
+执行：
+
+```bash
+chmod +x robot-system-learning/linux/day4_system_check.sh
+cd robot-system-learning/linux
+./day4_system_check.sh
+echo $?
+cat day4_system_check.log
+
+./day4_system_check.sh day4_custom.log
+echo $?
+cat day4_custom.log
+```
+
 验证标准：
-- 能说明 grep、sort、uniq、sed 的基本用途
-- 能说出 grep -n 会显示行号
-- 能说明过滤文本和排序文本的区别
 
-二、Shell 脚本进阶：变量、数组、循环、参数
-任务 6：变量与环境变量
-练习命令：
-- VAR_NAME="day3"
-- echo $VAR_NAME
-- echo $HOME
-- echo $PATH
-- export TEST_VAR="hello"
-- echo $TEST_VAR
+- 每次运行都输出 6 个 `[OK]`。
+- 两次正常运行的退出状态都是 `0`。
+- 默认日志和自定义日志都成功生成。
+- 日志包含时间、主机名、内核、架构、磁盘、内存和负载。
+
+任务 7：异常场景验证
+
+在 `robot-system-learning/linux` 目录执行：
+
+```bash
+DAY4_TEST_MISSING=1 ./day4_system_check.sh day4_failed.log
+echo $?
+test -e day4_failed.log
+echo $?
+```
+
+预期结果：
+
+- 前 6 个真实命令显示 `[OK]`。
+- `day4_missing_command` 显示 `[ERROR]`。
+- 脚本退出状态不是 `0`。
+- `day4_failed.log` 不应生成，因为脚本在写报告前已经停止。
+- `test -e day4_failed.log` 的退出状态应为非 `0`。
+
 验证标准：
-- 能理解变量和环境变量的区别
-- 能说明 $HOME、$PATH 是什么
-- 能说出 shell 中变量的引用方式
 
-任务 7：脚本参数
-练习命令：
-- 写脚本 day3_args.sh：
-  - #!/bin/bash
-  - echo "脚本名: $0"
-  - echo "第一个参数: $1"
-  - echo "第二个参数: $2"
-  - echo "全部参数: $@"
-- chmod +x day3_args.sh
-- ./day3_args.sh robot linux
-验证标准：
-- 能解释 $0、$1、$2、$@ 的意义
-- 能说明脚本参数如何传递
+- 能说明为什么缺少必要命令时脚本停止。
+- 能说明错误信息为什么使用 `>&2`。
+- 能说明异常测试为什么不能只看屏幕文字，还要检查退出状态和文件是否生成。
 
-任务 8：数组
-练习命令：
-- arr=("linux" "cpp" "ros2")
-- echo ${arr[0]}
-- echo ${arr[*]}
-- for item in ${arr[*]}; do echo $item; done
-验证标准：
-- 能解释数组是什么
-- 能说明 arr[0] 和 arr[*] 的区别
-- 能写一个简单 for 循环读取数组
+六、必须回答的问题
 
-任务 9：条件判断与多分支
-练习命令：
-- num=10
-- if [ $num -gt 5 ]; then echo "大于5"; else echo "不大于5"; fi
-- if [ -f "a.txt" ]; then echo "文件存在"; elif [ -d "a.txt" ]; then echo "是目录"; else echo "都不是"; fi
-验证标准：
-- 能理解 if/else/elif 结构
-- 能知道 -gt、-lt、-eq 的含义
-- 能说明条件判断用于筛选逻辑
+把以下问题及自己的答案写入 out.md：
 
-任务 10：while 与 until
-练习命令：
-- i=1
-- while [ $i -le 3 ]; do echo $i; i=$((i+1)); done
-- count=1
-- until [ $count -gt 3 ]; do echo $count; count=$((count+1)); done
-验证标准：
-- 能区分 while 和 until
-- 能理解循环退出条件
-- 能说出什么情况下用循环
+1. `file` 和 `stat` 分别解决什么问题？
+2. inode 与文件名是什么关系？
+3. Linux 内核与 Ubuntu 发行版有什么区别？
+4. `df` 和 `du` 的统计对象有什么不同？
+5. `free -h` 中 available 为什么比 free 更适合判断还能使用多少内存？
+6. `uptime` 的三个负载值分别表示什么？它们为什么不是 CPU 百分比？
+7. `$?` 为什么必须立即检查？
+8. `command -v` 的用途是什么？
+9. `${1:-day4_system_check.log}` 是什么意思？
+10. `local`、`return 0`、`return 1` 分别有什么作用？
+11. `check_command "$command_name" || exit 1` 的执行逻辑是什么？
+12. 正常验证和异常验证分别证明了什么？
 
-三、Git 进阶：分支、暂存、与提交管理
-任务 11：查看分支与创建分支
-练习命令：
-- git branch
-- git branch day3-practice
-- git checkout day3-practice
-- git branch
-验证标准：
-- 能解释分支的作用
-- 能说明为什么分支有利于开发隔离
-- 能知道 checkout/switch 的目的
+七、操作与问题记录要求
 
-任务 12：在分支上提交
-练习命令：
-- echo "day3 branch note" > day3_note.txt
-- git add day3_note.txt
-- git commit -m "day3: add branch note"
-- git log --oneline -n 3
-验证标准：
-- 能说明提交记录的重要性
-- 能说明 commit message 要写什么
-- 能区分 工作区、暂存区、提交区
+在 out.md 的 `# Day4 用户操作输出记录` 标题下记录：
 
-任务 13：恢复与回退
-练习命令：
-- echo "testing restore" >> sample.txt
-- git restore sample.txt
-- 或：
-  - git checkout -- sample.txt
-- git status
-验证标准：
-- 能说明 restore 是恢复工作区文件
-- 能知道 restore 只对 Git 管理的文件有效
-- 能解释为什么未跟踪文件不能 restore
+- 执行过的命令。
+- 命令的真实输出。
+- 每项验证的预期结果与实际结果。
+- 自己对 12 个问题的回答。
+- 遇到的问题、第一判断、检查过程、根因、解决办法。
+- 今天真正学会的内容和仍然不懂的内容。
 
-任务 14：git stash 试验
-练习命令：
-- echo "temp work" >> temp.txt
-- git stash push -m "temp save"
-- git status
-- git stash list
-- git stash pop
-验证标准：
-- 能说明 stash 的用途
-- 能知道它适合临时保存修改
-- 能理解 “保存现场 → 后续恢复” 的思路
+不要提前修改 Linux README。Day4 完成并通过检查后，再由 AI 按学习问题记录模板整理到对应 README。
 
-四、C++ 进阶：数组、循环、函数
-任务 15：数组基础
-文件：
-- robot-system-learning/cpp/day3_array.cpp
-内容示例：
-- #include <iostream>
-- using namespace std;
-- int main() {
-    int arr[5] = {1, 2, 3, 4, 5};
-    for (int i = 0; i < 5; i++) {
-        cout << arr[i] << " ";
-    }
-    cout << endl;
-    return 0;
-  }
-编译与运行：
-- g++ day3_array.cpp -o day3_array
-- ./day3_array
-验证标准：
-- 能解释数组是什么
-- 能理解下标从 0 开始
-- 能说明 for 循环和数组结合可以遍历所有元素
+八、Git 提交要求
 
-任务 16：for 循环与条件判断
-文件：
-- robot-system-learning/cpp/day3_loop.cpp
-内容示例：
-- int main() {
-    for (int i = 1; i <= 5; i++) {
-        if (i % 2 == 0) cout << i << " is even" << endl;
-        else cout << i << " is odd" << endl;
-    }
-    return 0;
-  }
-编译与运行：
-- g++ day3_loop.cpp -o day3_loop
-- ./day3_loop
-验证标准：
-- 能解释 for 循环的三部分：初始化 / 条件 / 更新
-- 能理解 if/else 判断
-- 能说出 % 是取模运算
+完成学习并通过检查后，从学习目录执行：
 
-任务 17：函数与循环结合
-文件：
-- robot-system-learning/cpp/day3_func.cpp
-内容示例：
-- int sum(int a, int b) { return a + b; }
-- int main() {
-    int total = 0;
-    for (int i = 1; i <= 5; i++) {
-        total += i;
-    }
-    cout << "sum = " << total << endl;
-    cout << "function sum: " << sum(3, 5) << endl;
-    return 0;
-  }
-验证标准：
-- 能说明函数是为了复用逻辑
-- 能解释 total += i 的意思
-- 能区分参数和返回值
+```bash
+cd ~/workspace/learn/learn
+git status --short
+git diff
+git add 当前学习任务安排.txt 学习任务模板.md 学习问题记录模板.md AGENTS.md out.md robot-system-learning/linux/day4_system_check.sh
+git diff --cached --name-only
+git commit -m "day4: add Linux system diagnostic practice"
+```
 
-五、Day3 最终产出要求
-你至少需要完成以下内容，并写到对应目录：
-- Linux 进阶练习记录：
-  - robot-system-learning/linux/day3.txt
-- Shell 脚本：
-  - robot-system-learning/linux/day3_args.sh
-  - robot-system-learning/linux/day3_loop.sh
-- C++ 示例：
-  - robot-system-learning/cpp/day3_array.cpp
-  - robot-system-learning/cpp/day3_loop.cpp
-  - robot-system-learning/cpp/day3_func.cpp
-- Git 练习：
-  - git branch day3-practice
-  - commit 一条关于 Day3 的说明
-- out.md 中保留命令输出
+要求：
 
-六、Day3 的简短执行计划
-1. Linux 文件与重定向 → 验证：能解释 >、>>、grep、sed
-2. Shell 参数与循环 → 验证：脚本能成功运行并输出参数
-3. Git 分支与恢复 → 验证：git branch / git status / git restore 可用
-4. C++ 数组与循环 → 验证：两个程序编译并运行正常
-5. 总结 → 验证：写出 Day3 学习总结和疑问
+- `当前学习任务安排.txt`、两个模板、AGENTS.md、out.md 都必须处于 Git 管理中。
+- 两个模板没有改动时不会出现在本次差异中，但仍包含在提交快照里。
+- 不使用 `git add .`，避免误提交编译产物和临时文件。
+- 不提交 `day4_system_check.log`、`day4_custom.log`、`day4_failed.log`。
+- 提交前必须确认暂存区只包含任务、规则、学习记录和脚本。
 
-Day3 的完成标准
-如果你满足下面几条，就说明 Day3 基本完成：
-- 你做了 Linux 重定向与文本处理练习
-- 你写了至少 2 个 Shell 脚本并能执行
-- 你使用过 git branch 和 git restore
-- 你写了至少 2 个 C++ 程序并能编译运行
-- 你有一份 Day3 学习总结
+九、Day4 简短执行计划
 
-如果你愿意，我下一步可以直接继续给你：
-- Day3 的“一键命令脚本”
-- 或者 Day3 的“学习笔记模板”
-- 或者 Day4 的详细学习清单
+1. 文件类型与元数据 → 验证：能解释 file、stat 和 inode。
+2. 系统资源检查 → 验证：能解释内核、发行版、磁盘、内存和负载。
+3. 退出状态与命令检测 → 验证：能根据 `$?` 判断成功或失败。
+4. 编写诊断脚本 → 验证：正常运行生成完整日志。
+5. 异常测试 → 验证：缺少命令时返回失败且不生成报告。
+6. 总结与 Git → 验证：out.md 记录完整，暂存区不包含运行产物。
 
-你可以直接回复其中一个：
-- “给我 Day3 一键脚本”
-- “给我 Day3 笔记模板”
-- “继续 Day4”
+十、Day4 完成标准
 
-这样我就继续按你的节奏发给你最实用的内容。
+- 完成所有命令实验并保留真实输出。
+- 能回答 12 个必须掌握的问题。
+- `day4_system_check.sh` 可以正常运行。
+- 正常场景退出状态为 `0`，并生成完整日志。
+- 异常场景退出状态非 `0`，并且不生成失败报告。
+- out.md 包含操作、解释、异常、问题和学习总结。
+- Git 暂存区不包含日志、编译程序或 temp.txt。
