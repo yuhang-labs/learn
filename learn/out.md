@@ -828,3 +828,129 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$
 commit信息写本次修改主要内容
 工作区、暂存区、提交区
 工作区是当前编辑区域，暂存区是add 之后的区域，提交区是push上去之后的区域
+
+
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git restore sample.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git checkout -- sample.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git restore sample.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+我做这个任务之后发现，首先我新建sample.txt文件之后保存
+之后执行git add sample.txt之后加入暂存区
+后面我继续使用vscode手动修改sample.txt文件，修改之后保存
+之后我执行git restore sample.txt发现它恢复到了git add sample.txt时的状态
+我对于恢复的理解是必须是提交到暂存区域的文件才可以恢复，恢复的内容是已经提交过暂存区的内容，未跟踪的文件无法恢复，因为git不知道这个文件
+
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo "temp work" >> temp.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+day2-demo  day2_demo_if_for.sh  day2_demo.sh  day3_args.sh  demo  err.txt  files.txt  list.txt  out.txt  README.md  sample.txt  somefile  temp.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git stash push -m "temp save"
+保存工作目录和索引状态 On main: temp save
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git status
+位于分支 main
+您的分支与上游分支 'origin/main' 一致。
+
+未跟踪的文件:
+  （使用 "git add <文件>..." 以包含要提交的内容）
+        temp.txt
+
+提交为空，但是存在尚未跟踪的文件（使用 "git add" 建立跟踪）
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git stash list
+stash@{0}: On main: temp save
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git stash pop
+位于分支 main
+您的分支与上游分支 'origin/main' 一致。
+
+尚未暂存以备提交的变更：
+  （使用 "git add <文件>..." 更新要提交的内容）
+  （使用 "git restore <文件>..." 丢弃工作区的改动）
+        修改：     ../../AGENTS.md
+        修改：     ../../out.md
+
+未跟踪的文件:
+  （使用 "git add <文件>..." 以包含要提交的内容）
+        temp.txt
+
+修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
+丢弃了 refs/stash@{0}（899b9a680d4875569c61e6130ad2c8a8b53e888d）
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+stash的用途是保存临时的工作目录，便于下次回来时修改
+我不理解“保存现场 → 后续恢复”，需要你帮我梳理
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ touch day3_array.cpp
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ls
+add  add.cpp  condition  condition.cpp  day3_array.cpp  hello.cpp  hello_day2  hello_day2.cpp  README.md
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ g++ day3_array.cpp -o day3_array
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_array 
+1 2 3 4 5 
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+- 能解释数组是什么
+- 能理解下标从 0 开始
+- 能说明 for 循环和数组结合可以遍历所有元素
+数组就是array=[0,1,3,6,7]其中0的下标是0,array[0]=0,array[3]=6
+for循环遍历数组就是从下标0开始遍历到最后
+
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ g++ day3_loop.cpp -o day3_loop
+day3_loop.cpp: In function ‘int main()’:
+day3_loop.cpp:3:25: error: ‘cout’ was not declared in this scope
+    3 |         if (i % 2 == 0) cout << i << " is even" << endl;
+      |                         ^~~~
+day3_loop.cpp:3:52: error: ‘endl’ was not declared in this scope
+    3 |         if (i % 2 == 0) cout << i << " is even" << endl;
+      |                                                    ^~~~
+day3_loop.cpp:4:14: error: ‘cout’ was not declared in this scope
+    4 |         else cout << i << " is odd" << endl;
+      |              ^~~~
+day3_loop.cpp:4:40: error: ‘endl’ was not declared in this scope
+    4 |         else cout << i << " is odd" << endl;
+      |                                        ^~~~
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+编译失败了，我的理解是因为头文件缺失
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_loop 
+1 is odd
+2 is even
+3 is odd
+4 is even
+5 is odd
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+头文件加入之后正常编译执行输出
+- 能解释 for 循环的三部分：初始化 / 条件 / 更新
+- 能理解 if/else 判断
+- 能说出 % 是取模运算
+for (int i = 1; i <= 5; i++) 其中int i = 1是初始化，i<=5是循环条件，i++是更新，后面{}里面是循环体
+ if (i % 2 == 0) cout << i << " is even" << endl;
+        else cout << i << " is odd" << endl;
+其中if ()中是判断条件，如果if成立则执行后面count内容，如果不成立则执行else的内容
+我对%的理解是5%2=1,其中5/2=2...1
+
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ g++ day3_func.cpp day3_func
+day3_func.cpp: In function ‘int main()’:
+day3_func.cpp:7:5: error: ‘cout’ was not declared in this scope
+    7 |     cout << "sum = " << total << endl;
+      |     ^~~~
+day3_func.cpp:7:34: error: ‘endl’ was not declared in this scope
+    7 |     cout << "sum = " << total << endl;
+      |                                  ^~~~
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+依旧是缺少头文件，下次你注意必须给出完整可复制粘贴执行代码
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ g++ day3_func.cpp day3_func
+/usr/bin/ld: 找不到 day3_func: 没有那个文件或目录
+collect2: error: ld returned 1 exit status
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ g++ day3_func.cpp -o day3_func
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_func 
+sum = 15
+function sum: 8
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+其中sum函数复用在main中，函数方便复用，在修改其他代码时可以直接调用这个函数
+total+=i是total=total+i
+sum函数的参数是a,b返回值是a+b
+main没有参数，返回值是0
