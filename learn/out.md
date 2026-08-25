@@ -1268,3 +1268,121 @@ out_file是输出文件，保存执行日志
 之后检查依赖的六个命令是否正常
 如果是正常模式，则走手机系统信息写入日志文件，最后告诉用户日志文件在哪
 如果是异常模式，缺少命令的情况下，则exit 1不生成日志保存
+
+
+# Day5 用户操作输出记录
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes\n'
+day4_system_check.log | 560 bytes
+day4_custom.log | 560 bytes
+seeway@test:~/workspace/learn/learn$ 
+这条命令的搜索起点是robot-system-learning/linux，并且只在当前目录层级搜索，不去更深层级,-type f 是指普通文件，-name是指区分大小写，*.log表示后缀是.log的文件， -printf是指搜索到的文件怎么去输出，输出格式为是文件名+字节数
+
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes | %TY-%Tm-%Td %TH:%TM\n'
+day4_system_check.log | 560 bytes | 2026-08-24 19:41
+day4_custom.log | 560 bytes | 2026-08-24 19:51
+seeway@test:~/workspace/learn/learn$ 
+起点是这条命令的搜索起点是robot-system-learning/linux，并且只在当前目录层级搜索，不去更深层级，与第一条的区别是文件的输出格式不同，增加了一个修改时间
+
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -iname 'DAY4_CUSTOM.LOG' -printf '%f\n'
+day4_custom.log
+seeway@test:~/workspace/learn/learn$ 
+这条命令与第一条的区别是： -iname不区分大小写 输出格式只有文件名，搜索方式是指定文件名搜索
+
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -size +500c -printf '%f | %s bytes\n'
+day4_system_check.log | 560 bytes
+day4_custom.log | 560 bytes
+seeway@test:~/workspace/learn/learn$ 
+这条命令与第一条的区别是： 只有大于500bytes的文件并且后缀是.log的文件才会被搜索
+
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -newermt '2 days ago' -printf '%f | %TY-%Tm-%Td %TH:%TM\n'
+day4_system_check.log | 2026-08-24 19:41
+day4_custom.log | 2026-08-24 19:51
+seeway@test:~/workspace/learn/learn$ 
+这条命令与第一条的区别是：文件修改时间是近2天修改的文件，没有输出字节，有日期
+
+- 如果某条命令没有输出，要根据文件大小或修改时间判断这是正常无匹配还是命令错误
+-name 是区分大小写，-iname是不区分大小写
+-size +500c 其中c是字节
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -size +1000c -printf '%f | %s bytes\n'
+seeway@test:~/workspace/learn/learn$ 没有输出是因为在linux文件夹中普通文件是.log后缀的文件有但是没有大于1000bytes的匹配文件
+
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'Kernel' {} +
+robot-system-learning/linux/day4_system_check.log:4:Kernel: 6.8.0-136-generic
+robot-system-learning/linux/day4_custom.log:4:Kernel: 6.8.0-136-generic
+seeway@test:~/workspace/learn/learn$ 
+
+
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'DAY5_NOT_FOUND' {} +
+echo $?
+1
+seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'DAY5_NOT_FOUND' {} +
+seeway@test:~/workspace/learn/learn$ echo $?
+1
+seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'Kernel' {} +
+robot-system-learning/linux/day4_system_check.log:4:Kernel: 6.8.0-136-generic
+robot-system-learning/linux/day4_custom.log:4:Kernel: 6.8.0-136-generic
+seeway@test:~/workspace/learn/learn$ echo $?
+0
+seeway@test:~/workspace/learn/learn$ 
+需要你教学这些：为什么第二组的 `echo $?` 可能仍然是 `0`。项目脚本为什么需要直接保存 `grep` 的退出状态。
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ practice_dir='/tmp/day5-delete-practice'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ mkdir -p "$practice_dir"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ touch "$practice_dir/keep.txt" "$practice_dir/remove.log"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice_dir" -maxdepth 1 -type f -printf '%f\n'
+remove.log
+keep.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice_dir" -maxdepth 1 -type f -name '*.log' -print
+/tmp/day5-delete-practice/remove.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice_dir" -maxdepth 1 -type f -name '*.log' -delete
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice_dir" -maxdepth 1 -type f -printf '%f\n'
+keep.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+预览可以确保你要删除的文件是可以安全删除的，很重要，本次删除的精确搜索起点是/tmp/day5-delete-practice，深度是day5-delete-practice，只在本级目录搜索，类型是普通文件，名称条件是.log后缀区分大小写
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh . Kernel
+[INFO] searched log files: 2
+./day4_system_check.log:4:Kernel: 6.8.0-136-generic
+./day4_custom.log:4:Kernel: 6.8.0-136-generic
+[OK] keyword found: Kernel
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh . DAY5_NOT_FOUND
+[INFO] searched log files: 2
+[INFO] no matching line: DAY5_NOT_FOUND
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$  
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh ./day5_missing_dir Kernel
+[ERROR] directory not found: ./day5_missing_dir
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+2
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh ./demo Kernel
+[INFO] no log files found in: ./demo
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+3
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh . -n
+[INFO] searched log files: 2
+[INFO] no matching line: -n
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+1. `find` 命令中的搜索起点与筛选条件分别是什么？这个问题答案在上面，自行寻找
+2. `-maxdepth 1` 限制了什么？限制了搜索目录的层级
+3. `-name` 与 `-iname` 有什么区别？是否区分大小写的区别
+4. `-size +500c` 中 `+`、`500`、`c` 分别代表什么？+是大于，500是数字，C是字节
+5. 为什么 `find -exec grep ...` 没有匹配时，`find` 仍可能返回 `0`？GNU find 使用 -exec ... {} + 时，已经找到日志文件并执行了 grep，如果 grep 返回 1，find 最终也可能返回非零。若根本没找到文件，grep 没有执行，find 却可能返回 0。所以不能仅靠 find 的状态准确区分搜索结果，
+6. 为什么处理文件名时，`-print0` 比普通换行分隔更可靠？-print0 配合 mapfile：安全地把每个文件路径放入数组，避免路径中的空格或换行被错误拆开。
+7. `mapfile -d '' -t log_files` 做了什么？mapfile`：把多条输入读取进 Bash 数组。
+8. `${#log_files[@]}` 是匹配行数还是日志文件数？${#log_files[@]}：找到的日志文件数量，不是匹配行数。
+9. `grep` 的退出状态 `0`、`1`、大于 `1` 分别代表什么？grep：0 表示找到，1 表示没找到，大于 1 表示执行错误。
+10. `--` 为什么能保护以 `-` 开头的关键字？--：告诉 grep 后面是搜索文本，所以 -n 不会被当成选项
+11. 为什么删除前必须先用同样的条件执行 `-print`？需要确认删除的文件是否安全，是否是自己要删除的文件
+12. `day5_find_logs.sh` 的状态 `0`、`1`、`2`、`3` 分别代表什么？脚本状态：0 找到关键字，1 没有匹配行，2 目录不存在，3 没有日志文件。
+
+1. 真正学会了什么、排查了什么问题、目前还有什么不确定。
+学会了find搜索，安全删除 ，排查了为什么 find -exec grep 返回 1，目前不确定的是5～12问题答案，但是整体逻辑已经理解
