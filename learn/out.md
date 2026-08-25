@@ -954,3 +954,317 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$
 total+=i是total=total+i
 sum函数的参数是a,b返回值是a+b
 main没有参数，返回值是0
+
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ file day3_args.sh 
+day3_args.sh: Bourne-Again shell script, Unicode text, UTF-8 text executable
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+Unicode text这是什么意思？
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ stat day3_args.sh 
+  文件：day3_args.sh
+  大小：110             块：8          IO 块大小：4096   普通文件
+设备：10302h/66306d     Inode：48522843    硬链接：1
+权限：(0755/-rwxr-xr-x)  Uid: ( 1000/  seeway)   Gid: ( 1000/       l)
+访问时间：2026-08-24 10:20:26.985601739 +0800
+修改时间：2026-08-21 17:37:19.017295859 +0800
+变更时间：2026-08-21 17:37:19.017295859 +0800
+创建时间：2026-08-21 17:37:19.017295859 +0800
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ stat -c '名称=%n 类型=%F 大小=%s 权限=%A 所有者=%U:%G inode=%i' day3_args.sh 
+名称=day3_args.sh 类型=普通文件 大小=110 权限=-rwxr-xr-x 所有者=seeway:l inode=48522843
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+file和stat有什么区别？
+名称=day3_args.sh 类型=普通文件 大小=110 权限=-rwxr-xr-x 所有者=seeway:l inode=48522843
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+这个可以看到大小、权限、所有者、修改时间和 inode。
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ uname -r 
+6.8.0-136-generic
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 这是什么意思
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ uname -m
+x86_64
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 这个我理解系统是X86架构的，但是我们的项目机器是aarch64。所以才采用了交叉编译
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ hostname
+test
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ uname -a
+Linux test 6.8.0-136-generic #136~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Jul  3 16:29:11 UTC  x86_64 x86_64 x86_64 GNU/Linux
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+这是我设置的主机名字是test,其中seeway@test中的test就是主机名字
+
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat /etc/os-release
+PRETTY_NAME="Ubuntu 22.04.5 LTS"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.5 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+这是我安装的ubuntu发行版的信息
+
+
+ubuntu只是一个操作界面，linux是内核操作系统
+
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ df -h
+文件系统        大小  已用  可用 已用% 挂载点
+tmpfs           3.2G  2.9M  3.2G    1% /run
+/dev/nvme0n1p2  916G  184G  686G   22% /
+tmpfs            16G  162M   16G    2% /dev/shm
+tmpfs           5.0M  4.0K  5.0M    1% /run/lock
+efivarfs        256K  132K  120K   53% /sys/firmware/efi/efivars
+/dev/nvme0n1p1  511M  6.1M  505M    2% /boot/efi
+tmpfs           3.2G  204K  3.2G    1% /run/user/1000
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cd ..
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls
+can  cpp  linux  ros2
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cd ..
+seeway@test:~/workspace/learn/learn$ ls
+12个月每日学习与项目实践计划_机器人系统方向.txt  AGENTS.md              学习任务模板.md
+365天机器人系统学习实战手册_完整版.txt           out.md                 学习问题记录模板.md
+365天机器人系统每日理论知识点手册.txt            robot-system-learning  当前学习任务安排.txt
+seeway@test:~/workspace/learn/learn$ du -sh robot-system-learning/
+260K    robot-system-learning/
+seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$ free -h
+               total        used        free      shared  buff/cache   available
+内存：       31Gi        11Gi       9.5Gi       185Mi        10Gi        20Gi
+交换：      2.0Gi          0B       2.0Gi
+seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$ uptime
+ 15:10:21 up 1 day, 21:30,  1 user,  load average: 0.61, 0.46, 0.40
+seeway@test:~/workspace/learn/learn$ 
+df 是查看整个文件系统的使用情况
+du 是查看指定文件或当前文件的大小
+free -h 中内存的total是31G，used是11G，可用的是20G
+看不懂这个seeway@test:~/workspace/learn/learn$ uptime
+ 15:10:21 up 1 day, 21:30,  1 user,  load average: 0.61, 0.46, 0.40
+
+ seeway@test:~/workspace/learn/learn$ true
+seeway@test:~/workspace/learn/learn$ 为什么没有输出
+seeway@test:~/workspace/learn/learn$ true
+seeway@test:~/workspace/learn/learn$ echo $?
+0
+seeway@test:~/workspace/learn/learn$ 为什么输出0？
+seeway@test:~/workspace/learn/learn$ false
+seeway@test:~/workspace/learn/learn$ echo $?
+1
+seeway@test:~/workspace/learn/learn$ 为什么又输出1了？
+seeway@test:~/workspace/learn/learn$ command -v uname
+/usr/bin/uname
+seeway@test:~/workspace/learn/learn$ echo $?
+0
+seeway@test:~/workspace/learn/learn$ 又变成0了？
+seeway@test:~/workspace/learn/learn$ 俄文三
+俄文三：未找到命令
+seeway@test:~/workspace/learn/learn$ echo $?
+127
+seeway@test:~/workspace/learn/learn$为什么是127了？
+seeway@test:~/workspace/learn/learn$ command -v day4_missing_command
+seeway@test:~/workspace/learn/learn$ echo $?
+1
+seeway@test:~/workspace/learn/learn$ 
+
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh
+bash: ./day4_system_check.sh: 权限不够
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x day4_system_check.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 没有输出是为什么？
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat day4_system_check.log
+cat: day4_system_check.log: 没有那个文件或目录
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh day4_custom.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ at day4_custom.log
+找不到命令 “at”，但可以通过以下软件包安装它：
+sudo apt install at
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat day4_custom.log
+cat: day4_custom.log: 没有那个文件或目录
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ DAY4_TEST_MISSING=1 ./day4_system_check.sh day4_failed.log
+[ERROR] missing command: day4_missing_command
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ test -e day4_failed.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x robot-system-learning/linux/day4_system_check.sh
+cd robot-system-learning/linux
+./day4_system_check.sh
+echo $?
+cat day4_system_check.log
+
+./day4_system_check.sh day4_custom.log
+echo $?
+cat day4_custom.log
+chmod: 无法访问 'robot-system-learning/linux/day4_system_check.sh': 没有那个文件或目录
+bash: cd: robot-system-learning/linux: 没有那个文件或目录
+[ERROR] missing command: day4_missing_command
+cat: day4_system_check.log: 没有那个文件或目录
+[ERROR] missing command: day4_missing_command
+cat: day4_custom.log: 没有那个文件或目录
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x robot-system-learning/linux/day4_system_check.sh
+chmod: 无法访问 'robot-system-learning/linux/day4_system_check.sh': 没有那个文件或目录
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cd ..
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -a
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cd linux/
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ;s
+bash: 未预期的记号 ";" 附近有语法错误
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+
+
+补充：
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh 
+[OK] date
+[OK] uname
+[OK] hostname
+[OK] df
+[OK] free
+[OK] uptime
+Report saved to: day4_system_check.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat day4_system_check.log
+=== Robot System Diagnostic ===
+Time: 2026-08-24 19:41:36
+Host: test
+Kernel: 6.8.0-136-generic
+Architecture: x86_64
+
+--- Root Filesystem ---
+文件系统        大小  已用  可用 已用% 挂载点
+/dev/nvme0n1p2  916G  185G  685G   22% /
+
+--- Memory ---
+               total        used        free      shared  buff/cache   available
+内存：       31Gi        13Gi       6.5Gi       240Mi        11Gi        18Gi
+交换：      2.0Gi          0B       2.0Gi
+
+--- Uptime And Load ---
+ 19:41:36 up 2 days,  2:01,  1 user,  load average: 0.90, 0.82, 0.82
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh day4_custom.log
+[OK] date
+[OK] uname
+[OK] hostname
+[OK] df
+[OK] free
+[OK] uptime
+Report saved to: day4_custom.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat day4_custom.log
+=== Robot System Diagnostic ===
+Time: 2026-08-24 19:51:52
+Host: test
+Kernel: 6.8.0-136-generic
+Architecture: x86_64
+
+--- Root Filesystem ---
+文件系统        大小  已用  可用 已用% 挂载点
+/dev/nvme0n1p2  916G  185G  685G   22% /
+
+--- Memory ---
+               total        used        free      shared  buff/cache   available
+内存：       31Gi        13Gi       6.7Gi       259Mi        11Gi        18Gi
+交换：      2.0Gi          0B       2.0Gi
+
+--- Uptime And Load ---
+ 19:51:52 up 2 days,  2:11,  1 user,  load average: 1.41, 0.80, 0.73
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ DAY4_TEST_MISSING=1 ./day4_system_check.sh day4_failed.log
+[OK] date
+[OK] uname
+[OK] hostname
+[OK] df
+[OK] free
+[OK] uptime
+[ERROR] missing command: day4_missing_command
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ test -e day4_failed.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+
+8. `command -v` 的用途是什么？Shell 当前环境下能不能找到某个命令，以及这个命令实际对应什么。
+9. `${1:-day4_system_check.log}` 是什么意思？常见的 Shell 参数设计方式。
+10. `local`、`return 0`、`return 1` 分别有什么作用？给调用者返回结果。
+11. `check_command "$command_name" || exit 1` 的执行逻辑是什么？检查 git，如果 git 不存在，就立即终止脚本。
+12. 正常验证和异常验证分别证明了什么？系统在符合预期条件下，脚本能够正确执行，并且能够识别正常状态。系统不仅能处理正常情况，还能够正确识别和处理错误情况。
+
+file回答：这个文件的类型是什么。stat回答：详细文件属性
+文件名是目录中的“名字”，inode 才是文件在文件系统中的核心身份信息。
+Linux 是内核，Ubuntu 是基于 Linux 内核构建出来的一套完整操作系统发行版。
+df -h 文件系统整体还剩多少空间。
+du -sh 某个目录/文件实际占用了多少空间。
+free = 现在完全没被使用的内存
+
+available = 系统估计还能拿出来给程序使用的内存
+系统中处于可运行状态或不可中断睡眠状态、正在等待 CPU 或某些内核资源的任务数量的时间平均情况。
+$?上一条命令的退出状态码。
+第 5 题回答不完整：
+- free 只是当前完全空闲的内存。
+- available 还考虑了系统能够回收的缓存，表示在不发生明显交换的情况下，估计还能提供给新程序的内存，所以更适合判断可用内存。
+第 6 题缺少两部分：
+- 三个值依次表示过去 1、5、15 分钟的平均负载。
+- 它统计可运行和不可中断睡眠任务的平均数量，不是 CPU 时间比例，因此不是百分比；判断高低还要结合 CPU 逻辑核心数。
+第 7 题只解释了 $? 是什么，没有回答为什么立即检查：
+- 每执行一条新命令，$? 都会被新命令的退出状态覆盖。
+第 9 题过于模糊：
+${1:-day4_system_check.log}
+表示：如果第一个参数 $1 未提供或为空，使用 day4_system_check.log；否则使用 $1。
+第 10 题需要分别解释：
+- local：变量只在当前函数内有效。
+- return 0：函数结束并向调用者报告成功。
+- return 1：函数结束并向调用者报告失败。
+第 11 题回答错误，不是固定检查 Git：
+check_command "$command_name" || exit 1
+表示检查当前数组中的命令；如果 check_command 返回非零状态，就执行 exit 1，立即结束整个脚本。
+
+如果 free 只有 1 GiB，但 available 有 8 GiB，程序申请 4 GiB 内存是否一定失败？为什么？
+不一定失败，因为可用还有8G，足够4G程序使用
+uptime 显示负载为 4.0 时，在 4 核与 16 核 CPU 上分别可能意味着什么？
+负载 4.0：4 核系统可能接近满载；16 核系统通常仍有较多余量，但还要考虑不可中断任务。
+依次执行 false、echo hello、echo $?，最后为什么不是查看 false 的状态？
+echo hello 是有效的 Shell 内置命令，执行成功并返回 0,false; echo hello; echo $? 最后输出 0，因为 echo hello 成功并覆盖了 false 的状态。
+${1:-day4_system_check.log} 在传入和不传入参数时分别得到什么？
+不知道
+local command_name 为什么放在函数内部？return 1 与 exit 1 的影响范围有什么区别？
+return 1：退出当前函数，将失败状态交给调用者。
+exit 1：结束整个脚本。
+check_command "$command_name" || exit 1 检查到不存在的命令后会发生什么？为什么错误使用 >&2？
+>&2：把错误写入标准错误，使错误能与正常输出分开处理。
+用三句话总结：今天真正学会了什么、排查了什么错误、还有什么不确定。
+学习了命令状态，文件属性与类型
+今天学会了查看cpu负载情况，shell命令使用，文件查看属性与类型，脚本参数设置
+发现了执行脚本错误echosss 应该是echo
+目前仍然不确定day4_system_check.sh脚本是干嘛的
+
+
+这个脚本是一个诊断工具
+out_file是输出文件，保存执行日志
+之后检查依赖的六个命令是否正常
+如果是正常模式，则走手机系统信息写入日志文件，最后告诉用户日志文件在哪
+如果是异常模式，缺少命令的情况下，则exit 1不生成日志保存
