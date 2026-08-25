@@ -1,148 +1,147 @@
-Day5 详细学习安排：高级文件筛选与日志搜索脚本
+Day6 详细学习安排：grep 取证与日志等级分析
 
 一、今日目标
 
-- 使用 `find` 的多个条件精确筛选文件。
-- 理解 `-maxdepth`、`-type`、`-name`、`-iname`、`-size`、`-newermt` 和 `-printf`。
-- 理解 `find -exec` 的用途，以及为什么不能用 `find` 的退出状态判断关键字是否匹配。
-- 使用 `-print0` 和 `mapfile` 安全处理带空格的文件名。
-- 编写并验证 `day5_find_logs.sh` 日志搜索脚本。
-- 在受控的 `/tmp` 目录中练习“先预览、后删除”的安全流程。
+- 理解 `grep` 在日志分析链路中的输入、处理和输出。
+- 区分“按字面量搜索”和“按正则表达式搜索”。
+- 使用上下文行查看故障发生前后的信息。
+- 使用多个模式筛选 `ERROR` 和 `WARN` 日志。
+- 完成并验证 `day6_log_analyzer.sh` 日志等级分析脚本。
+- 能根据脚本状态判断系统日志是正常、警告、错误还是输入无效。
 
 说明：
 
-- Day5 原手册主题是 `rm/find`，但基础的 `rm` 和 `find` 已在 Day2 学过，因此今天不重复基础用法。
-- Day3 已练习基础 `grep`，今天只把它作为日志搜索工具使用，重点是组合筛选和可靠验证。
+- Day3 已学习基础 `grep`，Day5 已学习日志文件搜索和 `grep` 退出状态，今天不重复这些基础内容。
+- Day6 原手册主题是 `grep`，今天重点学习“匹配规则是否准确”和“如何从日志中取得故障证据”。
+- 代码和命令均已完整提供，不要求背参数；重点理解每一步为什么存在，以及输入如何变成结论。
 - 今天只学习 Linux 与 Shell，不新增 C++、CAN、ROS2 内容。
-- 建议用时 60～90 分钟。
-- 所有操作必须由用户亲自在终端执行，并把真实输出写入 out.md。
+- 建议用时 45～70 分钟。
+- 所有练习由用户亲自在终端执行，真实输出记录到 `out.md`。
 
-二、find 组合筛选
+二、准备可重复验证的日志
 
-任务 1：精确查找 Day4 日志
-
-先进入学习目录：
-
-```bash
-cd ~/workspace/learn/learn
-```
-
-确认 Day4 日志仍然存在：
-
-```bash
-find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes\n'
-```
-
-继续执行：
-
-```bash
-find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes | %TY-%Tm-%Td %TH:%TM\n'
-
-find robot-system-learning/linux -maxdepth 1 -type f -iname 'DAY4_CUSTOM.LOG' -printf '%f\n'
-
-find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -size +500c -printf '%f | %s bytes\n'
-
-find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -newermt '2 days ago' -printf '%f | %TY-%Tm-%Td %TH:%TM\n'
-```
-
-重点理解：
-
-- 第一个位置参数是搜索起点。
-- `-maxdepth 1` 表示最多检查起点目录和它的第一层内容，不递归进入更深目录。
-- `-type f` 只保留普通文件。
-- `-name` 区分大小写，`-iname` 不区分大小写。
-- `-size +500c` 表示文件大小大于 500 字节，`c` 表示字节。
-- `-newermt '2 days ago'` 根据修改时间筛选最近两天内修改的文件。
-- 多个条件默认是“并且”关系，文件必须同时满足全部条件。
-- `-printf` 自定义输出，`%f` 是文件名，`%s` 是字节数，`%T` 系列是修改时间。
-
-验证标准：
-
-- 能解释每条命令的搜索起点和筛选条件。
-- 能说明 `-name` 与 `-iname` 的区别。
-- 能说明为什么 `-size +500c` 不是“大于 500 KB”。
-- 如果某条命令没有输出，要根据文件大小或修改时间判断这是正常无匹配还是命令错误。
-
-三、find 与 grep 的组合
-
-任务 2：使用 `-exec` 搜索日志内容
+任务 1：只在 `/tmp` 中创建测试数据
 
 执行：
 
 ```bash
-find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'Kernel' {} +
-echo $?
-
-find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'DAY5_NOT_FOUND' {} +
-echo $?
-```
-
-重点理解：
-
-- `-exec 命令 {} +` 把 `find` 找到的多个文件批量传给命令。
-- `{}` 代表找到的文件路径。
-- `+` 尽量一次传递多个文件，比每个文件执行一次更高效。
-- `grep -Hn` 显示文件名和行号。
-- `--` 表示后面的内容不再解析为选项，因此以 `-` 开头的关键字也能被当作普通文本。
-- `find` 的退出状态主要表示遍历过程是否成功，不表示 `grep` 是否找到了内容。
-- 因此第二组命令即使没有匹配，`find` 仍可能返回 `0`。不能据此写成“关键字匹配成功”。
-
-验证标准：
-
-- 第一组能够找到包含 `Kernel` 的日志行。
-- 第二组没有匹配内容。
-- 能解释为什么第二组的 `echo $?` 可能仍然是 `0`。
-- 能说明项目脚本为什么需要直接保存 `grep` 的退出状态。
-
-四、安全删除流程
-
-任务 3：只在受控临时目录练习删除
-
-本任务只允许操作 `/tmp/day5-delete-practice`，禁止把搜索起点改为 `/`、`/home` 或学习仓库。
-
-执行：
-
-```bash
-practice_dir='/tmp/day5-delete-practice'
+practice_dir='/tmp/day6-grep-practice'
 mkdir -p "$practice_dir"
-touch "$practice_dir/keep.txt" "$practice_dir/remove.log"
 
-find "$practice_dir" -maxdepth 1 -type f -printf '%f\n'
+printf '%s\n' \
+    '10:00:00 [INFO] robot boot' \
+    '10:00:01 [INFO] motor ready' \
+    '10:00:02 [INFO] system healthy' \
+    > "$practice_dir/clean.log"
 
-find "$practice_dir" -maxdepth 1 -type f -name '*.log' -print
+printf '%s\n' \
+    '10:01:00 [INFO] robot boot' \
+    '10:01:01 [WARN] temp=78' \
+    '10:01:02 [INFO] fan increased' \
+    > "$practice_dir/warning.log"
 
-find "$practice_dir" -maxdepth 1 -type f -name '*.log' -delete
+printf '%s\n' \
+    '10:02:00 [INFO] robot boot' \
+    '10:02:01 [WARN] temp=82' \
+    '10:02:02 [ERROR] motor timeout' \
+    '10:02:03 [INFO] retry motor' \
+    '10:02:04 [ERROR] CAN offline' \
+    > "$practice_dir/error.log"
 
-find "$practice_dir" -maxdepth 1 -type f -printf '%f\n'
+find "$practice_dir" -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes\n'
 ```
 
-预期结果：
-
-- 删除前同时存在 `keep.txt` 和 `remove.log`。
-- 预览命令只显示 `remove.log`。
-- 执行 `-delete` 后只剩 `keep.txt`。
+预期：存在 `clean.log`、`warning.log`、`error.log` 三个文件。
 
 重点理解：
 
-- `-delete` 会直接删除匹配对象，不能撤销。
-- 安全做法是先用完全相同的条件配合 `-print` 预览，再把最后的动作改为 `-delete`。
-- 删除前必须再次确认搜索起点、`-type` 和名称条件。
-- 本任务不要求清理 `/tmp/day5-delete-practice`，避免额外使用宽泛删除命令。
+- 测试数据放在 `/tmp`，不作为项目源码提交。
+- 三份日志分别代表正常、警告和错误场景。
+- 使用固定输入可以重复验证脚本，避免系统实时日志变化影响结果。
 
 验证标准：
 
-- 能说明为什么先预览比直接删除安全。
-- 能指出本次删除的精确搜索起点、深度、类型和名称条件。
-- `keep.txt` 必须保留。
+- 三份日志均成功生成。
+- 能说明每份日志代表的场景。
+- 不要求记忆生成日志的 `printf` 写法。
 
-五、项目实践：日志搜索工具
+三、字面量搜索与正则表达式
 
-任务 4：编写 `day5_find_logs.sh`
+任务 2：观察容易产生误匹配的写法
 
-创建文件：
+执行：
+
+```bash
+grep -n -- '[ERROR]' "$practice_dir/error.log"
+
+grep -Fn -- '[ERROR]' "$practice_dir/error.log"
+```
+
+重点理解：
+
+- 普通 `grep` 会把 `[ERROR]` 当作正则表达式，其中方括号表示“匹配其中任意一个字符”，因此可能匹配很多不相关的行。
+- `grep -F` 把 `[ERROR]` 当作完整的普通文字，适合查找固定日志标签。
+- 日志标签是固定文本时，优先使用字面量搜索，意图更明确。
+
+验证标准：
+
+- 第一条命令可能显示不只两行错误日志。
+- 第二条命令只显示包含完整 `[ERROR]` 标签的两行。
+- 能用自己的话说明误匹配的原因，不要求背正则语法。
+
+任务 3：在需要表达变化时使用正则
+
+执行：
+
+```bash
+grep -En -- 'temp=[0-9]+' "$practice_dir/error.log"
+
+grep -En -- '\[(ERROR|WARN)\]' "$practice_dir/error.log"
+```
+
+重点理解：
+
+- `-E` 启用扩展正则表达式。
+- `temp=[0-9]+` 表示查找 `temp=` 后面跟一个或多个数字的内容。
+- `(ERROR|WARN)` 表示匹配 `ERROR` 或 `WARN`。
+- 固定文本使用 `-F`，需要表达“数字范围、多个可能模式”等变化时再使用正则。
+
+验证标准：
+
+- 第一条只找到温度行。
+- 第二条找到一行警告和两行错误。
+- 能判断某个需求更适合字面量还是正则搜索。
+
+四、查看故障上下文
+
+任务 4：保留错误发生前后的证据
+
+执行：
+
+```bash
+grep -Fn -C 1 -- '[ERROR]' "$practice_dir/error.log"
+```
+
+重点理解：
+
+- 只看错误行可能不知道故障前后发生了什么。
+- `-C 1` 同时显示匹配行前后各一行。
+- 在机器人系统中，上下文可以帮助判断错误发生前的状态和错误后的恢复动作。
+
+验证标准：
+
+- 输出包含错误行及相邻上下文。
+- 能指出 `motor timeout` 后出现了 `retry motor`。
+- 能说明上下文比只看单独错误行多提供了什么证据。
+
+五、项目实践：日志等级分析器
+
+任务 5：创建 `day6_log_analyzer.sh`
+
+文件位置：
 
 ```text
-robot-system-learning/linux/day5_find_logs.sh
+robot-system-learning/linux/day6_log_analyzer.sh
 ```
 
 完整代码：
@@ -150,205 +149,169 @@ robot-system-learning/linux/day5_find_logs.sh
 ```bash
 #!/bin/bash
 
-search_dir="${1:-.}"
-keyword="${2:-ERROR}"
+log_file="${1:-}"
 
-if [ ! -d "$search_dir" ]; then
-    echo "[ERROR] directory not found: $search_dir" >&2
-    exit 2
-fi
-
-mapfile -d '' -t log_files < <(
-    find "$search_dir" -maxdepth 2 -type f -name '*.log' -print0
-)
-
-if [ "${#log_files[@]}" -eq 0 ]; then
-    echo "[INFO] no log files found in: $search_dir"
+if [ -z "$log_file" ] || [ ! -f "$log_file" ]; then
+    echo "[ANALYZER ERROR] log file not found: $log_file" >&2
     exit 3
 fi
 
-echo "[INFO] searched log files: ${#log_files[@]}"
+error_count=$(grep -F -c -- '[ERROR]' "$log_file")
+warning_count=$(grep -F -c -- '[WARN]' "$log_file")
 
-grep -Hn -- "$keyword" "${log_files[@]}"
-grep_status=$?
+echo "Log file: $log_file"
+echo "ERROR count: $error_count"
+echo "WARN count: $warning_count"
 
-case "$grep_status" in
-    0)
-        echo "[OK] keyword found: $keyword"
-        exit 0
-        ;;
-    1)
-        echo "[INFO] no matching line: $keyword"
-        exit 1
-        ;;
-    *)
-        echo "[ERROR] grep failed with status: $grep_status" >&2
-        exit "$grep_status"
-        ;;
-esac
+if [ "$error_count" -gt 0 ]; then
+    echo "--- ERROR evidence ---"
+    grep -Fn -C 1 -- '[ERROR]' "$log_file"
+    echo "[STATUS] ERROR"
+    exit 2
+fi
+
+if [ "$warning_count" -gt 0 ]; then
+    echo "--- WARN evidence ---"
+    grep -Fn -C 1 -- '[WARN]' "$log_file"
+    echo "[STATUS] WARN"
+    exit 1
+fi
+
+echo "[STATUS] HEALTHY"
+exit 0
 ```
+
+整体流程：
+
+1. 接收一份日志文件作为输入。
+2. 输入文件不存在时立即报告错误。
+3. 分别统计固定标签 `[ERROR]` 和 `[WARN]`。
+4. 有错误时优先输出错误证据并返回 `2`。
+5. 没有错误但存在警告时输出警告证据并返回 `1`。
+6. 两者都没有时报告健康并返回 `0`。
 
 要求：
 
-- 必须由用户自己创建脚本并逐段阅读。
-- 不理解的语法先记录问题，不能直接写“已经理解”。
-- 不要给脚本添加自动删除日志的功能；搜索工具和删除工具应分开。
+- AI 已提供完整代码，用户只需创建文件、运行并理解整体流程。
+- 不要求记住 `grep` 的组合参数。
+- 不给脚本增加自动修改或删除日志的功能；分析工具只读取证据。
 
-六、理解脚本关键语法
+六、脚本验证
 
-任务 5：先阅读，再运行
+任务 6：验证四种结果
 
-重点理解：
-
-- `${1:-.}`：未传第一个参数时，默认从当前目录搜索。
-- `${2:-ERROR}`：未传第二个参数时，默认搜索 `ERROR`。
-- `[ ! -d "$search_dir" ]`：判断搜索目录不存在。
-- `mapfile`：把多条输入读取进 Bash 数组。
-- `-print0`：使用空字符分隔文件路径，不使用换行符。
-- `-d ''`：让 `mapfile` 按空字符读取。
-- `-t`：去掉每项末尾的分隔符。
-- `< <(...)`：进程替换，把括号中命令的输出提供给 `mapfile`。
-- `${#log_files[@]}`：数组元素数量，也就是找到的日志文件数。
-- `grep -Hn -- "$keyword" "${log_files[@]}"`：安全地把每个日志路径作为独立参数交给 `grep`。
-- `grep` 返回 `0` 表示找到匹配，`1` 表示没有匹配，大于 `1` 表示执行错误。
-- `case` 根据不同状态执行不同分支。
-
-验证标准：
-
-- 能解释为什么文件路径不能简单地按空格拆分。
-- 能说明 `-print0` 与 `mapfile -d ''` 如何配合。
-- 能说明数组元素数量是搜索的日志文件数量，不是匹配行数。
-- 能说出脚本中退出状态 `0`、`1`、`2`、`3` 的意义。
-
-七、脚本验证
-
-任务 6：正常和异常场景
-
-进入脚本目录：
+进入脚本目录并添加执行权限：
 
 ```bash
 cd ~/workspace/learn/learn/robot-system-learning/linux
-chmod +x day5_find_logs.sh
+chmod +x day6_log_analyzer.sh
 ```
 
-场景 1：找到关键字
+场景 1：正常日志
 
 ```bash
-./day5_find_logs.sh . Kernel
+./day6_log_analyzer.sh /tmp/day6-grep-practice/clean.log
 echo $?
 ```
 
-预期：显示日志文件中的 `Kernel` 行，最后返回 `0`。
+预期：`ERROR count` 和 `WARN count` 都是 `0`，状态为 `HEALTHY`，返回 `0`。
 
-场景 2：日志存在，但关键字不存在
+场景 2：警告日志
 
 ```bash
-./day5_find_logs.sh . DAY5_NOT_FOUND
+./day6_log_analyzer.sh /tmp/day6-grep-practice/warning.log
 echo $?
 ```
 
-预期：输出 `no matching line`，返回 `1`。
+预期：没有错误、存在一个警告，状态为 `WARN`，返回 `1`。
 
-场景 3：搜索目录不存在
+场景 3：错误日志
 
 ```bash
-./day5_find_logs.sh ./day5_missing_dir Kernel
+./day6_log_analyzer.sh /tmp/day6-grep-practice/error.log
 echo $?
 ```
 
-预期：输出 `directory not found`，返回 `2`。
+预期：存在两个错误和一个警告；错误优先，状态为 `ERROR`，返回 `2`，并显示错误上下文。
 
-场景 4：目录存在，但没有 `*.log`
+场景 4：文件不存在
 
 ```bash
-./day5_find_logs.sh ./demo Kernel
+./day6_log_analyzer.sh /tmp/day6-grep-practice/missing.log
 echo $?
 ```
 
-预期：输出 `no log files found`，返回 `3`。
-
-场景 5：关键字以 `-` 开头
-
-```bash
-./day5_find_logs.sh . -n
-echo $?
-```
-
-预期：`-n` 被当作搜索文本而不是 `grep` 选项；如果没有匹配则返回 `1`，不应出现选项解析错误。
+预期：提示日志文件不存在，返回 `3`。
 
 验证标准：
 
-- 五个场景的退出状态符合预期。
-- 能根据状态区分“成功匹配、无匹配、目录不存在、没有日志文件”。
-- 带 `-` 的关键字不会被误当成命令选项。
-- 正常和异常输出均记录到 out.md。
+- 四种场景的统计、状态和退出状态均符合预期。
+- 能说明为什么错误日志中虽然也有警告，最终状态仍是 `ERROR`。
+- 脚本不修改输入日志。
 
-八、必须回答的问题
+七、必须回答的问题
 
-把下面问题和自己的答案写入 out.md：
+把答案写入 `out.md`。重点回答整体逻辑，不要求背参数：
 
-1. `find` 命令中的搜索起点与筛选条件分别是什么？
-2. `-maxdepth 1` 限制了什么？
-3. `-name` 与 `-iname` 有什么区别？
-4. `-size +500c` 中 `+`、`500`、`c` 分别代表什么？
-5. 为什么 `find -exec grep ...` 没有匹配时，`find` 仍可能返回 `0`？
-6. 为什么处理文件名时，`-print0` 比普通换行分隔更可靠？
-7. `mapfile -d '' -t log_files` 做了什么？
-8. `${#log_files[@]}` 是匹配行数还是日志文件数？
-9. `grep` 的退出状态 `0`、`1`、大于 `1` 分别代表什么？
-10. `--` 为什么能保护以 `-` 开头的关键字？
-11. 为什么删除前必须先用同样的条件执行 `-print`？
-12. `day5_find_logs.sh` 的状态 `0`、`1`、`2`、`3` 分别代表什么？
+1. `grep` 在日志分析中的输入、处理和输出分别是什么？
+2. 搜索固定标签 `[ERROR]` 时，为什么字面量搜索比普通正则更准确？
+3. 什么情况下适合使用正则表达式？
+4. 查看错误前后的上下文能提供什么额外证据？
+5. `day6_log_analyzer.sh` 从输入日志到最终状态经历了哪些步骤？
+6. 为什么脚本先判断 `ERROR`，再判断 `WARN`？
+7. 脚本状态 `0`、`1`、`2`、`3` 分别表示什么？
+8. 为什么日志分析脚本只读取日志，不应该自动删除或修改日志？
 
-九、操作与问题记录要求
+八、操作与问题记录要求
 
-在 out.md 的 `# Day5 用户操作输出记录` 标题下记录：
+在 `out.md` 的 `# Day6 用户操作输出记录` 标题下记录：
 
-- 执行过的命令和真实输出。
-- 每个筛选条件的实际作用。
-- 五个脚本场景的预期结果、实际结果和退出状态。
-- 自己对 12 个问题的回答。
-- 遇到的问题、第一判断、检查过程、根因和解决办法。
-- 今天真正学会的内容和仍然不懂的内容。
+- 创建测试日志的命令和实际结果。
+- 字面量与正则搜索的输出差异及自己的解释。
+- 错误上下文输出及它提供的证据。
+- 四个脚本场景的实际输出和退出状态。
+- 对 8 个问题的回答。
+- 遇到的问题、第一判断、检查过程、根因和解决办法；没有运行错误时，可以记录理解过程中产生的疑问。
+- 最后用三句话总结：真正学会了什么、排查了什么、还有什么不确定。
 
-不要提前修改 Linux README。Day5 完成并通过检查后，再由 AI 按学习问题记录模板整理到对应 README。
+不要提前修改 Linux README。Day6 完成并通过检查后，再由 AI 按学习问题记录模板归档。
 
-十、Git 提交要求
+九、Git 提交要求
 
-完成学习并通过检查后，从学习目录执行：
+Day6 完成、检查并归档后，从学习目录执行：
 
 ```bash
 cd ~/workspace/learn/learn
 git status --short
 git diff
-git add 当前学习任务安排.txt 学习任务模板.md 学习问题记录模板.md AGENTS.md out.md robot-system-learning/linux/README.md robot-system-learning/linux/day5_find_logs.sh
+git add 当前学习任务安排.txt 学习任务模板.md 学习问题记录模板.md AGENTS.md out.md robot-system-learning/linux/README.md robot-system-learning/linux/day6_log_analyzer.sh
 git diff --cached --name-only
-git commit -m "day5: add safe log search practice"
+git commit -m "day6: add diagnostic log analyzer"
 ```
 
 要求：
 
-- `当前学习任务安排.txt`、两个模板、AGENTS.md、out.md 都必须处于 Git 管理中。
-- 两个模板没有改动时不会出现在本次差异中，但仍包含在提交快照里。
-- 不使用 `git add .`，避免误提交编译产物、日志和临时文件。
-- 不提交 `*.log`、C++ 编译产物或 `temp.txt`。
-- 提交前必须确认暂存区只包含任务、规则、学习记录、README 和 Day5 脚本。
+- 当前任务安排、两个模板、`AGENTS.md`、`out.md` 必须保持在 Git 管理中。
+- 不使用 `git add .`。
+- 不提交 `/tmp` 中的测试日志、项目中的 `*.log`、C++ 编译产物或 `temp.txt`。
+- 提交前确认暂存区只包含任务、规则、学习记录、README 和 Day6 脚本。
 
-十一、Day5 简短执行计划
+十、Day6 简短执行计划
 
-1. find 组合筛选 → 验证：能解释搜索起点和多个条件的“并且”关系。
-2. find 与 grep → 验证：理解 `-exec` 和退出状态不能代表内容匹配。
-3. 安全删除 → 验证：只在 `/tmp` 中先预览再删除，保留 `keep.txt`。
-4. 编写日志搜索脚本 → 验证：能处理文件名并保存 `grep` 状态。
-5. 五种场景测试 → 验证：退出状态分别符合预期。
-6. 总结与 Git → 验证：out.md 记录完整，提交不包含运行产物。
+1. 创建固定测试日志 → 验证：得到正常、警告和错误三种输入。
+2. 对比字面量与正则 → 验证：理解为什么固定标签优先使用字面量。
+3. 查看故障上下文 → 验证：能找出错误前后的状态。
+4. 创建日志分析器 → 验证：理解输入、统计、优先级和输出流程。
+5. 验证四种场景 → 验证：状态依次为 `0`、`1`、`2`、`3`。
+6. 完成记录 → 验证：`out.md` 包含真实输出、问题答案和总结。
 
-十二、Day5 完成标准
+十一、Day6 完成标准
 
-- 完成所有 `find` 组合筛选实验，并能解释每个条件。
-- 完成受控安全删除实验，`keep.txt` 保留。
-- `day5_find_logs.sh` 语法正确且可以执行。
-- 五个测试场景的输出和退出状态符合预期。
-- 能用自己的话回答 12 个问题。
-- out.md 包含操作、解释、异常、问题和学习总结。
-- Git 暂存区不包含日志、编译程序或 temp.txt。
+- 三份测试日志生成成功。
+- 能区分固定文本搜索和正则搜索的使用场景。
+- 能使用上下文输出取得故障前后证据。
+- `day6_log_analyzer.sh` 语法正确且可以执行。
+- 四种测试场景的统计、结论和退出状态正确。
+- 能从整体流程回答 8 个问题。
+- `out.md` 记录完整。
+- Git 提交不包含测试日志、编译程序或临时文件。
