@@ -1,147 +1,166 @@
-Day6 详细学习安排：grep 取证与日志等级分析
+Day7 详细学习安排：日志分段查看与实时观察
 
 一、今日目标
 
-- 理解 `grep` 在日志分析链路中的输入、处理和输出。
-- 区分“按字面量搜索”和“按正则表达式搜索”。
-- 使用上下文行查看故障发生前后的信息。
-- 使用多个模式筛选 `ERROR` 和 `WARN` 日志。
-- 完成并验证 `day6_log_analyzer.sh` 日志等级分析脚本。
-- 能根据脚本状态判断系统日志是正常、警告、错误还是输入无效。
+- 根据文件大小和查看目的选择 `cat`、`less`、`head` 或 `tail`。
+- 理解“查看全部、查看首部、查看尾部、交互搜索”的区别。
+- 理解只看日志首尾为什么可能遗漏中间故障。
+- 使用 `tail -f` 观察日志新增内容。
+- 完成并验证 `day7_log_snapshot.sh` 日志首尾快照工具。
+- 建立“原始日志只读、快照只是部分证据”的排查意识。
 
 说明：
 
-- Day3 已学习基础 `grep`，Day5 已学习日志文件搜索和 `grep` 退出状态，今天不重复这些基础内容。
-- Day6 原手册主题是 `grep`，今天重点学习“匹配规则是否准确”和“如何从日志中取得故障证据”。
-- 代码和命令均已完整提供，不要求背参数；重点理解每一步为什么存在，以及输入如何变成结论。
+- Day2 已学习 `cat/head/tail` 的基础用途，今天不重复基础命令介绍。
+- Day7 原手册主题是 `cat/less/head/tail`，今天重点学习如何为不同日志场景选择查看方式。
+- 命令和脚本均已完整提供，不要求背参数，只需要理解整体用途和限制。
+- 按用户要求，今天不考数字退出状态码，也不要求填写每日总结。
 - 今天只学习 Linux 与 Shell，不新增 C++、CAN、ROS2 内容。
-- 建议用时 45～70 分钟。
+- 建议用时 40～60 分钟。
 - 所有练习由用户亲自在终端执行，真实输出记录到 `out.md`。
 
-二、准备可重复验证的日志
+二、准备包含中间故障的测试日志
 
-任务 1：只在 `/tmp` 中创建测试数据
+任务 1：在 `/tmp` 中创建固定测试日志
 
 执行：
 
 ```bash
-practice_dir='/tmp/day6-grep-practice'
+practice_dir='/tmp/day7-view-practice'
 mkdir -p "$practice_dir"
 
-printf '%s\n' \
-    '10:00:00 [INFO] robot boot' \
-    '10:00:01 [INFO] motor ready' \
-    '10:00:02 [INFO] system healthy' \
-    > "$practice_dir/clean.log"
+for number in $(seq 1 40); do
+    case "$number" in
+        20) printf '%02d [WARN] motor temperature rising\n' "$number" ;;
+        21) printf '%02d [ERROR] motor timeout\n' "$number" ;;
+        22) printf '%02d [RECOVERY] motor restarted\n' "$number" ;;
+        *)  printf '%02d [INFO] robot running\n' "$number" ;;
+    esac
+done > "$practice_dir/robot.log"
 
-printf '%s\n' \
-    '10:01:00 [INFO] robot boot' \
-    '10:01:01 [WARN] temp=78' \
-    '10:01:02 [INFO] fan increased' \
-    > "$practice_dir/warning.log"
-
-printf '%s\n' \
-    '10:02:00 [INFO] robot boot' \
-    '10:02:01 [WARN] temp=82' \
-    '10:02:02 [ERROR] motor timeout' \
-    '10:02:03 [INFO] retry motor' \
-    '10:02:04 [ERROR] CAN offline' \
-    > "$practice_dir/error.log"
-
-find "$practice_dir" -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes\n'
+wc -l "$practice_dir/robot.log"
 ```
 
-预期：存在 `clean.log`、`warning.log`、`error.log` 三个文件。
+预期：日志共 40 行，警告、错误和恢复信息位于中间位置。
 
 重点理解：
 
-- 测试数据放在 `/tmp`，不作为项目源码提交。
-- 三份日志分别代表正常、警告和错误场景。
-- 使用固定输入可以重复验证脚本，避免系统实时日志变化影响结果。
+- 测试日志放在 `/tmp`，不提交到项目仓库。
+- 中间故障用于验证“只看开头或结尾可能漏掉问题”。
+- 不要求理解或记忆生成日志的循环细节。
 
 验证标准：
 
-- 三份日志均成功生成。
-- 能说明每份日志代表的场景。
-- 不要求记忆生成日志的 `printf` 写法。
+- `wc -l` 显示 40 行。
+- 能说明故障信息为什么故意放在日志中间。
 
-三、字面量搜索与正则表达式
+三、按查看目的选择工具
 
-任务 2：观察容易产生误匹配的写法
+任务 2：比较完整输出、首部和尾部
 
 执行：
 
 ```bash
-grep -n -- '[ERROR]' "$practice_dir/error.log"
+cat "$practice_dir/robot.log"
 
-grep -Fn -- '[ERROR]' "$practice_dir/error.log"
+head -n 5 "$practice_dir/robot.log"
+
+tail -n 5 "$practice_dir/robot.log"
 ```
 
-重点理解：
+观察并回答：
 
-- 普通 `grep` 会把 `[ERROR]` 当作正则表达式，其中方括号表示“匹配其中任意一个字符”，因此可能匹配很多不相关的行。
-- `grep -F` 把 `[ERROR]` 当作完整的普通文字，适合查找固定日志标签。
-- 日志标签是固定文本时，优先使用字面量搜索，意图更明确。
+- `cat` 显示整个文件，能看到中间故障，但大文件会产生大量终端输出。
+- `head` 适合快速确认文件开头、标题或启动阶段。
+- `tail` 适合快速确认文件结尾和最近记录。
+- 本次 `head` 和 `tail` 都看不到第 20～22 行的故障过程。
 
 验证标准：
 
-- 第一条命令可能显示不只两行错误日志。
-- 第二条命令只显示包含完整 `[ERROR]` 标签的两行。
-- 能用自己的话说明误匹配的原因，不要求背正则语法。
+- `cat` 输出 40 行完整日志。
+- `head` 只看到开头的正常记录。
+- `tail` 只看到结尾的正常记录。
+- 能说明首尾快照为什么不能代表整份日志没有错误。
 
-任务 3：在需要表达变化时使用正则
+任务 3：使用 `less` 搜索中间故障
 
 执行：
 
 ```bash
-grep -En -- 'temp=[0-9]+' "$practice_dir/error.log"
+less "$practice_dir/robot.log"
+```
 
-grep -En -- '\[(ERROR|WARN)\]' "$practice_dir/error.log"
+进入 `less` 后按顺序操作：
+
+```text
+/ERROR    搜索 ERROR
+n         跳到下一个匹配
+g         回到文件开头
+G         跳到文件结尾
+q         退出 less
 ```
 
 重点理解：
 
-- `-E` 启用扩展正则表达式。
-- `temp=[0-9]+` 表示查找 `temp=` 后面跟一个或多个数字的内容。
-- `(ERROR|WARN)` 表示匹配 `ERROR` 或 `WARN`。
-- 固定文本使用 `-F`，需要表达“数字范围、多个可能模式”等变化时再使用正则。
+- `less` 分页显示文件，不会一次把全部内容刷到终端。
+- 可以在文件内搜索并前后移动，适合人工查看较大的日志。
+- 这些按键不要求记忆，需要时查看帮助即可。
 
 验证标准：
 
-- 第一条只找到温度行。
-- 第二条找到一行警告和两行错误。
-- 能判断某个需求更适合字面量还是正则搜索。
+- 能在 `less` 中定位到第 21 行的 `motor timeout`。
+- 能正常退出并回到 Shell。
+- 在 `out.md` 中记录是否找到错误，不需要复制整个交互界面。
 
-四、查看故障上下文
+四、实时观察日志新增内容
 
-任务 4：保留错误发生前后的证据
+任务 4：使用两个终端观察日志更新
 
-执行：
+先创建实时日志：
 
 ```bash
-grep -Fn -C 1 -- '[ERROR]' "$practice_dir/error.log"
+printf '%s\n' \
+    '12:00:00 [INFO] monitor started' \
+    '12:00:01 [INFO] waiting for data' \
+    > "$practice_dir/live.log"
 ```
+
+在终端 A 执行：
+
+```bash
+tail -n 2 -f /tmp/day7-view-practice/live.log
+```
+
+保持终端 A 运行，在终端 B 执行：
+
+```bash
+printf '%s\n' '12:00:02 [WARN] sensor delayed' >> /tmp/day7-view-practice/live.log
+printf '%s\n' '12:00:03 [INFO] sensor recovered' >> /tmp/day7-view-practice/live.log
+```
+
+观察终端 A 出现两条新记录后，按 `Ctrl+C` 停止跟踪。
 
 重点理解：
 
-- 只看错误行可能不知道故障前后发生了什么。
-- `-C 1` 同时显示匹配行前后各一行。
-- 在机器人系统中，上下文可以帮助判断错误发生前的状态和错误后的恢复动作。
+- 普通 `tail` 是一次性快照。
+- `tail -f` 会继续等待并显示文件后续新增内容。
+- `Ctrl+C` 是停止当前前台命令，不会删除日志。
+- 实时跟踪适合观察正在运行的机器人节点、服务或测试程序。
 
 验证标准：
 
-- 输出包含错误行及相邻上下文。
-- 能指出 `motor timeout` 后出现了 `retry motor`。
-- 能说明上下文比只看单独错误行多提供了什么证据。
+- 终端 A 先显示原有两行，之后显示终端 B 追加的两行。
+- 停止跟踪后 `live.log` 仍然存在且内容完整。
+- 能说明实时跟踪与一次性查看的区别。
 
-五、项目实践：日志等级分析器
+五、项目实践：日志首尾快照工具
 
-任务 5：创建 `day6_log_analyzer.sh`
+任务 5：创建 `day7_log_snapshot.sh`
 
 文件位置：
 
 ```text
-robot-system-learning/linux/day6_log_analyzer.sh
+robot-system-learning/linux/day7_log_snapshot.sh
 ```
 
 完整代码：
@@ -150,168 +169,166 @@ robot-system-learning/linux/day6_log_analyzer.sh
 #!/bin/bash
 
 log_file="${1:-}"
+line_count="${2:-5}"
 
 if [ -z "$log_file" ] || [ ! -f "$log_file" ]; then
-    echo "[ANALYZER ERROR] log file not found: $log_file" >&2
-    exit 3
-fi
-
-error_count=$(grep -F -c -- '[ERROR]' "$log_file")
-warning_count=$(grep -F -c -- '[WARN]' "$log_file")
-
-echo "Log file: $log_file"
-echo "ERROR count: $error_count"
-echo "WARN count: $warning_count"
-
-if [ "$error_count" -gt 0 ]; then
-    echo "--- ERROR evidence ---"
-    grep -Fn -C 1 -- '[ERROR]' "$log_file"
-    echo "[STATUS] ERROR"
-    exit 2
-fi
-
-if [ "$warning_count" -gt 0 ]; then
-    echo "--- WARN evidence ---"
-    grep -Fn -C 1 -- '[WARN]' "$log_file"
-    echo "[STATUS] WARN"
+    echo "[SNAPSHOT ERROR] log file not found: $log_file" >&2
     exit 1
 fi
 
-echo "[STATUS] HEALTHY"
-exit 0
+if ! [[ "$line_count" =~ ^[1-9][0-9]*$ ]]; then
+    echo "[SNAPSHOT ERROR] line count must be a positive integer: $line_count" >&2
+    exit 1
+fi
+
+total_lines=$(wc -l < "$log_file")
+
+echo "Log file: $log_file"
+echo "Total lines: $total_lines"
+echo "--- First $line_count lines ---"
+head -n "$line_count" "$log_file"
+echo "--- Last $line_count lines ---"
+tail -n "$line_count" "$log_file"
+
+if [ "$total_lines" -gt $((line_count * 2)) ]; then
+    echo "[NOTICE] middle content is not included in this snapshot"
+fi
 ```
 
 整体流程：
 
-1. 接收一份日志文件作为输入。
-2. 输入文件不存在时立即报告错误。
-3. 分别统计固定标签 `[ERROR]` 和 `[WARN]`。
-4. 有错误时优先输出错误证据并返回 `2`。
-5. 没有错误但存在警告时输出警告证据并返回 `1`。
-6. 两者都没有时报告健康并返回 `0`。
+1. 接收日志文件和希望查看的行数，默认查看首尾各 5 行。
+2. 先确认日志文件存在，行数参数有效。
+3. 统计日志总行数。
+4. 分别输出文件开头和结尾的快照。
+5. 文件中间还有内容时，明确提示快照未包含中间部分。
 
 要求：
 
 - AI 已提供完整代码，用户只需创建文件、运行并理解整体流程。
-- 不要求记住 `grep` 的组合参数。
-- 不给脚本增加自动修改或删除日志的功能；分析工具只读取证据。
+- 不要求学习脚本中的正则细节或数字退出状态。
+- 脚本只读取日志，不修改或删除日志。
 
 六、脚本验证
 
-任务 6：验证四种结果
+任务 6：验证正常与异常场景
 
 进入脚本目录并添加执行权限：
 
 ```bash
 cd ~/workspace/learn/learn/robot-system-learning/linux
-chmod +x day6_log_analyzer.sh
+chmod +x day7_log_snapshot.sh
 ```
 
-场景 1：正常日志
+场景 1：默认查看首尾各 5 行
 
 ```bash
-./day6_log_analyzer.sh /tmp/day6-grep-practice/clean.log
-echo $?
+./day7_log_snapshot.sh /tmp/day7-view-practice/robot.log
 ```
 
-预期：`ERROR count` 和 `WARN count` 都是 `0`，状态为 `HEALTHY`，返回 `0`。
+预期：显示总行数 40、开头 5 行、结尾 5 行，并提示中间内容未包含。
 
-场景 2：警告日志
+场景 2：自定义查看首尾各 3 行
 
 ```bash
-./day6_log_analyzer.sh /tmp/day6-grep-practice/warning.log
-echo $?
+./day7_log_snapshot.sh /tmp/day7-view-practice/robot.log 3
 ```
 
-预期：没有错误、存在一个警告，状态为 `WARN`，返回 `1`。
+预期：显示开头和结尾各 3 行，并提示中间内容未包含。
 
-场景 3：错误日志
+场景 3：文件不存在
 
 ```bash
-./day6_log_analyzer.sh /tmp/day6-grep-practice/error.log
-echo $?
+./day7_log_snapshot.sh /tmp/day7-view-practice/missing.log
 ```
 
-预期：存在两个错误和一个警告；错误优先，状态为 `ERROR`，返回 `2`，并显示错误上下文。
+预期：明确提示日志文件不存在。
 
-场景 4：文件不存在
+场景 4：行数无效
 
 ```bash
-./day6_log_analyzer.sh /tmp/day6-grep-practice/missing.log
-echo $?
+./day7_log_snapshot.sh /tmp/day7-view-practice/robot.log 0
 ```
 
-预期：提示日志文件不存在，返回 `3`。
+预期：明确提示行数必须是正整数。
 
 验证标准：
 
-- 四种场景的统计、状态和退出状态均符合预期。
-- 能说明为什么错误日志中虽然也有警告，最终状态仍是 `ERROR`。
-- 脚本不修改输入日志。
+- 两个正常场景的总行数和首尾输出正确。
+- 两个异常场景都有清晰的屏幕提示。
+- 不要求记录或解释数字状态码。
+- 运行脚本前后 `robot.log` 内容保持不变。
 
 七、必须回答的问题
 
-把答案写入 `out.md`。重点回答整体逻辑，不要求背参数：
+把答案写入 `out.md`，只回答用途和整体逻辑：
 
-1. `grep` 在日志分析中的输入、处理和输出分别是什么？
-2. 搜索固定标签 `[ERROR]` 时，为什么字面量搜索比普通正则更准确？
-3. 什么情况下适合使用正则表达式？
-4. 查看错误前后的上下文能提供什么额外证据？
-5. `day6_log_analyzer.sh` 从输入日志到最终状态经历了哪些步骤？
-6. 为什么脚本先判断 `ERROR`，再判断 `WARN`？
-7. 脚本状态 `0`、`1`、`2`、`3` 分别表示什么？
-8. 为什么日志分析脚本只读取日志，不应该自动删除或修改日志？
+1. `cat`、`head`、`tail`、`less` 分别适合什么查看场景？
+2. 为什么不建议用 `cat` 直接查看非常大的日志？
+3. 为什么只看 `head` 和 `tail` 不能证明整份日志没有错误？
+4. `less` 相比一次性输出有什么优势？
+5. 实时跟踪和一次性查看有什么区别？
+6. `day7_log_snapshot.sh` 的整体处理流程是什么？
+7. 为什么首尾快照必须提示“中间内容未包含”？
+8. 为什么日志查看和快照工具应该保持只读？
+
+说明：
+
+- 不考按键、参数和数字状态码。
+- 不要求回答正则表达式细节。
+- 不要求填写每日总结。
 
 八、操作与问题记录要求
 
-在 `out.md` 的 `# Day6 用户操作输出记录` 标题下记录：
+在 `out.md` 的 `# Day7 用户操作输出记录` 标题下记录：
 
-- 创建测试日志的命令和实际结果。
-- 字面量与正则搜索的输出差异及自己的解释。
-- 错误上下文输出及它提供的证据。
-- 四个脚本场景的实际输出和退出状态。
-- 对 8 个问题的回答。
-- 遇到的问题、第一判断、检查过程、根因和解决办法；没有运行错误时，可以记录理解过程中产生的疑问。
-- 最后用三句话总结：真正学会了什么、排查了什么、还有什么不确定。
+- 测试日志的行数和三种查看方式的实际结果。
+- 是否通过 `less` 找到中间错误。
+- `tail -f` 实时看到的新增内容。
+- 四个脚本场景的实际屏幕输出。
+- 对 8 个整体逻辑问题的回答。
+- 如果遇到问题，记录现象、判断、检查和解决；没有问题时无需额外总结。
 
-不要提前修改 Linux README。Day6 完成并通过检查后，再由 AI 按学习问题记录模板归档。
+不要提前修改 Linux README。Day7 完成并通过检查后，再由 AI 按学习问题记录模板归档。
 
 九、Git 提交要求
 
-Day6 完成、检查并归档后，从学习目录执行：
+Day7 完成、检查并归档后，从学习目录执行：
 
 ```bash
 cd ~/workspace/learn/learn
 git status --short
 git diff
-git add 当前学习任务安排.txt 学习任务模板.md 学习问题记录模板.md AGENTS.md out.md robot-system-learning/linux/README.md robot-system-learning/linux/day6_log_analyzer.sh
+git add 当前学习任务安排.txt 学习任务模板.md 学习问题记录模板.md AGENTS.md out.md robot-system-learning/linux/README.md robot-system-learning/linux/day7_log_snapshot.sh
 git diff --cached --name-only
-git commit -m "day6: add diagnostic log analyzer"
+git commit -m "day7: add log snapshot practice"
+git push origin main
 ```
 
 要求：
 
 - 当前任务安排、两个模板、`AGENTS.md`、`out.md` 必须保持在 Git 管理中。
 - 不使用 `git add .`。
-- 不提交 `/tmp` 中的测试日志、项目中的 `*.log`、C++ 编译产物或 `temp.txt`。
-- 提交前确认暂存区只包含任务、规则、学习记录、README 和 Day6 脚本。
+- 不提交 `/tmp` 测试日志、项目中的 `*.log`、C++ 编译产物或 `temp.txt`。
+- 提交前确认暂存区只包含任务、规则、学习记录、README 和 Day7 脚本。
 
-十、Day6 简短执行计划
+十、Day7 简短执行计划
 
-1. 创建固定测试日志 → 验证：得到正常、警告和错误三种输入。
-2. 对比字面量与正则 → 验证：理解为什么固定标签优先使用字面量。
-3. 查看故障上下文 → 验证：能找出错误前后的状态。
-4. 创建日志分析器 → 验证：理解输入、统计、优先级和输出流程。
-5. 验证四种场景 → 验证：状态依次为 `0`、`1`、`2`、`3`。
-6. 完成记录 → 验证：`out.md` 包含真实输出、问题答案和总结。
+1. 创建中间含故障的日志 → 验证：总计 40 行。
+2. 比较完整、首部、尾部查看 → 验证：理解首尾快照的证据边界。
+3. 使用 `less` 搜索 → 验证：找到位于中间的错误。
+4. 实时观察新增日志 → 验证：终端 A 能看到终端 B 追加的内容。
+5. 创建首尾快照工具 → 验证：正常与异常提示符合预期。
+6. 完成记录 → 验证：`out.md` 包含实际结果和整体逻辑答案。
 
-十一、Day6 完成标准
+十一、Day7 完成标准
 
-- 三份测试日志生成成功。
-- 能区分固定文本搜索和正则搜索的使用场景。
-- 能使用上下文输出取得故障前后证据。
-- `day6_log_analyzer.sh` 语法正确且可以执行。
-- 四种测试场景的统计、结论和退出状态正确。
-- 能从整体流程回答 8 个问题。
-- `out.md` 记录完整。
+- 测试日志包含 40 行且中间故障位置正确。
+- 能根据查看目标选择合适的日志查看工具。
+- 能使用 `less` 找到日志中间的错误。
+- 能实时观察日志新增内容并正常停止跟踪。
+- `day7_log_snapshot.sh` 语法正确且可以执行。
+- 四个脚本场景的屏幕输出符合预期。
+- 能回答 8 个整体逻辑问题。
+- `out.md` 包含真实操作和问题答案。
 - Git 提交不包含测试日志、编译程序或临时文件。
