@@ -1,370 +1,315 @@
-Day8 详细学习安排：诊断管道与证据保存
+Day10 详细学习安排：环境变量与 PATH
 
 一、今日目标
 
-- 把管道理解为“上一阶段输出成为下一阶段输入”的数据链路。
-- 理解管道默认传递标准输出，标准错误不会自动进入下一阶段。
-- 使用 `tee` 在屏幕显示结果的同时保存证据文件。
-- 学会管道结果异常时逐段检查，而不是直接猜测最终命令有问题。
-- 完成并验证 `day8_diagnostic_pipeline.sh` 诊断信息提取工具。
-- 保证输入日志只读，并避免旧报告污染本次测试结果。
+- 理解普通 Shell 变量与环境变量的核心差别。
+- 理解环境变量可以把配置传给当前 Shell 启动的程序。
+- 理解 `PATH` 是命令搜索目录列表，以及 Shell 如何根据它找到命令。
+- 能根据“命令找不到”的现象，检查命令文件、执行权限和 `PATH`。
+- 完成原学习计划指定的 `robot_env.sh` 机器人项目环境文件。
+- 理解加载环境文件前后，项目变量和命令查找结果为什么不同。
 
 说明：
 
-- Day2、Day3 已学习基础管道用法，今天不重复“管道符是什么”的简单练习。
-- Day8 原手册主题是“管道”，今天重点学习数据流、标准错误边界、证据保存和逐段排查。
-- 命令和脚本均已完整提供，不要求背参数，只理解每个阶段的输入、处理和输出。
-- 按用户要求，不考数字状态码、正则表达式细节，也不要求每日总结。
+- Day10 严格保持总计划中的“环境变量与 PATH”主题，项目产出为 `robot_env.sh`。
+- Day3 已执行过 `echo "$PATH"` 和 `export`，但当时操作记录明确表示对变量、环境变量和 `PATH` 理解不完整，而且没有 `robot_env.sh` 项目产出，因此 Day10 不跳过。
+- 今天不重复学习变量引用的细节语法，只通过子进程和命令查找结果建立整体理解。
+- `source` 的今日用途只是加载 `robot_env.sh`；Day11 才按原计划专门学习 `source` 的执行环境和边界。
+- 不要求背命令参数或 Shell 细节，只理解配置如何传递、命令如何被找到、错误时先检查什么。
+- 不考数字状态码，不要求填写每日总结。
 - 今天只学习 Linux 与 Shell，不新增 C++、CAN、ROS2 内容。
 - 建议用时 40～60 分钟。
-- 所有练习由用户亲自在终端执行，真实输出记录到 `out.md`。
+- 所有练习由用户亲自在终端执行，并将真实输出写入 `out.md`。
 
-二、准备固定日志
+二、理解普通变量与环境变量
 
-任务 1：在 `/tmp` 中创建正常与异常日志
+任务 1：观察当前 Shell 和子进程看到的变量
 
 执行：
 
 ```bash
-practice_dir='/tmp/day8-pipeline-practice'
-mkdir -p "$practice_dir"
+DAY10_LOCAL='local-value'
+export DAY10_ENV='environment-value'
 
-printf '%s\n' \
-    '[INFO] robot boot' \
-    '[WARN] motor temperature high' \
-    '[INFO] retry motor' \
-    '[ERROR] motor timeout' \
-    '[ERROR] CAN offline' \
-    > "$practice_dir/mixed.log"
+printf 'current shell local: %s\n' "$DAY10_LOCAL"
+printf 'current shell environment: %s\n' "$DAY10_ENV"
 
-printf '%s\n' \
-    '[INFO] robot boot' \
-    '[INFO] motor ready' \
-    '[INFO] system healthy' \
-    > "$practice_dir/clean.log"
-
-wc -l "$practice_dir/mixed.log" "$practice_dir/clean.log"
-```
-
-预期：`mixed.log` 为 5 行，`clean.log` 为 3 行。
-
-重点理解：
-
-- `mixed.log` 包含一条警告和两条错误。
-- `clean.log` 只包含正常信息。
-- 测试数据位于 `/tmp`，不作为项目源码提交。
-
-验证标准：
-
-- 两份日志行数正确。
-- 能说明两份日志分别用于验证什么场景。
-
-三、把管道当作数据处理链
-
-任务 2：观察“输入、筛选、统计”三个阶段
-
-先只执行筛选阶段：
-
-```bash
-grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log"
-```
-
-再执行完整管道：
-
-```bash
-grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log" | wc -l
+bash -c 'printf "child local: %s\n" "${DAY10_LOCAL:-<empty>}"; printf "child environment: %s\n" "${DAY10_ENV:-<empty>}"'
 ```
 
 预期：
 
-- 第一条命令显示一条警告和两条错误。
-- 第二条命令输出 `3`，因为筛选结果包含三行。
+- 当前 Shell 能看到 `DAY10_LOCAL` 和 `DAY10_ENV`。
+- 新启动的子进程中，`DAY10_LOCAL` 显示 `<empty>`。
+- 子进程能看到 `DAY10_ENV` 的 `environment-value`。
 
-整体理解：
+整体逻辑：
 
 ```text
-mixed.log → grep 筛选关注行 → wc 统计筛选后的行数
+普通 Shell 变量：当前 Shell 使用
+导出的环境变量：当前 Shell 使用，它启动的子进程也能继承
 ```
+
+重点理解：
+
+- 两者都能在当前 Shell 中使用，核心差别是是否会传给子进程。
+- `export` 的整体作用是将变量加入子进程可继承的环境。
+- 这个实验只要看懂输出差异，不要求解释 `${...:-...}` 的语法。
 
 验证标准：
 
-- 能指出每个阶段接收什么、输出什么。
-- 能说明 `wc` 统计的是筛选后的内容，而不是原日志全部五行。
-- 不要求记忆 `grep` 参数。
+- 真实输出与上述预期一致。
+- 能根据输出说明：普通变量没有自动传给子进程，导出的环境变量会被继承。
 
-四、理解标准错误不会自动进入管道
+三、观察 PATH 与命令查找
 
-任务 3：分别产生正常输出和错误输出
+任务 2：将 `PATH` 中的目录逐行显示，并查看命令的真实位置
 
 执行：
 
 ```bash
-{
-    printf '%s\n' '[NORMAL] diagnostic output'
-    printf '%s\n' '[ERROR STREAM] simulated failure' >&2
-} | tee "$practice_dir/stdout-only.txt"
-
-cat "$practice_dir/stdout-only.txt"
+printf '%s\n' "$PATH" | tr ':' '\n'
+command -v bash
+command -v ls
+command -v day8_diagnostic_pipeline.sh || printf '%s\n' '[NOT FOUND] day8 script is not in PATH'
 ```
 
 预期：
 
-- 终端可能同时看到正常文字和错误文字。
-- `stdout-only.txt` 只保存 `[NORMAL] diagnostic output`。
-- `[ERROR STREAM] simulated failure` 没有通过默认管道交给 `tee`。
+- `PATH` 被拆成多个搜索目录，通常包含 `/usr/bin`、`/bin` 等位置。
+- `bash` 和 `ls` 能显示可执行文件位置。
+- 未将项目的 Linux 目录加入 `PATH` 时，`day8_diagnostic_pipeline.sh` 通常显示 `[NOT FOUND]`。
 
-重点理解：
-
-- 管道默认连接前一个命令的标准输出与后一个命令的标准输入。
-- 标准错误是另一条通道，默认直接显示在终端。
-- 屏幕上看到了错误，不代表错误内容已经被下游工具或报告文件保存。
-- 今天只理解这个边界，不要求记忆合并输出的写法。
-
-验证标准：
-
-- 能说明为什么屏幕出现两行，而文件只有一行。
-- 能意识到检查报告文件时不能假设所有屏幕内容都在文件中。
-
-五、使用 tee 同时显示并保存证据
-
-任务 4：提取并保存关注行
-
-执行：
-
-```bash
-grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log" \
-    | tee "$practice_dir/attention-report.txt"
-
-cat "$practice_dir/attention-report.txt"
-wc -l "$practice_dir/attention-report.txt"
-```
-
-预期：
-
-- 屏幕显示三条关注信息。
-- `attention-report.txt` 保存相同三行。
-- 行数为 `3`。
-
-继续使用正常日志覆盖生成报告：
-
-```bash
-grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/clean.log" \
-    | tee "$practice_dir/attention-report.txt"
-
-wc -l "$practice_dir/attention-report.txt"
-```
-
-预期：报告行数变为 `0`，旧的三行内容不应残留。
-
-重点理解：
-
-- `tee` 把收到的内容写入文件，同时继续输出到下一位置或屏幕。
-- 每次验证应生成本次报告，不能让旧结果冒充新结果。
-- 输入日志保持不变，报告文件是可重新生成的分析产物。
-
-验证标准：
-
-- 混合日志生成三行报告。
-- 正常日志重新生成空报告。
-- 能说明旧报告残留为什么会导致错误判断。
-
-六、项目实践：诊断管道工具
-
-任务 5：创建 `day8_diagnostic_pipeline.sh`
-
-文件位置：
+整体逻辑：
 
 ```text
-robot-system-learning/linux/day8_diagnostic_pipeline.sh
+输入命令名 → Shell 按 PATH 的目录顺序查找 → 找到可执行文件 → 运行
 ```
 
-完整代码：
+重点理解：
+
+- `PATH` 保存的是搜索目录，不是某一条命令的路径。
+- Shell 按顺序搜索，同名命令时前面的目录优先。
+- `command -v` 用来确认 Shell 实际会使用哪个命令，不要求背它的参数。
+
+验证标准：
+
+- 保留逐行显示的 `PATH` 和两个系统命令位置。
+- 能指出 Shell 是在哪些目录中寻找命令。
+
+四、用最小实验验证 PATH
+
+任务 3：创建一个临时命令，先用完整路径运行，再通过 `PATH` 运行
+
+执行：
+
+```bash
+mkdir -p /tmp/day10-bin
+vim /tmp/day10-bin/robot-health
+```
+
+在 Vim 中写入下面的完整内容：
 
 ```bash
 #!/bin/bash
 
-input_log="${1:-}"
-report_file="${2:-/tmp/day8-attention-report.txt}"
-
-if [ -z "$input_log" ] || [ ! -f "$input_log" ]; then
-    echo "[PIPELINE ERROR] input log not found: $input_log" >&2
-    exit 1
-fi
-
-echo "Input log: $input_log"
-echo "Report file: $report_file"
-echo "--- Attention lines ---"
-
-grep -F -e '[ERROR]' -e '[WARN]' "$input_log" \
-    | tee "$report_file"
-
-matched_lines=$(wc -l < "$report_file")
-echo "Matched lines: $matched_lines"
-
-if [ "$matched_lines" -eq 0 ]; then
-    echo "[RESULT] no warning or error found"
-else
-    echo "[RESULT] attention required"
-fi
+echo '[ROBOT] health check ready'
 ```
 
-整体流程：
-
-1. 接收输入日志和报告文件路径。
-2. 先确认输入日志存在。
-3. 筛选警告与错误信息。
-4. 使用 `tee` 同时显示并覆盖生成本次报告。
-5. 根据报告行数显示“无需关注”或“需要关注”。
-
-要求：
-
-- AI 已提供完整代码，用户只需创建文件、运行并理解数据流。
-- 不要求学习脚本参数细节或数字状态码。
-- 脚本只读取输入日志，报告保存到 `/tmp`，不提交报告文件。
-
-七、脚本验证与逐段排查
-
-任务 6：验证三个场景
-
-进入脚本目录并添加执行权限：
+保存后执行：
 
 ```bash
-cd ~/workspace/learn/learn/robot-system-learning/linux
-chmod +x day8_diagnostic_pipeline.sh
+chmod +x /tmp/day10-bin/robot-health
+/tmp/day10-bin/robot-health
+
+command -v robot-health || printf '%s\n' '[NOT FOUND] robot-health is not in PATH'
+
+export PATH="/tmp/day10-bin:$PATH"
+command -v robot-health
+robot-health
 ```
 
-场景 1：混合日志
+预期：
 
-```bash
-./day8_diagnostic_pipeline.sh \
-    /tmp/day8-pipeline-practice/mixed.log \
-    /tmp/day8-pipeline-practice/script-report.txt
-```
-
-预期：显示三条关注信息，报告包含三行，结果为 `attention required`。
-
-场景 2：正常日志覆盖旧报告
-
-```bash
-./day8_diagnostic_pipeline.sh \
-    /tmp/day8-pipeline-practice/clean.log \
-    /tmp/day8-pipeline-practice/script-report.txt
-
-wc -l /tmp/day8-pipeline-practice/script-report.txt
-```
-
-预期：没有关注行，报告为零行，结果为 `no warning or error found`。
-
-场景 3：输入文件不存在
-
-```bash
-./day8_diagnostic_pipeline.sh \
-    /tmp/day8-pipeline-practice/missing.log \
-    /tmp/day8-pipeline-practice/script-report.txt
-```
-
-预期：明确提示输入日志不存在，不生成虚假的分析结论。
-
-任务 7：练习逐段排查
-
-假设最终报告为空，但你认为日志应该包含错误，按下面顺序检查：
-
-```bash
-cat /tmp/day8-pipeline-practice/mixed.log
-
-grep -F -e '[ERROR]' -e '[WARN]' \
-    /tmp/day8-pipeline-practice/mixed.log
-
-cat /tmp/day8-pipeline-practice/script-report.txt
-```
+- 使用完整路径时，命令一开始就能运行。
+- 加入 `PATH` 前，只输入 `robot-health` 时 Shell 找不到它。
+- 将 `/tmp/day10-bin` 放入 `PATH` 后，`command -v` 显示 `/tmp/day10-bin/robot-health`，直接输入命令名也能运行。
 
 重点理解：
 
-1. 先确认上游输入是否真的包含预期内容。
-2. 再单独运行中间筛选阶段。
-3. 最后检查报告阶段。
-4. 哪一阶段首次与预期不同，问题就更可能位于该阶段或它的输入。
+- 完整路径直接指向文件，不依赖 `PATH` 搜索。
+- 只写命令名时，Shell 必须借助 `PATH` 找到它。
+- 命令文件存在不代表只写名字就能运行；还要有执行权限，并且所在目录可被搜索。
 
 验证标准：
 
-- 三个脚本场景的屏幕输出和报告内容符合预期。
-- 能说出逐段排查的先后顺序。
-- 不要求检查或解释数字状态码。
-- 运行脚本前后两份输入日志内容保持不变。
+- 保留加入 `PATH` 前后 `command -v robot-health` 的实际结果。
+- 加入 `PATH` 后，`robot-health` 显示 `[ROBOT] health check ready`。
 
-八、必须回答的问题
+五、故意破坏 PATH 并恢复
+
+任务 4：观察错误的 `PATH` 为什么会让系统命令“消失”
+
+严格按以下顺序执行：
+
+```bash
+saved_day10_path="$PATH"
+PATH='/tmp/day10-bin'
+
+command -v robot-health
+command -v ls || printf '%s\n' '[NOT FOUND] ls is not in the current PATH'
+ls
+
+PATH="$saved_day10_path"
+command -v ls
+ls --version | head -n 1
+```
+
+预期：
+
+- `PATH` 只保留 `/tmp/day10-bin` 时，`robot-health` 仍能被找到。
+- `ls` 的文件仍然存在，但它所在的系统目录不在当前 `PATH` 中，因此只输入 `ls` 会失败。
+- 恢复保存的 `PATH` 后，`ls` 重新能被找到并执行。
+
+重点理解：
+
+- “命令找不到”不等于软件一定没有安装，也可能是 `PATH` 中缺少它所在的目录。
+- 更新 `PATH` 时应保留原有目录，不能只留项目自己的目录。
+- 出现异常时先检查：命令文件是否存在、是否可执行、它所在目录是否在 `PATH` 中。
+
+验证标准：
+
+- 保留 `ls` 失败和恢复后成功的真实输出。
+- 恢复后的 `PATH` 与 `saved_day10_path` 一致。
+
+六、项目实践：robot_env.sh
+
+任务 5：创建原计划指定的项目环境文件
+
+文件位置：
+
+```text
+robot-system-learning/linux/robot_env.sh
+```
+
+执行：
+
+```bash
+cd ~/workspace/learn/learn/robot-system-learning/linux
+vim robot_env.sh
+```
+
+在 Vim 中写入下面的完整内容：
+
+```bash
+#!/bin/bash
+
+export ROBOT_PROJECT_ROOT="$HOME/workspace/learn/learn/robot-system-learning"
+export ROBOT_LOG_DIR="/tmp/robot-system-logs"
+export PATH="$ROBOT_PROJECT_ROOT/linux:$PATH"
+```
+
+先检查文件，再加载：
+
+```bash
+bash -n robot_env.sh
+
+unset ROBOT_PROJECT_ROOT ROBOT_LOG_DIR
+source ./robot_env.sh
+
+printf 'project root: %s\n' "$ROBOT_PROJECT_ROOT"
+printf 'log directory: %s\n' "$ROBOT_LOG_DIR"
+command -v day8_diagnostic_pipeline.sh
+
+mkdir -p "$ROBOT_LOG_DIR"
+test -d "$ROBOT_LOG_DIR" && printf '%s\n' '[OK] robot log directory exists'
+```
+
+预期：
+
+- `bash -n` 没有语法错误。
+- `ROBOT_PROJECT_ROOT` 显示项目目录，`ROBOT_LOG_DIR` 显示 `/tmp/robot-system-logs`。
+- 加载后，`command -v day8_diagnostic_pipeline.sh` 显示项目中脚本的完整路径。
+- 日志目录存在时显示 `[OK] robot log directory exists`。
+
+整体流程：
+
+1. `robot_env.sh` 集中定义机器人项目根目录和日志目录。
+2. 它将项目的 Linux 脚本目录放到现有 `PATH` 前面，同时保留原来的系统目录。
+3. 加载文件后，配置进入当前 Shell。
+4. 当前 Shell 可以把这些环境变量传给后续启动的项目脚本或程序。
+5. Shell 可根据新的 `PATH` 直接找到项目诊断脚本。
+
+学习要求：
+
+- AI 已提供 `robot_env.sh` 完整内容，用户只需创建、加载、运行并理解整体逻辑。
+- 不要求背 `export` 或 `source` 的语法。
+- 不要在今天修改 `~/.bashrc` 或其他用户级配置，避免在尚未完成 Day11 `source` 学习前引入持久影响。
+- `ROBOT_LOG_DIR` 位于 `/tmp`，运行产物不提交到 Git。
+
+验证标准：
+
+- `robot_env.sh` 语法正确。
+- 加载后两个项目环境变量均显示预期值。
+- 现有系统命令仍能正常使用。
+- 只写 `day8_diagnostic_pipeline.sh` 时，Shell 能通过 `PATH` 找到它。
+
+七、必须回答的问题
 
 把答案写入 `out.md`，只回答用途和整体逻辑：
 
-1. 管道中的上游、下游分别指什么？
-2. 在“日志 → 筛选 → 统计”中，每个阶段的输入和输出是什么？
-3. 为什么屏幕上的错误文字不一定会进入管道后的报告文件？
-4. `tee` 在诊断管道中解决了什么问题？
-5. 为什么每次测试应覆盖生成本次报告，不能保留旧内容冒充新结果？
-6. 管道最终结果与预期不符时，为什么应该逐段检查？
-7. `day8_diagnostic_pipeline.sh` 的整体处理流程是什么？
-8. 为什么脚本可以覆盖分析报告，但不能修改原始输入日志？
+1. 普通 Shell 变量与导出的环境变量，对子进程有什么不同？
+2. `PATH` 保存的是什么，Shell 只收到一个命令名时如何找到程序？
+3. 为什么 `/tmp/day10-bin/robot-health` 一开始能运行，只输入 `robot-health` 却找不到？
+4. 为什么更新 `PATH` 时应保留原来的内容，而不能只写项目目录？
+5. 出现“命令找不到”时，应按什么顺序检查命令文件、执行权限和 `PATH`？
+6. `robot_env.sh` 集中保存了哪些配置，加载后对当前 Shell 有什么影响？
+7. 为什么今天不直接把 `robot_env.sh` 写入 `~/.bashrc`？
 
 说明：
 
-- 不考命令参数、正则细节或数字状态码。
+- 不考变量展开语法、命令参数或数字状态码。
 - 不要求填写每日总结。
 
-九、操作与问题记录要求
+八、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day8 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day10 用户操作输出记录` 标题。请在该标题下记录：
 
-- 两份测试日志的行数。
-- 筛选阶段和完整统计管道的实际输出。
-- 标准输出与标准错误实验的屏幕结果和文件结果。
-- `tee` 生成三行报告、随后覆盖为空报告的结果。
-- 三个脚本场景的实际屏幕输出和报告内容。
-- 逐段排查时每一阶段看到的结果。
-- 对 8 个整体逻辑问题的回答。
+- 当前 Shell 与子进程中的变量实际输出。
+- `PATH` 目录列表以及 `bash`、`ls` 的命令位置。
+- `robot-health` 加入 `PATH` 前后的查找和运行结果。
+- `PATH` 故障期间 `ls` 失败和恢复后成功的输出。
+- `robot_env.sh` 语法检查、环境变量、项目命令位置和日志目录检查结果。
+- 对 7 个整体逻辑问题的回答。
 - 遇到问题时记录现象、判断、检查和解决；没有问题时无需额外总结。
 
-不要提前修改 Linux README。Day8 完成并通过检查后，再由 AI 按学习问题记录模板归档。
+不要提前修改 Linux README。Day10 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
-十、Git 提交要求
+九、Git 提交要求
 
-Day8 完成、检查并归档后，从学习目录执行：
-
-```bash
-cd ~/workspace/learn/learn
-git status --short
-git diff
-git add 当前学习任务安排.txt 学习任务模板.md 学习问题记录模板.md AGENTS.md out.md robot-system-learning/linux/README.md robot-system-learning/linux/day8_diagnostic_pipeline.sh
-git diff --cached --name-only
-git commit -m "Day8：新增诊断管道实践"
-git push origin main
-```
-
-要求：
-
-- 当前任务安排、两个模板、`AGENTS.md`、`out.md` 必须保持在 Git 管理中。
-- Git 提交信息必须使用中文。
+- 开始学习前，由 AI 将 Day9 跳过归档、Day10 安排、最新规则和 `out.md` 标题提交并推送到远程仓库。
+- Day10 完成、检查并归档后，由 AI 只暂存学习记录和 `robot_env.sh`，使用中文提交信息并推送。
 - 不使用 `git add .`。
-- 不提交 `/tmp` 测试日志、报告文件、项目中的 `*.log`、C++ 编译产物或 `temp.txt`。
-- 提交前确认暂存区只包含任务、规则、学习记录、README 和 Day8 脚本。
+- 不提交 `/tmp` 中的命令文件、日志目录或其他练习产物。
+- 不提交项目中的 `*.log`、C++ 编译产物或 `temp.txt`。
+- `当前学习任务安排.txt`、《学习任务模板.md》、《学习问题记录模板.md》、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理，不得忽略。
 
-十一、Day8 简短执行计划
+十、Day10 简短执行计划
 
-1. 创建固定日志 → 验证：混合日志 5 行，正常日志 3 行。
-2. 理解数据处理链 → 验证：筛选三行后统计结果为 3。
-3. 验证错误通道边界 → 验证：报告文件只包含标准输出。
-4. 使用 `tee` 保存证据 → 验证：旧报告不会污染本次结果。
-5. 创建诊断管道工具 → 验证：混合、正常、缺失输入均有正确提示。
-6. 逐段排查 → 验证：能找到第一个与预期不同的阶段。
-7. 完成记录 → 验证：`out.md` 包含真实结果和整体逻辑答案。
+1. 对比普通变量和环境变量 → 验证：子进程只继承导出的变量。
+2. 观察 `PATH` 与命令位置 → 验证：能根据搜索目录理解命令来源。
+3. 创建临时命令 → 验证：加入 `PATH` 前后的查找结果不同。
+4. 故意破坏并恢复 `PATH` → 验证：复现并解释“命令找不到”。
+5. 创建 `robot_env.sh` → 验证：项目配置生效，系统命令未受破坏。
+6. 完成记录 → 验证：`out.md` 包含真实输出和整体逻辑答案。
 
-十二、Day8 完成标准
+十一、Day10 完成标准
 
-- 理解管道中上游输出与下游输入的关系。
-- 理解标准错误不会自动进入默认管道。
-- 能使用 `tee` 同时显示并保存证据。
-- 能避免旧报告污染本次验证结果。
-- `day8_diagnostic_pipeline.sh` 语法正确且可以执行。
-- 三个脚本场景和逐段排查结果符合预期。
-- 能回答 8 个整体逻辑问题。
-- `out.md` 包含真实操作和问题答案。
-- Git 提交不包含测试日志、报告、编译程序或临时文件。
+- 理解普通变量与环境变量对子进程的影响不同。
+- 理解 `PATH` 是 Shell 搜索命令的目录列表。
+- 能根据真实输出确认完整路径运行与 `PATH` 查找的差别。
+- 能复现 `PATH` 配置错误，并恢复系统命令查找。
+- `robot_env.sh` 语法正确，加载后项目变量和命令搜索结果符合预期。
+- 能回答 7 个整体逻辑问题。
+- `out.md` 包含完整、真实的操作输出。
+- Git 提交不包含练习产物、日志、编译程序或临时文件。
