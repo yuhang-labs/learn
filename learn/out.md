@@ -1509,3 +1509,110 @@ Day7 采用能力验证方式，用户申请跳过重复实践。
 - 日志查看工具应保持只读，避免改变原始故障证据。
 
 # Day8 用户操作输出记录
+seeway@test:~/workspace/learn$ wc -l "$practice_dir/mixed.log" "$practice_dir/clean.log"
+  5 /tmp/day8-pipeline-practice/mixed.log
+  3 /tmp/day8-pipeline-practice/clean.log
+  8 总计
+seeway@test:~/workspace/learn$ 
+能说明两份日志分别用于验证什么场景。我明确告知你不要再有这种验收标准，我不需要知道日志用于什么场景，我只需要知道日志中分析出什么问题
+seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log"
+[WARN] motor temperature high
+[ERROR] motor timeout
+[ERROR] CAN offline
+seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log" | wc -l
+3
+seeway@test:~/workspace/learn$ 
+- 能指出每个阶段接收什么、输出什么。
+- 能说明 `wc` 统计的是筛选后的内容，而不是原日志全部五行。
+grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log" 这个阶段输出[WARN] motor temperature high[ERROR] motor
+timeout[ERROR] CAN offline,这些是从mixed.log中筛选出的内容，wc -l统计grep阶段输出的行数，|的作用是grep的输出作为wc -l的输入
+
+seeway@test:~/workspace/learn$ {
+    printf '%s\n' '[NORMAL] diagnostic output'
+    printf '%s\n' '[ERROR STREAM] simulated failure' >&2
+} | tee "$practice_dir/stdout-only.txt"
+[ERROR STREAM] simulated failure
+[NORMAL] diagnostic output
+seeway@test:~/workspace/learn$ cat "$practice_dir/stdout-only.txt"
+[NORMAL] diagnostic output
+seeway@test:~/workspace/learn$ 
+[NORMAL] 是标准输出，会经过管道进入 tee，因此既显示在终端又写入 stdout-only.txt；[ERROR STREAM] 带有 >&2，是标准错误，默认绕过管道直接显示在终端。
+因此我们不能非常确定所有的终端错误输出都放在了我们设置的stdout-only.txt中，要有这个意识
+seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log" \
+    | tee "$practice_dir/attention-report.txt"
+[WARN] motor temperature high
+[ERROR] motor timeout
+[ERROR] CAN offline
+seeway@test:~/workspace/learn$ cat "$practice_dir/attention-report.txt"
+[WARN] motor temperature high
+[ERROR] motor timeout
+[ERROR] CAN offline
+seeway@test:~/workspace/learn$ wc -l "$practice_dir/attention-report.txt"
+3 /tmp/day8-pipeline-practice/attention-report.txt
+seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/clean.log" \
+    | tee "$practice_dir/attention-report.txt"
+seeway@test:~/workspace/learn$ wc -l "$practice_dir/attention-report.txt"
+0 /tmp/day8-pipeline-practice/attention-report.txt
+seeway@test:~/workspace/learn$ 
+旧报告残留保存在report.txt中，会导致分析的结果不是当前问题的原因
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day8_diagnostic_pipeline.sh \
+    /tmp/day8-pipeline-practice/mixed.log \
+    /tmp/day8-pipeline-practice/script-report.txt
+Input log: /tmp/day8-pipeline-practice/mixed.log
+Report file: /tmp/day8-pipeline-practice/script-report.txt
+--- Attention lines ---
+[WARN] motor temperature high
+[ERROR] motor timeout
+[ERROR] CAN offline
+Matched lines: 3
+[RESULT] attention required
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day8_diagnostic_pipeline.sh \
+    /tmp/day8-pipeline-practice/clean.log \
+    /tmp/day8-pipeline-practice/script-report.txt
+Input log: /tmp/day8-pipeline-practice/clean.log
+Report file: /tmp/day8-pipeline-practice/script-report.txt
+--- Attention lines ---
+Matched lines: 0
+[RESULT] no warning or error found
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ wc -l /tmp/day8-pipeline-practice/script-report.txt
+0 /tmp/day8-pipeline-practice/script-report.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day8_diagnostic_pipeline.sh \
+    /tmp/day8-pipeline-practice/missing.log \
+    /tmp/day8-pipeline-practice/script-report.txt
+[PIPELINE ERROR] input log not found: /tmp/day8-pipeline-practice/missing.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day8_diagnostic_pipeline.sh \
+    /tmp/day8-pipeline-practice/missing.log \
+    /tmp/day8-pipeline-practice/script-report.txt
+[PIPELINE ERROR] input log not found: /tmp/day8-pipeline-practice/missing.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat /tmp/day8-pipeline-practice/mixed.log
+[INFO] robot boot
+[WARN] motor temperature high
+[INFO] retry motor
+[ERROR] motor timeout
+[ERROR] CAN offline
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -F -e '[ERROR]' -e '[WARN]' \
+    /tmp/day8-pipeline-practice/mixed.log
+[WARN] motor temperature high
+[ERROR] motor timeout
+[ERROR] CAN offline
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat /tmp/day8-pipeline-practice/script-report.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+2. 在“日志 → 筛选 → 统计”中，每个阶段的输入和输出是什么？第一阶段确认日志是否存在，之后筛选警告与错误信息，筛选的结果作为|后面统计的输入
+3. 为什么屏幕上的错误文字不一定会进入管道后的报告文件？因为标准错误只会输出在终端不一会进入报告文件
+4. `tee` 在诊断管道中解决了什么问题？同一份标准输入既显示在屏幕，又写入文件”，它不会自动把标准错误送进报告。
+5. 为什么每次测试应覆盖生成本次报告，不能保留旧内容冒充新结果？可能会导致本次生成的日志文件不是最新的，也不是当前问题的原因，导致排查方向错误
+6. 管道最终结果与预期不符时，为什么应该逐段检查？排查具体问题出在哪个阶段mixed.log 确实包含异常。
+单独运行筛选也得到三行。
+script-report.txt 却为空，是因为它之前被正常日志覆盖，之后没有用混合日志重新生成。
+因此空报告不是当前混合日志的有效分析结果。
+7. `day8_diagnostic_pipeline.sh` 的整体处理流程是什么？
+  1. 接收输入日志和报告文件路径。
+  2. 先确认输入日志存在。
+  3. 筛选警告与错误信息。
+  4. 使用 `tee` 同时显示并覆盖生成本次报告。
+  5. 根据报告行数显示“无需关注”或“需要关注”。
+8. 为什么脚本可以覆盖分析报告，但不能修改原始输入日志？修改原始输入日志会导致程序产生的原始错误被覆盖或者抹除，导致无法定位原有问题的原因
+管道中的上游是|前面的内容。下游是|后面的内容。即上游的输出作为下游的输入
