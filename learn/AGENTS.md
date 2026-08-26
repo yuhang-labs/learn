@@ -40,6 +40,7 @@
     │   ├── day3_args.sh
     │   ├── day4_system_check.sh
     │   ├── day5_find_logs.sh
+    │   ├── day6_log_analyzer.sh
     │   ├── demo
     │   │   └── day3
     │   │       ├── a.txt

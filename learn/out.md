@@ -1386,3 +1386,105 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 
 1. 真正学会了什么、排查了什么问题、目前还有什么不确定。
 学会了find搜索，安全删除 ，排查了为什么 find -exec grep 返回 1，目前不确定的是5～12问题答案，但是整体逻辑已经理解
+
+
+# Day6 用户操作输出记录
+
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice_dir" -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes\n'
+warning.log | 81 bytes
+clean.log | 86 bytes
+error.log | 139 bytes
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+clean代表的场景是正常场景
+warning代表的场景是有警告但是不影响正常运行，但有风险
+error代表的是无法正常执行场景，必须修复
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -n -- '[ERROR]' "$practice_dir/error.log"
+1:10:02:00 [INFO] robot boot
+2:10:02:01 [WARN] temp=82
+3:10:02:02 [ERROR] motor timeout
+4:10:02:03 [INFO] retry motor
+5:10:02:04 [ERROR] CAN offline
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -Fn -- '[ERROR]' "$practice_dir/error.log"
+3:10:02:02 [ERROR] motor timeout
+5:10:02:04 [ERROR] CAN offline
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+第一组是因为[error]中只需要匹配其中任意一个即可
+第二组是严格匹配error整个字符
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -En -- 'temp=[0-9]+' "$practice_dir/error.log"
+2:10:02:01 [WARN] temp=82
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -En -- '\[(ERROR|WARN)\]' "$practice_dir/error.log"
+2:10:02:01 [WARN] temp=82
+3:10:02:02 [ERROR] motor timeout
+5:10:02:04 [ERROR] CAN offline
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+其中固定文本过滤是用 -F,需要表达“数字范围、多个可能模式”等变化时再使用正则。
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -Fn -C 1 -- '[ERROR]' "$practice_dir/error.log"
+2-10:02:01 [WARN] temp=82
+3:10:02:02 [ERROR] motor timeout
+4-10:02:03 [INFO] retry motor
+5:10:02:04 [ERROR] CAN offline
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+如果单独查看error motor timeout,则不确定在哪一步造成了timeout,此时查看带有上下文的grep则更方便的定位问题
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ touch day6_log_analyzer.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x day6_log_analyzer.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh 
+[ANALYZER ERROR] log file not found: 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh day4_system_check.log
+Log file: day4_system_check.log
+ERROR count: 0
+WARN count: 0
+[STATUS] HEALTHY
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh /tmp/day6-grep-practice/clean.log
+echo $?
+Log file: /tmp/day6-grep-practice/clean.log
+ERROR count: 0
+WARN count: 0
+[STATUS] HEALTHY
+0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh /tmp/day6-grep-practice/warning.log
+Log file: /tmp/day6-grep-practice/warning.log
+ERROR count: 0
+WARN count: 1
+--- WARN evidence ---
+1-10:01:00 [INFO] robot boot
+2:10:01:01 [WARN] temp=78
+3-10:01:02 [INFO] fan increased
+[STATUS] WARN
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh /tmp/day6-grep-practice/error.log
+Log file: /tmp/day6-grep-practice/error.log
+ERROR count: 2
+WARN count: 1
+--- ERROR evidence ---
+2-10:02:01 [WARN] temp=82
+3:10:02:02 [ERROR] motor timeout
+4-10:02:03 [INFO] retry motor
+5:10:02:04 [ERROR] CAN offline
+[STATUS] ERROR
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+2
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh /tmp/day6-grep-practice/missing.log
+[ANALYZER ERROR] log file not found: /tmp/day6-grep-practice/missing.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
+3
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+2. 搜索固定标签 `[ERROR]` 时，为什么字面量搜索比普通正则更准确？因为字面量匹配更精准
+3. 什么情况下适合使用正则表达式？我明确告诉你，不需要管这个事情自然有AI帮助我解答
+4. 查看错误前后的上下文能提供什么额外证据？提供更清晰的前后步骤，更容易确定错误内容
+5. `day6_log_analyzer.sh` 从输入日志到最终状态经历了哪些步骤？接收并检查日志文件，统计错误和警告，优先判断错误，其次判断警告，否则判断为健康。
+6. 为什么脚本先判断 `ERROR`，再判断 `WARN`？error的优先级更高
+7. 脚本状态 `0`、`1`、`2`、`3` 分别表示什么？不知道，不要再学这个了，明确告诉你不需要学习这个
+8. 为什么日志分析脚本只读取日志，不应该自动删除或修改日志？日志分析只能用来分析，不可以用来删除，分析工具只读日志是为了保留原始故障证据，避免分析过程改变证据。
+
+grep处理的输入是日志文件，处理是根据参数确定的，输出是我们过滤后的内容
+ 例如grep -Fn -C 1 -- '[ERROR]' "$practice_dir/error.log"输入是error.log文件，处理是-Fn -C 1是匹配error完整字符并且输出前后1行输出的内容就是2-10:02:01 [WARN] temp=82
+3:10:02:02 [ERROR] motor timeout
+4-10:02:03 [INFO] retry motor
+5:10:02:04 [ERROR] CAN offline
+我再明确告知你，不需要总结
