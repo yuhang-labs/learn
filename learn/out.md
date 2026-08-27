@@ -1751,3 +1751,5 @@ ls：未找到命令
 /usr/bin/ls
 ls (GNU coreutils) 8.32
 seeway@test:~/workspace$ 
+
+# Day11 用户操作输出记录
