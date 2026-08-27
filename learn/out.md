@@ -1836,3 +1836,5 @@ seeway@test:/tmp$
 5. 为什么从 `/tmp` 中使用完整路径，仍然能加载项目里的 `robot_env.sh`？当然可以，因为使用的是完整路径，不受当前路径的干扰
 6. `robot_env.sh` 被 `source` 后，从文件输入到当前 Shell 变化的整体流程是什么？source 读取robot_env.sh并执行之后，export了环境变量，给当前shell的path中robot_env.sh 是把项目目录放到现有 PATH 前面，不是简单追加到末尾，后续shell执行项目内可执行文件时，都可以找到并执行
 7. 为什么不应随意 `source` 不信任或不了解的文件？不可信文件中的命令会直接在当前 Shell 执行，可能修改变量、PATH、当前目录或文件，因此不能随意 source。
+
+# Day12 用户操作输出记录
