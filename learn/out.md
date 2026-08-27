@@ -1838,3 +1838,97 @@ seeway@test:/tmp$
 7. 为什么不应随意 `source` 不信任或不了解的文件？不可信文件中的命令会直接在当前 Shell 执行，可能修改变量、PATH、当前目录或文件，因此不能随意 source。
 
 # Day12 用户操作输出记录
+seeway@test:~/workspace/learn/learn/robot-system-learning$ whoami
+seeway
+seeway@test:~/workspace/learn/learn/robot-system-learning$ id
+uid=1000(seeway) gid=1000(l) 组=1000(l),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),122(lpadmin),135(lxd),136(sambashare),999(docker)
+seeway@test:~/workspace/learn/learn/robot-system-learning$ group
+找不到命令 “group”，您的意思是：
+  “groups” 命令来自 Debian 软件包 coreutils (8.32-4.1ubuntu1.3)
+  “grop” 命令来自 Debian 软件包 grop (2:0.10-1.2)
+尝试 sudo apt install <deb name>
+seeway@test:~/workspace/learn/learn/robot-system-learning$ groups
+l adm cdrom sudo dip plugdev lpadmin lxd sambashare docker
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+当前用户名seeway,主组是l,当前用户所属组l adm cdrom sudo dip plugdev lpadmin lxd sambashare docker
+seeway@test:~/workspace/learn/learn/robot-system-learning$ practice_dir='/tmp/day12-permission-practice'
+seeway@test:~/workspace/learn/learn/robot-system-learning$ mkdir -p "$practice_dir"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ printf '%s\n' 'robot status: ready' > "$practice_dir/status.txt"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chmod u=rwx,go= "$practice_dir"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chmod u=rw,go= "$practice_dir/status.txt"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -ld "$practice_dir"
+drwx------ 2 seeway l 4096 Aug 27 11:05 /tmp/day12-permission-practice
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -l "$practice_dir/status.txt"
+-rw------- 1 seeway l 20 Aug 27 11:05 /tmp/day12-permission-practice/status.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'permissions=%A | owner=%U | group=%G | file=%n' "$practice_dir" "$practice_dir/status.txt"
+permissions=drwx------ | owner=seeway | group=l | file=/tmp/day12-permission-practice
+permissions=-rw------- | owner=seeway | group=l | file=/tmp/day12-permission-practice/status.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+其中day12-permission-practice是目录文件，status.txt是普通文件，目录的owner是seeway权限是rwx,普通文件的owner是seeway,权限是rw
+group都是l,权限都是---，这个---是没有权限？还是所有权限，我认为是没有权限，对不对。其他用户组都是没有权限
+
+下面这个权限组这些东西是困扰我多年的知识点，现已经学会，但是希望重点记录在reademe中，要能够在文件中重点突出，方便我一眼就能看到
+- rw- --- ---
+│  │   │   └─ other：其他用户
+│  │   └───── group：文件所属组
+│  └───────── owner：文件所有者
+└──────────── 文件类型；“-”表示普通文件，“d”表示目录
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cat "$practice_dir/status.txt"
+robot status: ready
+seeway@test:~/workspace/learn/learn/robot-system-learning$ whoami
+seeway
+seeway@test:~/workspace/learn/learn/robot-system-learning$ 可以看到当前用户是seeway,而status.txt的owner是seeway所以我拥有的权限是rw,自然可以cat也可以vim
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chmod u-r "$practice_dir/status.txt"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -l "$practice_dir/status.txt"
+--w------- 1 seeway l 20 Aug 27 11:05 /tmp/day12-permission-practice/status.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cat "$practice_dir/status.txt"
+cat: /tmp/day12-permission-practice/status.txt: 权限不够
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chmod u+r "$practice_dir/status.txt"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -l "$practice_dir/status.txt"
+-rw------- 1 seeway l 20 Aug 27 11:05 /tmp/day12-permission-practice/status.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cat "$practice_dir/status.txt"
+robot status: ready
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+本次实验中唯一改变的条件是r权限
+seeway@test:~/workspace/learn/learn/robot-system-learning$ whoami
+seeway
+seeway@test:~/workspace/learn/learn/robot-system-learning$ id
+uid=1000(seeway) gid=1000(l) 组=1000(l),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),122(lpadmin),135(lxd),136(sambashare),999(docker)
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -ld "$practice_dir"
+drwx------ 2 seeway l 4096 Aug 27 11:05 /tmp/day12-permission-practice
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -l "$practice_dir/status.txt"
+-rw------- 1 seeway l 20 Aug 27 11:05 /tmp/day12-permission-practice/status.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'permissions=%A | owner=%U | group=%G | file=%n' "$practice_dir" "$practice_dir/status.txt"
+permissions=drwx------ | owner=seeway | group=l | file=/tmp/day12-permission-practice
+permissions=-rw------- | owner=seeway | group=l | file=/tmp/day12-permission-practice/status.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+权限不足时，先查看当前用户身份是什么whoami、id确认当前用户身份是seeway,用户所属组是id输出的这些，之后查看权限不足的文件的归属是什么，用户所拥有的权限是什么，当前用户身份是否于文件权限匹配，最后修改权限或者切换用户验证问题
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -l   "$project_linux/day4_system_check.sh"   "$project_linux/day5_find_logs.sh"   "$
+project_linux/day6_log_analyzer.sh"   "$project_linux/day8_diagnostic_pipeline.sh"   "$project_linux/robot_env.sh"
+-rwxr-xr-x 1 seeway l 933 Aug 25 12:03 /home/l/workspace/learn/learn/robot-system-learning/linux/day4_system_check.sh
+-rwxr-xr-x 1 seeway l 772 Aug 25 15:44 /home/l/workspace/learn/learn/robot-system-learning/linux/day5_find_logs.sh
+-rwxr-xr-x 1 seeway l 693 Aug 26 15:45 /home/l/workspace/learn/learn/robot-system-learning/linux/day6_log_analyzer.sh
+-rwxr-xr-x 1 seeway l 591 Aug 26 16:46 /home/l/workspace/learn/learn/robot-system-learning/linux/day8_diagnostic_pipeline.sh
+-rw-r--r-- 1 seeway l 182 Aug 27 09:57 /home/l/workspace/learn/learn/robot-system-learning/linux/robot_env.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'permissions=%A | owner=%U | group=%G | file=%n' \
+  "$project_linux/day4_system_check.sh" \
+  "$project_linux/day5_find_logs.sh" \
+  "$project_linux/day6_log_analyzer.sh" \
+  "$project_linux/day8_diagnostic_pipeline.sh" \
+  "$project_linux/robot_env.sh"
+permissions=-rwxr-xr-x | owner=seeway | group=l | file=/home/l/workspace/learn/learn/robot-system-learning/linux/day4_system_check.sh
+permissions=-rwxr-xr-x | owner=seeway | group=l | file=/home/l/workspace/learn/learn/robot-system-learning/linux/day5_find_logs.sh
+permissions=-rwxr-xr-x | owner=seeway | group=l | file=/home/l/workspace/learn/learn/robot-system-learning/linux/day6_log_analyzer.sh
+permissions=-rwxr-xr-x | owner=seeway | group=l | file=/home/l/workspace/learn/learn/robot-system-learning/linux/day8_diagnostic_pipeline.sh
+permissions=-rw-r--r-- | owner=seeway | group=l | file=/home/l/workspace/learn/learn/robot-system-learning/linux/robot_env.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+day8_diagnostic_pipeline.sh可以直接执行是因为当前用户是seeway,拥有对该文件的执行权限
+robot_env.sh可以通过source读取是因为当前用户拥有对该文件的读取权限
+1. 用户和组分别表示什么？当前 Shell 执行命令时，如何确认自己的用户和所属组？用户表示操作身份；组表示一组用户的集合，不是“谁在使用当前文件”。，通过whoami确认当前用户，用id确认所属组s
+2. `ls -l` 权限字符串中，owner、group、other 三组分别对应谁？owner 是文件所有者；group 是属于该文件所属组的用户；other 是既不是 owner、也不属于文件所属组的其他用户。other 不是“拥有者所属的其他组”。
+3. 当前用户正好是文件 owner 时，系统使用哪组权限？是否会再把三组权限相加？系统使用owner权限，不会相加
+4. 为什么文件明明存在，`cat` 仍然可能提示“权限不够”？文件虽然存在，但是当前用户没有对该文件的r权限，所以当前权限不足
+5. `ls -l` 能提供哪些权限证据？为什么判断访问结果时还要查看 `whoami` 或 `id`？能提供文件所属用户，用户组拥有什么权限的证据，使用whoami,id为了确认当前用户和用户组是什么，有没有对文件的对应权限
+6. 遇到权限问题时，应按什么顺序检查和验证？先确认当前用户和所属组，再确认路径及文件存在，检查路径目录和目标文件的 owner、group、权限，判断当前身份匹配 owner/group/other 中哪一组，检查该组是否允许所需操作，最后最小修改并回归验证。
+7. 为什么今天只在 `/tmp` 的测试对象上复现问题，不使用 `sudo`、不修改系统文件，也不对项目文件执行 `chown`？sudo拥有高级权限，无法在当前测试对象上复现问题，Day13 专门学习 `chmod/chown`，所以今天只用最少的 `chmod` 建立测试条件，不学习所有者变更，也不使用 `chown`。你再问这种关于学习安排的问题，就把你网断掉，以后禁止询问学习安排相关问题
