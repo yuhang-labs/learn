@@ -989,3 +989,107 @@ day2_demo_if_for.sh
 - 已完成正常读取、权限拒绝和恢复后的回归验证。
 - 已能按身份、路径、归属、权限和回归验证的顺序排查问题。
 - Day12 所有核心学习目标已通过检查。
+
+# Day13 chmod 与 chown 学习记录
+
+## 1. 学习目标
+
+- 区分 `chmod` 与 `chown` 修改的文件元数据。
+- 通过变更前后的证据确认权限、owner 和 group 的变化范围。
+- 理解普通用户改变自己文件所属组的边界。
+- 完成合法 group 变更、非法 group 变更和恢复验证。
+- 验证元数据变化不会修改文件正文或项目原文件。
+
+## 2. 核心区别
+
+| 命令 | 修改对象 | 不直接修改 |
+|---|---|---|
+| `chmod` | 文件权限 | owner、group、文件正文 |
+| `chown` | owner、group，或同时修改两者 | 文件正文 |
+
+- 权限、owner 和 group 都是文件元数据，不是文件正文。
+- `chmod` 成功后要检查权限是否符合预期，同时确认 owner 和 group 未被意外改变。
+- `chown` 成功后要检查 owner/group 是否符合预期，同时确认权限和内容未被意外改变。
+
+## 3. 实际执行与结果
+
+### 项目文件副本
+
+- 将项目中的 `robot_env.sh` 复制为 `/tmp/day13-ownership-practice/robot_env.test.sh`。
+- 项目原文件为 `-rw-r--r--`，owner 是 `seeway`，group 是 `l`。
+- 临时副本初始为 `-rw-r-----`，owner 是 `seeway`，group 是 `l`。
+- 后续实验只操作 `/tmp` 副本，没有修改项目原文件。
+
+### chmod 权限变更
+
+```text
+变更前：-rw-r----- | owner=seeway | group=l
+增加组写权限：-rw-rw---- | owner=seeway | group=l
+恢复后：-rw-r----- | owner=seeway | group=l
+```
+
+- `chmod g+w` 只增加 group 的写权限。
+- `chmod g-w` 成功恢复初始权限。
+- owner 和 group 在整个过程中没有变化，证明本次 `chmod` 只修改权限。
+
+### chown 合法变更
+
+- 当前用户 `seeway` 的所属组中包含 `adm`。
+- `chown :adm` 成功将临时副本的 group 从 `l` 改为 `adm`。
+- 变更后 owner 仍为 `seeway`，权限仍为 `-rw-r-----`。
+- 当前用户仍是文件 owner，因此访问时继续使用 owner 权限，不会改用 group 权限。
+
+### chown 失败验证
+
+- 当前用户不属于 `root` 组。
+- `chown :root` 明确提示“不允许的操作”。
+- 失败后 owner 仍为 `seeway`，group 仍为 `adm`，权限仍为 `-rw-r-----`。
+- 已理解命令失败后还要检查当前状态，不能只记录错误文字。
+
+### 恢复与回归验证
+
+- 使用 `chown :l` 将副本 group 恢复为 `l`。
+- `cmp` 显示 `[OK] file content unchanged`，证明元数据操作没有修改文件正文。
+- 项目原文件最终仍为 `-rw-r--r--`、owner `seeway`、group `l`。
+- Git 对项目 `robot_env.sh` 没有显示修改。
+- `/tmp/day13-ownership-practice` 不作为 Git 提交内容。
+
+## 4. 遇到的问题与纠正
+
+### chown 的职责范围
+
+- 初始回答只认为 `chown` 修改 group。
+- 纠正：`chown` 可以修改 owner、group，或者同时修改两者；本次实验只选择修改 group。
+
+### adm 与 root 的含义
+
+- 初始回答把成功和失败归因于“普通用户”和“高级管理员用户”。
+- 纠正：`:adm` 与 `:root` 在本次命令中指定的都是组名，不是当前执行命令的用户身份。
+- 成功原因是当前用户属于 `adm`；失败原因是当前用户不属于 `root` 组，普通用户不能把自己的文件任意改为非所属组。
+
+### chmod/chown 是否修改文件内容
+
+- 初始回答把两个命令都说成只修改权限。
+- 纠正：`chmod` 修改权限，`chown` 修改 owner/group；二者都不修改文件正文。
+
+### 操作不允许时的检查顺序
+
+1. 检查当前用户和所属组。
+2. 检查文件当前的 owner、group 和权限。
+3. 确认请求修改的目标 owner/group。
+4. 判断当前用户是否有权执行该变更。
+5. 失败后使用 `stat` 确认文件状态没有发生意外变化。
+
+### 不能只用 ls 完成回归验证
+
+- `ls -l` 可以查看权限、owner 和 group，但不能证明文件正文没有变化。
+- 完整验证需要比较变更前后的 `stat`，使用 `cmp` 检查正文，并用 Git 状态确认项目原文件没有变化。
+
+## 5. Day13 完成结论
+
+- 已正确区分 `chmod` 和 `chown` 的职责。
+- 已通过实际输出证明 `chmod` 只改变目标权限。
+- 已完成允许和拒绝两条 `chown` 路径，并检查失败后的状态。
+- 已恢复临时副本的权限和 group。
+- 已确认文件正文和项目原文件均未被修改。
+- Day13 所有核心学习目标已通过检查。

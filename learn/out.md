@@ -1934,3 +1934,59 @@ robot_env.sh可以通过source读取是因为当前用户拥有对该文件的�
 7. 为什么今天只在 `/tmp` 的测试对象上复现问题，不使用 `sudo`、不修改系统文件，也不对项目文件执行 `chown`？sudo拥有高级权限，无法在当前测试对象上复现问题，Day13 专门学习 `chmod/chown`，所以今天只用最少的 `chmod` 建立测试条件，不学习所有者变更，也不使用 `chown`。你再问这种关于学习安排的问题，就把你网断掉，以后禁止询问学习安排相关问题
 
 # Day13 用户操作输出记录
+seeway@test:~/workspace/learn/learn/robot-system-learning$ practice_dir='/tmp/day13-ownership-practice'
+seeway@test:~/workspace/learn/learn/robot-system-learning$ source_file="$HOME/workspace/learn/learn/robot-system-learning/linux/robot_env.sh"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ test_file="$practice_dir/robot_env.test.sh"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ mkdir -p "$practice_dir"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cp "$source_file" "$test_file"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chmod u=rw,g=r,o= "$test_file"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ id
+uid=1000(seeway) gid=1000(l) 组=1000(l),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),122(lpadmin),135(lxd),136(sambashare),999(docker)
+seeway@test:~/workspace/learn/learn/robot-system-learning$ groups
+l adm cdrom sudo dip plugdev lpadmin lxd sambashare docker
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -l "$source_file" "$test_file"
+-rw-r--r-- 1 seeway l 182 Aug 27 09:57 /home/l/workspace/learn/learn/robot-system-learning/linux/robot_env.sh
+-rw-r----- 1 seeway l 182 Aug 27 11:56 /tmp/day13-ownership-practice/robot_env.test.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'permissions=%A | owner=%U | group=%G | file=%n' "$source_file" "$test_file"
+permissions=-rw-r--r-- | owner=seeway | group=l | file=/home/l/workspace/learn/learn/robot-system-learning/linux/robot_env.sh
+permissions=-rw-r----- | owner=seeway | group=l | file=/tmp/day13-ownership-practice/robot_env.test.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'before chown: permissions=%A | owner=%U | group=%G' "$test_file"
+before chown: permissions=-rw-r----- | owner=seeway | group=l
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chown :adm "$test_file"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'after chown:  permissions=%A | owner=%U | group=%G' "$test_file"
+after chown:  permissions=-rw-r----- | owner=seeway | group=adm
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+seeway@test:~/workspace/learn/learn/robot-system-learning$ id -nG | tr ' ' '\n' | grep -Fx 'root' || printf '%s\n' '[EXPECTED] current user is not in group root'
+[EXPECTED] current user is not in group root
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chown :root "$test_file"
+chown: 更改 '/tmp/day13-ownership-practice/robot_env.test.sh' 的所属组: 不允许的操作
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'after failed chown: permissions=%A | owner=%U | group=%G' "$test_file"
+after failed chown: permissions=-rw-r----- | owner=seeway | group=adm
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chown :l "$test_file"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'final: permissions=%A | owner=%U | group=%G' "$test_file"
+final: permissions=-rw-r----- | owner=seeway | group=l
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cmp -s "$source_file" "$test_file" && printf '%s\n' '[OK] file content unchanged'
+[OK] file content unchanged
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ls -l "$source_file"
+-rw-r--r-- 1 seeway l 182 Aug 27 09:57 /home/l/workspace/learn/learn/robot-system-learning/linux/robot_env.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'project file: permissions=%A | owner=%U | group=%G | file=%n' "$source_file"
+project file: permissions=-rw-r--r-- | owner=seeway | group=l | file=/home/l/workspace/learn/learn/robot-system-learning/linux/robot_env.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning$ git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/robot_env.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+1. `chmod` 和 `chown` 分别修改文件的什么信息？chmod 修改权限；chown 修改 owner、group，或者同时修改两者。
+2. 为什么执行 `chmod g+w` 后，权限发生变化，但 owner 和 group 没有变化？因为chmod只修改文件权限信息
+3. 为什么当前用户可以把自己文件的 group 改成 `adm`，改成 `root` 却失败？成功原因不是“adm 是普通用户”。adm 和 root 在这里都是组名。当前用户属于 adm 组，所以能将自己的文件改为该组；当前用户不属于 root 组，所以 chown :root 失败。
+4. 文件 group 改成 `adm` 后，当前用户仍然是 owner；系统访问该文件时使用 owner、group 还是 other 权限？系统访问时使用的owner权限
+5. 为什么 `chmod/chown` 执行后，文件内容仍然可以与原文件完全相同？chmod 修改权限元数据，chown 修改 owner/group 元数据；二者都不修改文件正文
+6. `chown` 提示操作不允许时，应检查哪些身份和文件证据？应检查当前用户、所属组、文件 owner/group/权限、目标 owner/group，以及当前用户是否有权执行该变更；失败后再用 stat 确认状态未变化。
+7. 如何验证一次 `chmod/chown` 变更确实达到预期，并且没有意外修改其他元数据或文件内容？应比较变更前后的 stat，确认权限、owner、group 是否符合预期；使用 cmp 检查内容，并用 Git 状态确认项目原文件未变化。仅使用 ls 不能证明内容没有改变。
+seeway@test:~/workspace/learn/learn/robot-system-learning$ stat -c 'before chmod: permissions=%A | owner=%U | group=%G' "$test_file"
+chmod g+w "$test_file"
+stat -c 'after chmod: permissions=%A | owner=%U | group=%G' "$test_file"
+chmod g-w "$test_file"
+stat -c 'restored: permissions=%A | owner=%U | group=%G' "$test_file"
+before chmod: permissions=-rw-r----- | owner=seeway | group=l
+after chmod: permissions=-rw-rw---- | owner=seeway | group=l
+restored: permissions=-rw-r----- | owner=seeway | group=l
+seeway@test:~/workspace/learn/learn/robot-system-learning$
