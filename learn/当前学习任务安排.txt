@@ -1,403 +1,443 @@
-Day15 详细学习安排：kill、pkill 与 signal
+Day16 详细学习安排：systemd、systemctl 与服务状态
 
 一、今日目标
 
-- 理解 signal 是发送给进程的通知，`kill` 命令的核心作用是发送信号。
-- 理解 `TERM` 用于请求进程结束，进程可以在退出前执行清理逻辑。
-- 能在发送信号前根据 PID 确认目标，在发送后重新查询确认结果。
-- 能区分 `kill` 按 PID 定位与 `pkill` 按名称或模式匹配的作用范围。
-- 只对本次创建的临时进程发送信号，不影响系统进程或其他用户进程。
-- 创建项目脚本 `process_check.sh`，检查指定 PID 是否仍在运行或可访问。
-- 完成正常结束、无效目标和名称批量匹配三条验证路径。
+- 理解 systemd 是系统与服务管理器，service unit 是它管理的一类对象。
+- 理解 `systemctl` 是查询和控制 systemd 的命令行工具，不是服务进程本身。
+- 能区分 unit 是否已加载、当前是否 active、是否配置为自动启动。
+- 使用 `systemctl --user status / start / stop` 完成一个安全的临时服务实验。
+- 将服务状态与对应进程 PID 联系起来，并在停止后重新验证。
+- 只读查看系统中的 SSH、CAN 或相关服务，不改变真实系统服务状态。
+- 完成正常启动、正常停止和 unit 不存在三条验证路径。
 
 说明：
 
-- Day15 严格保持原学习计划的 `kill/signal`、`kill/pkill` 和 `process_check.sh` 主题。
-- Day14 已学习识别进程和 PID；今天学习向明确目标发送信号，不重复进程列表基础。
-- 所有终止实验只操作本次由当前 Shell 创建的临时 worker。
-- 禁止对系统进程、ROS2 进程、服务进程、未知 PID 或不明确的名称执行 `kill/pkill`。
-- 不对 Day14 的旧 PID 发送信号，因为旧 PID 可能已经被系统复用。
-- 今天只实践 `TERM`；不实践强制终止信号，不使用 `sudo`。
-- AI 已提供全部脚本和命令，用户只需创建、执行并理解整体逻辑。
-- 不要求背信号编号、命令参数、Shell 语法或数字状态码。
+- Day16 严格保持固定计划的 `systemd`、`systemctl status / start / stop` 和查看 CAN、SSH 相关服务主题。
+- Day14、Day15 已学习进程观察与信号；今天在此基础上理解服务管理，不重复 PID 和 signal 基础。
+- Day17 才学习 `journalctl`，今天不提前学习日志查询参数。
+- 启停实验只操作本次创建的 `day16-practice.service` 用户服务。
+- SSH、CAN、系统级服务只允许查询，禁止对它们执行 `start`、`stop`、`restart`、`enable` 或 `disable`。
+- 不使用 `sudo`，不修改 `/etc/systemd/system` 或系统服务配置。
+- 如果 `systemctl --user` 提示无法连接 user bus，保留真实错误并停止启停实验，不得改为操作系统服务。
+- AI 已提供完整 unit 文件和命令，用户只需亲自在终端执行并理解整体逻辑。
+- 不要求背 systemctl 参数、unit 文件语法、状态码或 systemd 内部实现。
 - 不要求填写每日总结。
-- 今天只学习 Linux，不新增 C++、CAN、ROS2 代码。
+- 今天只学习 Linux，不新增 C++、CAN 或 ROS2 代码。
 - 建议用时 40～50 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、理解 kill 与 signal
+二、理解 systemd、unit 与 systemctl
 
 任务 1：建立整体概念
 
 ```text
-发送方进程
-    ↓ 使用 kill/pkill
-向目标进程发送 signal
-    ↓
-目标进程根据 signal 继续、清理或结束
+unit 文件或系统配置
+        ↓ 交给 systemd
+systemd 管理服务生命周期和状态
+        ↑
+systemctl 查询或请求 start / stop
+        ↓
+状态、MainPID、成功或错误信息
 ```
 
 重点理解：
 
-- `kill` 的核心动作是向进程发送信号，不等于无条件强制结束。
-- 本次使用的 `TERM` 表示“请求结束”，目标程序可以在退出前清理。
-- 发送命令没有报错，只能证明请求被系统接受；还要检查目标进程和清理输出。
-- `kill` 按明确 PID 定位实例；`pkill` 按名称或模式匹配，可能同时影响多个进程。
-- 执行 `pkill` 前必须先查看完全相同模式的匹配范围。
+- systemd 通常作为系统初始化与服务管理器，负责管理 service 等 unit。
+- service unit 描述“如何启动和管理一个服务”，服务启动后通常对应一个或多个进程。
+- `systemctl` 是用户与 systemd 交互的工具，负责发送查询或控制请求。
+- unit 文件是管理配置，不是运行中的服务进程。
+- 今天只理解输入、管理对象、状态输出和验证链路，不学习内部依赖算法。
 
 验证标准：
 
-- 后续实验同时保留发送前、发送后和回归查询证据。
+- 后续能把 unit 文件、systemd、systemctl、服务进程和状态证据连成一条完整链路。
 
-三、创建能处理 TERM 的临时 worker
+三、确认当前 systemd 环境
 
-任务 2：在 `/tmp` 创建信号实验 worker
+任务 2：检查系统管理器和用户管理器是否可用
 
 执行：
 
 ```bash
-practice_dir='/tmp/day15-signal-practice'
-worker_script="$practice_dir/day15_worker.sh"
-worker_log="$practice_dir/day15_worker.log"
-
-mkdir -p "$practice_dir"
-vim "$worker_script"
+ps -p 1 -o pid,comm,args
+systemctl --version | head -n 1
+systemctl is-system-running
+systemctl --user is-system-running
 ```
 
-在 Vim 中写入下面的完整内容：
+结果判断：
 
-```bash
-#!/bin/bash
-
-trap 'printf "%s\n" "[WORKER] TERM received; cleanup complete"; exit 0' TERM
-
-printf '[WORKER] ready pid=%s\n' "$$"
-
-while true; do
-    sleep 1
-done
-```
-
-保存后执行：
-
-```bash
-bash -n "$worker_script"
-chmod u+x "$worker_script"
-cat "$worker_script"
-```
+- PID 1 的命令名通常是 `systemd`，说明当前系统由 systemd 初始化和管理。
+- `systemctl --version` 显示当前 systemd 版本。
+- `systemctl is-system-running` 可能显示 `running`、`degraded` 或其他真实状态，应如实记录。
+- `systemctl --user is-system-running` 能返回用户管理器状态时，才继续用户服务启停实验。
+- 如果出现 `Failed to connect to bus`，记录错误并停止任务 4 至任务 7，向 AI 反馈；不要使用 `sudo` 或改动系统服务。
 
 重点理解：
 
-- `trap` 让 worker 收到 `TERM` 时先输出清理信息，再退出。
-- 循环只是让临时 worker 保持运行，不要求学习代码细节。
-- worker 和日志位于 `/tmp`，不提交到 Git。
+- 系统级 systemd 和当前用户的 user manager 管理范围不同。
+- Day16 使用 `--user`，把实验范围限制在当前用户会话。
 
 验证标准：
 
-- 文件内容正确，`bash -n` 没有语法错误。
+- 保留 PID 1、systemd 版本、系统状态和 user manager 状态的真实输出。
 
-四、按 PID 发送 TERM
+四、查看服务与 unit 文件快照
 
-任务 3：启动 worker，确认目标后请求其正常结束
-
-启动并获取证据：
-
-```bash
-: > "$worker_log"
-"$worker_script" > "$worker_log" 2>&1 &
-worker_pid="$!"
-
-sleep 1
-
-printf 'worker PID: %s\n' "$worker_pid"
-ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd
-cat "$worker_log"
-```
-
-预期：
-
-- `ps` 显示的 PID 与 `worker_pid` 一致。
-- worker 由当前用户运行。
-- 日志显示 `[WORKER] ready pid=...`，其中 PID 与目标一致。
-
-确认无误后执行：
-
-```bash
-kill -TERM "$worker_pid"
-wait "$worker_pid"
-
-cat "$worker_log"
-ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd ||
-  printf '%s\n' '[EXPECTED] worker stopped after TERM'
-```
-
-预期：
-
-- 日志新增 `[WORKER] TERM received; cleanup complete`。
-- 最终 `ps` 不再显示该 worker。
-- 清理文字证明 worker 收到并处理了 `TERM`。
-
-整体流程：
-
-```text
-启动 worker → 记录 PID → ps 与日志确认目标
-                           ↓
-                    kill 发送 TERM
-                           ↓
-                 worker 执行清理并退出
-                           ↓
-                查看日志并重新查询 PID
-```
-
-验证标准：
-
-- 保留发送前的目标证据、清理日志和发送后的查询结果。
-
-五、安全验证不存在的目标
-
-任务 4：只对确定不可能存在的 PID 复现错误
+任务 3：比较当前运行状态与自动启动配置
 
 执行：
 
 ```bash
-invalid_pid='99999999'
+printf '%s\n' '[RUNNING SERVICES]'
+systemctl list-units --type=service --state=running --no-pager | head -n 15
 
-ps -p "$invalid_pid" -o pid,ppid,user,stat,etime,cmd ||
-  printf '%s\n' '[EXPECTED] invalid PID is not running'
-
-kill -TERM "$invalid_pid"
+printf '%s\n' '[SERVICE UNIT FILES]'
+systemctl list-unit-files --type=service --no-pager | head -n 15
 ```
-
-预期：
-
-- 查询先确认 PID `99999999` 不存在。
-- `kill` 提示“没有那个进程”或 `No such process`。
 
 重点理解：
 
-- 异常测试也必须先确认目标，不能随意使用可能属于其他进程的 PID。
-- 不重新使用旧 PID，因为数字可能被复用。
-- 读懂错误文字即可，不要求记忆状态码。
+- `list-units` 主要展示 systemd 当前已加载的 unit 及其运行状态。
+- `list-unit-files` 主要展示磁盘上的 unit 文件及其启用状态。
+- `active` 描述当前运行状态；`enabled` 描述是否配置为随相应目标自动启动。
+- 服务可以当前 active 但不一定 enabled，也可以 enabled 但当前没有运行，两者不能混为一谈。
 
 验证标准：
 
-- 保留发送前的无目标证据和 `kill` 错误文字。
+- 保留两组前15行真实输出。
+- 能根据输出区分“当前状态”和“自动启动配置”。
 
-六、使用 pkill 处理唯一名称的临时进程
+五、创建 Day16 项目 unit
 
-任务 5：创建两个同名临时 worker，观察名称匹配范围
-
-请将下面整段命令一次执行，不修改匹配模式：
-
-```bash
-bash -c 'exec -a day15-pkill-worker sleep 60' &
-pkill_pid_one="$!"
-
-bash -c 'exec -a day15-pkill-worker sleep 60' &
-pkill_pid_two="$!"
-
-sleep 1
-
-printf 'worker one PID: %s\n' "$pkill_pid_one"
-printf 'worker two PID: %s\n' "$pkill_pid_two"
-
-printf '%s\n' '[BEFORE] exact name matches'
-pgrep -af '^day15-pkill-worker '
-
-pkill -TERM -f '^day15-pkill-worker '
-
-wait "$pkill_pid_one" 2>/dev/null || true
-wait "$pkill_pid_two" 2>/dev/null || true
-
-printf '%s\n' '[AFTER] exact name matches'
-pgrep -af '^day15-pkill-worker ' ||
-  printf '%s\n' '[EXPECTED] no day15 pkill workers remain'
-```
-
-预期：
-
-- 发送前显示两个不同 PID。
-- 精确模式只匹配两个本次创建的临时进程。
-- 发送后不再显示这两个进程。
-
-重点理解：
-
-- `kill` 使用 PID 指向一个明确实例。
-- `pkill` 根据名称或命令行模式选择目标，一次可能匹配多个实例。
-- 名称模式过宽可能影响无关进程，必须先用相同模式查看结果。
-- 禁止将本次模式改成宽泛的 `sleep`、`bash` 或 `robot`。
-
-验证标准：
-
-- 保留发送前两个 PID 和发送后无匹配的证据。
-
-七、项目实践：创建 process_check.sh
-
-任务 6：为 Robot System Diagnostic Tool 创建 PID 检查脚本
+任务 4：在 Linux 项目中创建安全的用户服务配置
 
 执行：
 
 ```bash
 cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
-vim process_check.sh
+vim day16-practice.service
 ```
 
 在 Vim 中写入下面的完整内容：
 
-```bash
-#!/bin/bash
+```ini
+[Unit]
+Description=Day16 safe systemd user service practice
 
-target_pid="$1"
-
-if [[ -z "$target_pid" ]]; then
-    printf '%s\n' '[PROCESS CHECK ERROR] PID is required' >&2
-    exit 1
-fi
-
-if [[ ! "$target_pid" =~ ^[0-9]+$ ]]; then
-    printf '[PROCESS CHECK ERROR] invalid PID: %s\n' "$target_pid" >&2
-    exit 1
-fi
-
-if kill -0 "$target_pid" 2>/dev/null; then
-    printf '[PROCESS RUNNING] PID=%s\n' "$target_pid"
-    ps -p "$target_pid" -o pid,ppid,user,stat,etime,cmd
-else
-    printf '[PROCESS NOT RUNNING OR NOT ACCESSIBLE] PID=%s\n' "$target_pid"
-    exit 1
-fi
+[Service]
+Type=simple
+ExecStart=/usr/bin/sleep infinity
 ```
 
 保存后执行：
 
 ```bash
-bash -n process_check.sh
-chmod u+x process_check.sh
-ls -l process_check.sh
+project_unit="$PWD/day16-practice.service"
+
+systemd-analyze --user verify "$project_unit"
+cat "$project_unit"
+git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/day16-practice.service
 ```
-
-脚本整体逻辑：
-
-1. 接收一个 PID。
-2. 检查 PID 是否为空或格式无效。
-3. 使用 `kill -0` 检查目标是否存在且当前用户可访问，不发送终止信号。
-4. 可访问时输出运行状态和 `ps` 证据。
-5. 不存在或不可访问时输出明确提示。
 
 重点理解：
 
-- `kill -0` 不会结束进程，只做存在性和权限检查。
-- 检查失败可能表示进程不存在，也可能表示当前用户无权访问。
-- 只需理解输入、检查和输出证据的整体框架，不要求记住代码语法。
+- `[Unit]` 保存该 unit 的说明信息。
+- `[Service]` 描述服务进程如何启动。
+- 这里使用 `sleep infinity` 只是创建一个持续运行、可安全停止的练习进程。
+- unit 文件位于项目中，后续由 Git 管理；它本身存在不代表服务已经运行。
+- 不要求记住 unit 文件字段或语法。
 
 验证标准：
 
-- 脚本语法通过并具有 owner 执行权限。
-- 文件位于 `robot-system-learning/linux/process_check.sh`。
+- `systemd-analyze` 没有报告 unit 语法错误。
+- 文件内容与给定内容一致。
+- Git 显示 `day16-practice.service` 是新增文件。
 
-八、验证 process_check.sh
+六、加载 unit 并检查初始状态
 
-任务 7：分别检查运行中和结束后的临时进程
+任务 5：把项目 unit 链接到用户管理器
 
 执行：
 
 ```bash
-bash -c 'exec -a day15-check-worker sleep 60' &
-check_pid="$!"
+systemctl --user link "$project_unit"
+systemctl --user daemon-reload
 
-sleep 1
+systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState -p UnitFileState
 
-./process_check.sh "$check_pid"
-
-kill -TERM "$check_pid"
-wait "$check_pid" 2>/dev/null || true
-
-./process_check.sh "$check_pid"
+systemctl --user status day16-practice.service --no-pager
 ```
 
 预期：
 
-- 第一次显示 `[PROCESS RUNNING]` 和对应 PID 信息。
-- 发送 `TERM` 并等待后，第二次显示 `[PROCESS NOT RUNNING OR NOT ACCESSIBLE]`。
+- `LoadState=loaded` 表示 user manager 已读取该 unit。
+- 尚未启动时，`ActiveState` 应为 `inactive`。
+- `UnitFileState` 可能显示 `linked`，表示用户管理器通过链接找到项目中的 unit 文件。
+- `status` 在 inactive 状态可能返回非零结果；以文字状态为准，不要求记忆状态码。
 
-随后检查项目文件：
+重点理解：
 
-```bash
-bash -n process_check.sh
-git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/process_check.sh
-```
-
-预期：
-
-- 语法检查仍通过。
-- Git 显示 `process_check.sh` 是新增文件。
+- 修改或新增 unit 后，`daemon-reload` 让 systemd 重新读取配置。
+- 已加载不等于正在运行。
 
 验证标准：
 
-- 同一脚本正确区分运行中与已结束的临时 worker。
-- 不提交任何 `/tmp` worker 或日志。
+- 保留加载状态、活动状态和 `status` 的真实输出。
 
-九、必须回答的技术问题
+七、启动服务并关联进程
+
+任务 6：使用 systemctl start 启动用户服务
+
+执行：
+
+```bash
+systemctl --user start day16-practice.service
+
+systemctl --user status day16-practice.service --no-pager
+systemctl --user is-active day16-practice.service
+systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState -p MainPID
+
+main_pid="$(systemctl --user show day16-practice.service -p MainPID --value)"
+printf 'service MainPID: %s\n' "$main_pid"
+ps -p "$main_pid" -o pid,ppid,user,stat,etime,cmd
+```
+
+预期：
+
+- 服务状态显示 `active (running)`，`is-active` 输出 `active`。
+- `MainPID` 是大于0的进程 PID。
+- `ps` 显示相同 PID，并且运行用户是当前用户，命令包含 `sleep infinity`。
+
+整体逻辑：
+
+```text
+systemctl --user start
+          ↓
+user systemd 读取 unit 的 ExecStart
+          ↓
+启动 sleep 练习进程并记录 MainPID
+          ↓
+status / show / ps 从不同层面确认结果
+```
+
+验证标准：
+
+- 保留 `active`、MainPID 和对应 `ps` 进程行。
+
+八、停止服务并回归验证
+
+任务 7：使用 systemctl stop 停止用户服务
+
+执行：
+
+```bash
+systemctl --user stop day16-practice.service
+
+systemctl --user is-active day16-practice.service ||
+  printf '%s\n' '[EXPECTED] day16 practice service is inactive'
+
+systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState -p MainPID
+
+ps -p "$main_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] previous MainPID is no longer running'
+```
+
+预期：
+
+- 服务状态变为 `inactive`，MainPID 变为 `0`。
+- 启动时保存的原 MainPID 不再对应运行中的练习进程。
+- 这说明 `stop` 请求已生效；不能只凭命令没有报错就判断服务停止。
+
+验证标准：
+
+- 保留停止后的 unit 状态和原 MainPID 消失证据。
+
+九、验证 unit 不存在的异常场景
+
+任务 8：查询一个明确不存在的练习 unit
+
+执行：
+
+```bash
+systemctl --user status day16-missing.service --no-pager
+
+systemctl --user show day16-missing.service \
+  -p LoadState -p ActiveState -p SubState
+```
+
+预期：
+
+- `status` 提示找不到 `day16-missing.service`。
+- `show` 中 `LoadState` 显示 `not-found`。
+
+重点理解：
+
+- unit 不存在与 unit 存在但 inactive 是两种不同状态。
+- `not-found` 时先检查 unit 名称和文件位置，再考虑 `daemon-reload`，不能直接猜服务进程故障。
+- 异常输出本身就是诊断证据，不要求记忆返回码。
+
+验证标准：
+
+- 保留缺失 unit 的错误和 `LoadState` 证据。
+
+十、只读查看 SSH 与 CAN 相关服务
+
+任务 9：完成固定计划中的相关服务检查
+
+执行：
+
+```bash
+printf '%s\n' '[SSH/CAN UNIT FILE MATCHES]'
+systemctl list-unit-files --type=service --no-pager |
+  grep -Ei 'ssh|sshd|can|socketcan' ||
+  printf '%s\n' '[INFO] no matching SSH/CAN service unit files found'
+
+printf '%s\n' '[SSH/CAN LOADED UNIT MATCHES]'
+systemctl list-units --type=service --all --no-pager |
+  grep -Ei 'ssh|sshd|can|socketcan' ||
+  printf '%s\n' '[INFO] no matching loaded SSH/CAN services found'
+
+printf '%s\n' '[SSH COMMON UNIT STATES]'
+systemctl show ssh.service sshd.service \
+  -p Id -p LoadState -p ActiveState -p SubState -p UnitFileState --no-pager
+```
+
+结果判断：
+
+- 有匹配时，如实记录 unit 名称、加载状态和活动状态。
+- `LoadState=not-found` 表示对应名称的 unit 文件没有被找到，不等于 SSH 软件一定未安装。
+- 没有 CAN service 匹配，不等于系统不支持 CAN；CAN 也可能由网络配置、自定义 unit 或其他工具管理。
+- 这里只查询，不对任何真实 SSH、CAN 或系统服务执行状态修改。
+
+验证标准：
+
+- 保留真实匹配结果或无匹配提示。
+- 没有对真实服务执行启停或配置修改。
+
+十一、清理用户管理器链接
+
+任务 10：停止练习服务并移除 user manager 中的链接
+
+执行：
+
+```bash
+systemctl --user stop day16-practice.service
+systemctl --user disable day16-practice.service
+systemctl --user daemon-reload
+
+systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState
+
+git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/day16-practice.service
+```
+
+结果判断：
+
+- `disable` 用于移除 `systemctl link` 创建的用户配置链接，不删除项目中的 unit 文件。
+- 清理后可能显示 `LoadState=not-found`，项目文件仍应存在并显示为 Git 新增文件。
+- 如果 `disable` 提示该 unit 没有安装配置，继续检查 `LoadState` 和项目文件即可，如实记录输出。
+
+验证标准：
+
+- 练习服务最终没有运行。
+- 用户管理器中的练习链接已清理，项目 unit 文件仍然存在。
+- 不提交用户配置目录、临时对象或系统输出文件。
+
+十二、服务问题的基础诊断顺序
+
+任务 11：形成 systemd 服务层面的取证流程
+
+```text
+确认 unit 名称与管理范围（系统级或 --user）
+                    ↓
+检查 LoadState，确认配置是否被找到并加载
+                    ↓
+检查 ActiveState / SubState，确认当前状态
+                    ↓
+查看 status 中的 MainPID 和错误信息
+                    ↓
+需要时检查对应进程
+                    ↓
+做最小修改后重新查询状态
+```
+
+重点理解：
+
+- 先确认对象和管理范围，再判断运行状态。
+- `not-found`、`inactive` 和 `active` 表示不同问题层级。
+- Day16 先使用状态和进程证据；服务日志的系统学习留到 Day17。
+
+验证标准：
+
+- 能按 unit 名称、加载状态、活动状态、MainPID 和回归查询的顺序说明过程。
+
+十三、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. signal 是什么？`kill` 命令对目标进程执行的核心动作是什么？
-2. 哪些日志和进程证据证明临时 worker 收到 `TERM` 后执行了清理再退出？
-3. 为什么发送信号前必须确认 PID 对应的目标，发送后还要重新查询？
-4. `kill` 与 `pkill` 的目标选择方式有什么区别，哪一种更容易一次影响多个进程？
-5. 为什么执行 `pkill` 前必须用相同的精确模式查看匹配结果？
-6. `process_check.sh` 中的 `kill -0` 做什么？检查失败为什么不能只解释为进程不存在？
-7. `process_check.sh` 从接收 PID 到输出运行或不可访问结果，整体流程是什么？
+1. systemd、service unit 和 `systemctl` 分别是什么，它们之间是什么关系？
+2. unit 文件存在为什么不能直接证明服务正在运行？
+3. `LoadState`、`ActiveState` 和 `UnitFileState` 分别回答什么问题？
+4. `start/stop` 与 `enable/disable` 关注的状态有什么区别？
+5. 哪些状态和进程证据共同证明 Day16 练习服务已经启动，后来又停止？
+6. 为什么真实 SSH、CAN 服务只能只读查看，不能直接拿来练习 `start/stop`？
+7. 查询服务提示 unit not found 时，应该按什么顺序检查？
 
 说明：
 
-- 只回答信号、目标范围、安全检查和回归验证的整体关系。
-- 不考信号编号、命令参数、Shell 语法或数字状态码。
+- 只回答管理对象、状态区别、安全边界和诊断顺序。
+- 不考 systemctl 参数、unit 文件语法、状态码或 systemd 内部实现。
 - 不要求填写每日总结。
 
-十、操作与问题记录要求
+十四、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day15 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day16 用户操作输出记录` 标题。请在该标题下记录：
 
-- 临时 worker 文件内容和语法检查结果。
-- worker 启动后的 PID、`ps` 和 ready 日志。
-- 发送 `TERM` 后的清理日志与进程消失证据。
-- 不存在 PID 的发送前检查和错误文字。
-- 两个 `pkill` worker 发送前后的名称匹配结果。
-- `process_check.sh` 文件内容、语法和权限。
-- 脚本检查运行中与已结束 worker 的结果。
-- Git 对 `process_check.sh` 的状态。
+- PID 1、systemd 版本、系统状态和 user manager 状态。
+- 运行中服务与 service unit 文件的快照。
+- `day16-practice.service` 文件内容、语法验证和 Git 状态。
+- unit 加载后但启动前的状态。
+- 启动后的 `active`、MainPID 和 `ps` 证据。
+- 停止后的 `inactive`、MainPID 和原进程消失证据。
+- 缺失 unit 的错误和 `LoadState=not-found` 证据。
+- SSH、CAN 相关服务的真实查询结果或无匹配提示。
+- 清理用户链接后的状态和项目文件状态。
 - 对 7 个技术问题的回答。
 
-不要提前修改 Linux README。Day15 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day16 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
-十一、Git 提交要求
+十五、Git 提交要求
 
-- 开始学习前，由 AI 将 Day15 学习安排和 `out.md` 标题提交并推送。
-- Day15 完成、检查并归档后，由 AI 提交学习记录和 `process_check.sh`。
+- 开始学习前，由 AI 将 Day16 学习安排和 `out.md` 标题提交并推送。
+- Day16 完成、检查并归档后，由 AI 提交学习记录和 `day16-practice.service`。
 - 不使用 `git add .`。
-- 不提交 `/tmp/day15-signal-practice` 中的 worker 或日志。
-- 不提交其他日志、报告、C++ 编译产物或 `temp.txt`。
+- 不提交用户 systemd 配置链接、终端输出文件、日志、报告、C++ 编译产物或 `temp.txt`。
 - 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十二、Day15 简短执行计划
+十六、Day16 简短执行计划
 
-1. 创建 TERM worker → 验证：文件正确且语法通过。
-2. 按 PID 发送 TERM → 验证：清理日志出现且进程消失。
-3. 验证不存在目标 → 验证：发送前确认无目标并获得错误。
-4. 验证 `pkill` → 验证：精确模式只处理两个临时进程。
-5. 创建 `process_check.sh` → 验证：语法和权限正确。
-6. 测试项目脚本 → 验证：区分运行中与结束后的 worker。
-7. 完成记录 → 验证：`out.md` 包含真实输出和7个技术问题答案。
+1. 确认 systemd 环境 → 验证：系统和 user manager 状态有真实输出。
+2. 查看服务快照 → 验证：区分当前状态与自动启动配置。
+3. 创建项目 unit → 验证：文件正确且语法通过。
+4. 加载并启动 → 验证：状态为 active，MainPID 对应实际进程。
+5. 停止并回查 → 验证：状态为 inactive，原进程消失。
+6. 查询缺失 unit → 验证：获得 not-found 证据。
+7. 查看 SSH/CAN 服务 → 验证：只读记录真实结果。
+8. 清理链接并完成记录 → 验证：服务停止、项目文件保留、7题已回答。
 
-十三、Day15 完成标准
+十七、Day16 完成标准
 
-- 理解 signal 与 `kill` 命令的整体关系。
-- 理解 `TERM` 可以让目标进程执行清理后退出。
-- 能在发送信号前确认目标，并在发送后重新验证。
-- 能区分 `kill` 的 PID 目标与 `pkill` 的名称匹配范围。
-- 所有信号只发送给明确创建的临时进程或已确认不存在的安全测试 PID。
-- `process_check.sh` 存在、语法正确且具有执行权限。
-- 项目脚本能区分运行中与结束后的临时进程。
+- 理解 systemd、service unit、systemctl 和服务进程的整体关系。
+- 能区分 loaded、active 和 enabled 所描述的不同状态。
+- 已安全完成用户练习服务的加载、启动、停止和回归验证。
+- 已完成 unit 不存在的异常验证。
+- 已只读查看 SSH、CAN 相关服务，没有改变真实服务状态。
+- `day16-practice.service` 存在且语法检查通过。
+- 用户管理器中的练习链接已清理，练习服务最终未运行。
 - `out.md` 包含完整、真实的操作输出和7个技术问题答案。
-- Git 提交不包含临时 worker、日志、报告、编译程序或 `temp.txt`。
+- Git 提交不包含用户配置链接、日志、报告、编译程序或 `temp.txt`。
