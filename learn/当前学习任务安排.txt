@@ -1,344 +1,318 @@
-Day13 详细学习安排：chmod 与 chown
+Day14 详细学习安排：进程、PID、ps 与 top
 
 一、今日目标
 
-- 理解 `chmod` 修改权限，`chown` 修改文件的 owner 或 group。
-- 能通过变更前后的 `stat` 输出判断究竟是哪项元数据发生变化。
-- 理解文件 owner 通常可以修改自己的文件权限。
-- 理解普通用户只能在有限范围内改变文件所属组，不能随意改变文件 owner 或改成自己不属于的组。
-- 使用当前用户已经所属的 `adm` 组完成一次合法的 group 变更。
-- 使用当前用户不属于的 `root` 组安全复现一次 `chown` 失败，并确认失败后元数据没有被错误改变。
-- 验证 `chmod/chown` 修改的是文件元数据，不会修改文件内容。
+- 理解程序是磁盘上的可执行文件，进程是程序运行时的实例。
+- 理解 PID 用于标识一个正在运行的进程，PPID 表示启动它的父进程。
+- 能用 `ps` 获取某一时刻的进程快照。
+- 能用 `top` 观察系统和目标进程的动态状态。
+- 能根据 PID、PPID、用户、状态、运行时间和命令确认目标进程。
+- 启动一个会自然结束的临时诊断 worker，记录其出现、运行和消失的完整证据。
+- 检查当前系统是否存在名称可识别的 ROS2 相关进程，并如实记录结果。
 
 说明：
 
-- Day13 严格保持原学习计划的 `chmod/chown` 主题。
-- Day2 已练习数字形式的 `chmod 755/644`，Day12 已练习符号形式的权限增减并掌握 owner/group/other。今天不重复权限数字换算和三组权限结构。
-- Day13 的新增重点是区分 `chmod` 与 `chown` 的职责，以及普通用户执行 `chown` 的权限边界。
-- 所有修改都作用于 `/tmp` 中的项目文件副本，不修改仓库中的 `robot_env.sh`。
-- 不使用 `sudo`，不创建用户或组，不修改系统文件。
-- AI 已提供全部命令，用户只需亲自在终端执行并理解整体变化。
-- 不要求背命令参数、数字权限或错误状态码。
+- Day14 严格保持原学习计划的“进程/ps/top”与“进程和 PID”主题。
+- Day10、Day11 只涉及父子 Shell 和环境继承，没有学习进程列表、PID、PPID 或运行状态，因此 Day14 不跳过。
+- 今天只观察进程，不终止进程；`kill/signal` 是 Day15 内容，不提前学习。
+- 项目当前未提供正在运行的 ROS2 节点，今天先检查实际系统；没有匹配结果时不得伪造。
+- 临时诊断 worker 使用系统已有程序并在8秒后自然结束，不新增仓库脚本。
+- `htop` 只检查是否安装；未安装时不使用 `sudo` 安装，继续使用 `ps/top` 即可。
+- AI 已提供全部命令，用户只需亲自在终端执行并理解整体流程。
+- 不要求背命令参数、进程状态字母或数字状态码。
 - 不要求填写每日总结。
-- 今天只学习 Linux，不新增 C++、CAN、ROS2 内容，也不新增仓库脚本。
+- 今天只学习 Linux，不新增 C++、CAN、ROS2 代码。
 - 建议用时 30～40 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、准备项目配置副本
+二、认识当前 Shell 进程
 
-任务 1：复制 `robot_env.sh` 到临时练习目录
+任务 1：查看当前 Shell 的 PID 和进程信息
 
 执行：
 
 ```bash
-practice_dir='/tmp/day13-ownership-practice'
-source_file="$HOME/workspace/learn/learn/robot-system-learning/linux/robot_env.sh"
-test_file="$practice_dir/robot_env.test.sh"
-
-mkdir -p "$practice_dir"
-cp "$source_file" "$test_file"
-chmod u=rw,g=r,o= "$test_file"
-
-id
-groups
-ls -l "$source_file" "$test_file"
-stat -c 'permissions=%A | owner=%U | group=%G | file=%n' "$source_file" "$test_file"
+printf 'current shell PID: %s\n' "$$"
+ps -p "$$" -o pid,ppid,user,stat,etime,cmd
 ```
 
-预期：
+重点观察：
 
-- 当前用户仍为 `seeway`，所属组中包含主组 `l` 和附加组 `adm`。
-- 项目原文件与临时副本内容相同，但它们是两个不同路径下的文件。
-- 临时副本由当前用户拥有，初始 group 为 `l`，权限为 `-rw-r-----`。
-
-重点理解：
-
-- 今天把真实项目配置复制到 `/tmp`，后续只修改副本的元数据。
-- `chmod` 在这里仅用于建立明确的初始状态，不重复学习权限数字。
-- 项目原文件是对照对象，整个实验都不修改它。
-
-验证标准：
-
-- 保留当前身份、组和两个文件初始元数据的真实输出。
-- 确认 `test_file` 路径位于 `/tmp/day13-ownership-practice`。
-
-三、验证 chmod 只修改权限
-
-任务 2：只给副本的 group 增加写权限
-
-变更前再次记录：
-
-```bash
-stat -c 'before chmod: permissions=%A | owner=%U | group=%G' "$test_file"
-```
-
-执行权限变更：
-
-```bash
-chmod g+w "$test_file"
-stat -c 'after chmod:  permissions=%A | owner=%U | group=%G' "$test_file"
-```
-
-预期：
-
-- 权限从 `-rw-r-----` 变为 `-rw-rw----`。
-- owner 仍为 `seeway`。
-- group 仍为 `l`。
+- 第一条输出当前 Shell 的 PID。
+- `ps` 中的 PID 应与 `$$` 输出一致。
+- PPID 是启动当前 Shell 的父进程 PID。
+- USER 是运行该进程的用户。
+- STAT 表示当前状态，ETIME 表示进程已经运行多久，CMD 表示启动命令。
 
 整体逻辑：
 
 ```text
-chmod 接收文件和目标权限
-          ↓
-修改权限位
-          ↓
-owner、group 和文件内容保持不变
+终端或上级程序
+       ↓ 启动
+当前 Shell 进程
+       ↓
+获得自己的 PID，并记录父进程 PPID
 ```
-
-随后恢复初始权限：
-
-```bash
-chmod g-w "$test_file"
-stat -c 'restored: permissions=%A | owner=%U | group=%G' "$test_file"
-```
-
-验证标准：
-
-- 保留变更前、变更后和恢复后的 `stat` 输出。
-- 根据证据确认 `chmod` 只改变权限，没有改变 owner 或 group。
-
-四、确认允许使用的测试组
-
-任务 3：在执行 chown 前先确认当前用户属于 `adm`
-
-执行：
-
-```bash
-groups
-id -nG | tr ' ' '\n' | grep -Fx 'adm'
-```
-
-预期：
-
-- `groups` 输出包含 `adm`。
-- 第二条命令单独输出 `adm`。
 
 重点理解：
 
-- 文件 owner 可以把文件 group 改成自己所属的组。
-- 先用身份和组证据确认变更条件，再执行 `chown`，不要盲目尝试。
-- 今天只改变 group，不尝试把文件 owner 改成其他用户。
+- PID 标识的是一次运行实例，不是磁盘文件的永久编号。
+- 同一个程序多次运行时，每个进程会有各自的 PID。
+- 不要求记住输出列参数，只需能从结果中找到 PID、PPID 和命令。
 
 验证标准：
 
-- 保留当前用户属于 `adm` 的真实证据。
+- 保留 `$$` 和 `ps` 的真实输出。
+- 两处 Shell PID 一致。
 
-五、验证 chown 修改所属组
+三、查看系统进程快照
 
-任务 4：使用 chown 将副本的 group 从 `l` 改为 `adm`
+任务 2：用 ps 获取当前时刻的进程证据
 
 执行：
 
 ```bash
-stat -c 'before chown: permissions=%A | owner=%U | group=%G' "$test_file"
+ps -eo pid,ppid,user,stat,etime,comm --sort=pid | head -n 15
+```
 
-chown :adm "$test_file"
+重点理解：
 
-stat -c 'after chown:  permissions=%A | owner=%U | group=%G' "$test_file"
+- `ps` 输出是执行命令那个时刻的快照。
+- 进程可能在下一刻启动、结束或改变状态，因此旧快照不能永久代表当前系统。
+- 一行通常代表一个进程实例，不同 PID 表示不同运行实例。
+
+验证标准：
+
+- 保留前15行真实输出。
+- 能指出其中任意一行的 PID、PPID、USER 和命令名。
+
+四、临时诊断 worker 生命周期实验
+
+任务 3：启动、观察并等待一个临时后台进程自然结束
+
+请将下面整段命令一次执行：
+
+```bash
+shell_pid="$$"
+
+bash -c 'exec -a robot-system-diagnostic-worker sleep 8' &
+worker_pid="$!"
+
+printf 'shell PID: %s\n' "$shell_pid"
+printf 'worker PID: %s\n' "$worker_pid"
+
+printf '%s\n' '[PS] exact worker snapshot'
+ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd
+
+printf '%s\n' '[PS] children of current shell'
+ps --ppid "$shell_pid" -o pid,ppid,user,stat,etime,cmd
+
+printf '%s\n' '[SEARCH] worker by name'
+pgrep -af 'robot-system-diagnostic-worker'
+
+printf '%s\n' '[TOP] worker snapshot'
+top -b -n 1 -p "$worker_pid" | head -n 12
+
+wait "$worker_pid"
+
+printf '%s\n' '[PS] after worker finished'
+ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] worker is no longer running'
 ```
 
 预期：
 
-- group 从 `l` 变为 `adm`。
-- owner 仍为 `seeway`。
-- 权限仍为 `-rw-r-----`。
+- `worker_pid` 是后台 worker 的 PID。
+- worker 的 PPID 与 `shell_pid` 一致，证明当前 Shell 启动了它。
+- `ps`、名称搜索和 `top` 都能在 worker 存活期间找到它。
+- worker 命令行包含 `robot-system-diagnostic-worker`。
+- `wait` 只等待 worker 自然结束，没有发送终止信号。
+- 最后再次查询该 PID 时，显示预期的“不再运行”结果。
 
-整体逻辑：
+生命周期：
 
 ```text
-当前用户是文件 owner，并且属于 adm 组
-                    ↓
-chown 只请求把文件 group 改为 adm
-                    ↓
-系统允许变更
-                    ↓
-group 改变，owner 和权限保持不变
+当前 Shell
+    ↓ 启动
+临时 worker 获得 PID
+    ↓
+ps / top 获取运行证据
+    ↓
+8秒后自然结束
+    ↓
+原 PID 不再对应该 worker
 ```
 
 重点理解：
 
-- `chown` 可以修改 owner，也可以只修改 group；本次只使用它修改 group。
-- 不要求记住 `:adm` 的具体写法，只需理解这次输入指定了目标 group。
-- 当前用户仍然是文件 owner，因此后续访问仍优先使用 owner 权限，不会因为 group 改成 `adm` 就改用 group 权限。
+- `$!` 提供当前 Shell 最近启动的后台进程 PID；不要求记忆写法，只需理解本次如何得到精确目标。
+- 后台运行表示 Shell 可以在 worker 存活期间继续执行观察命令。
+- PID 只在进程存在期间用于定位该实例；进程结束后不能继续把旧 PID 当成有效运行证据。
+- 不要求理解 `exec -a` 细节，它只为临时 worker 设置便于搜索的名称。
 
 验证标准：
 
-- 保留变更前后的 `stat` 输出。
-- 根据输出确认只有 group 发生变化。
+- 保留 worker PID、PPID、`ps`、名称搜索和 `top` 输出。
+- 保留 worker 自然结束后的查询结果。
+- 根据输出确认 worker 的父进程是当前 Shell。
 
-六、安全复现 chown 失败
+五、理解 ps 与 top 的证据差异
 
-任务 5：尝试把副本改为当前用户不属于的 `root` 组
+任务 4：根据刚才的实际输出比较两种观察方式
 
-先确认当前用户不属于 `root` 组：
+`ps` 的整体作用：
 
-```bash
-id -nG | tr ' ' '\n' | grep -Fx 'root' || printf '%s\n' '[EXPECTED] current user is not in group root'
-```
+- 获取执行时刻的进程快照。
+- 适合记录明确的 PID、PPID、用户、状态、运行时间和命令。
+- 再次执行才会得到新的当前状态。
 
-随后执行预期失败的变更：
+`top` 的整体作用：
 
-```bash
-chown :root "$test_file"
-stat -c 'after failed chown: permissions=%A | owner=%U | group=%G' "$test_file"
-```
-
-预期：
-
-- 第一组命令确认当前用户不属于 `root`。
-- `chown :root` 提示“操作不允许”或 `Operation not permitted`。
-- 失败后 owner 仍为 `seeway`，group 仍为 `adm`，权限仍为 `-rw-r-----`。
-
-调试逻辑：
-
-1. 读取错误文字，确认是权限边界问题。
-2. 用 `id` 或 `groups` 检查当前用户是否属于目标组。
-3. 用 `stat` 检查失败后文件元数据是否保持原状。
-4. 只对允许的目标组做恢复，不使用更高权限绕过实验。
-
-重点理解：
-
-- 普通用户不能任意决定文件 owner 或 group。
-- 命令失败后不能只看错误，还要检查文件当前状态，确认没有发生部分变更。
-- 今天不要求了解 Linux capability 或内核检查细节。
+- 正常交互使用时会持续刷新系统和进程状态。
+- 本次使用批处理单次输出，便于把结果记录到 `out.md`。
+- 输出同时包含系统负载、CPU、内存概要和目标进程信息。
 
 验证标准：
 
-- 保留预期错误文字。
-- 保留失败后的 `stat` 输出，确认 group 没有变成 `root`。
+- 能根据实际输出指出两者都找到了同一个 worker PID。
+- 理解 `ps` 是快照，`top` 通常用于持续观察；不要求记住操作按键。
 
-七、恢复所属组并验证文件内容
+六、检查 htop 是否可用
 
-任务 6：将副本 group 恢复为主组 `l`，并证明文件内容未改变
+任务 5：只检查工具是否安装
 
 执行：
 
 ```bash
-chown :l "$test_file"
-stat -c 'final: permissions=%A | owner=%U | group=%G' "$test_file"
-
-cmp -s "$source_file" "$test_file" && printf '%s\n' '[OK] file content unchanged'
+command -v htop || printf '%s\n' '[INFO] htop is not installed; continue with ps and top'
 ```
 
 预期：
 
-- 副本的 group 恢复为 `l`。
-- owner 仍为 `seeway`，权限为 `-rw-r-----`。
-- 内容比较显示 `[OK] file content unchanged`。
-
-整体逻辑：
-
-```text
-chmod → 修改权限元数据
-chown → 修改 owner/group 元数据
-cmp   → 验证文件内容仍与项目原文件相同
-```
+- 已安装时显示 `htop` 路径。
+- 未安装时显示提示文字，这不影响 Day14 完成。
 
 重点理解：
 
-- 权限和归属属于文件元数据，不是文件正文。
-- `chmod/chown` 成功不代表文件内容被重新写入。
-- 最终同时检查权限、owner、group 和内容，才构成完整回归验证。
+- `htop` 是另一种交互式进程观察工具。
+- 今天的核心进程证据已经由 `ps` 和 `top` 提供，不为了单个练习安装软件。
 
 验证标准：
 
-- group 已恢复为 `l`。
-- 项目原文件和临时副本内容仍然相同。
+- 保留真实检查结果。
 
-八、项目原文件回归检查
+七、检查当前 ROS2 相关进程
 
-任务 7：确认仓库中的 `robot_env.sh` 没有被实验修改
+任务 6：在系统进程快照中查找可识别的 ROS2 相关命令
 
 执行：
 
 ```bash
-ls -l "$source_file"
-stat -c 'project file: permissions=%A | owner=%U | group=%G | file=%n' "$source_file"
-git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/robot_env.sh
+ps -eo pid,ppid,user,stat,etime,cmd |
+  grep -E '[r]os2|[r]obot_state_publisher' ||
+  printf '%s\n' '[INFO] no matching ROS2-related process is currently visible'
 ```
 
-预期：
+结果判断：
 
-- 项目原文件保持原有权限、owner 和 group。
-- Git 对 `robot_env.sh` 没有显示任何修改。
+- 有输出时：记录匹配进程的 PID、PPID、用户和命令。
+- 无输出时：如实保留提示，表示本次快照没有发现名称匹配的进程。
+- 名称没有匹配不等于 ROS2 软件没有安装，也不能证明系统永远没有 ROS2 节点；它只说明本次搜索没有取得匹配证据。
+
+重点理解：
+
+- 只有正在运行的程序才会出现在进程列表中。
+- 磁盘上存在程序文件，不代表它当前一定有对应进程。
+- 以后实际启动 ROS2 节点时，可以根据启动命令、已知进程名或 PID 使用同样方法观察。
 
 验证标准：
 
-- 保留项目原文件的最终元数据和 Git 检查结果。
-- Git 命令无输出表示该项目文件没有未提交改动。
+- 保留真实匹配结果或无匹配提示。
+- 不编造不存在的 ROS2 节点或 PID。
+
+八、进程问题的基础诊断顺序
+
+任务 7：形成进程层面的取证流程
+
+当预期的程序似乎没有运行时，按下面顺序思考：
+
+1. 明确预期运行的程序或命令名称。
+2. 用进程快照搜索匹配对象。
+3. 有结果时记录 PID、PPID、USER、STAT、ETIME 和 CMD。
+4. 无结果时区分“进程已经结束”和“搜索名称不准确”，不能直接认定程序未安装。
+5. 对已知 PID 再做精确查询，确认该实例当前是否仍存在。
+6. 需要持续观察时使用动态工具，重新获取当前证据。
+
+说明：
+
+- Day14 只负责识别和观察进程。
+- 不对系统服务或不熟悉的进程执行任何修改或终止操作。
+
+验证标准：
+
+- 能按目标、搜索、确认身份、观察状态、重新验证的顺序说明过程。
 
 九、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. `chmod` 和 `chown` 分别修改文件的什么信息？
-2. 为什么执行 `chmod g+w` 后，权限发生变化，但 owner 和 group 没有变化？
-3. 为什么当前用户可以把自己文件的 group 改成 `adm`，改成 `root` 却失败？
-4. 文件 group 改成 `adm` 后，当前用户仍然是 owner；系统访问该文件时使用 owner、group 还是 other 权限？
-5. 为什么 `chmod/chown` 执行后，文件内容仍然可以与原文件完全相同？
-6. `chown` 提示操作不允许时，应检查哪些身份和文件证据？
-7. 如何验证一次 `chmod/chown` 变更确实达到预期，并且没有意外修改其他元数据或文件内容？
+1. 磁盘上的程序文件与正在运行的进程有什么区别？
+2. PID 和 PPID 分别表示什么？本次 worker 的 PPID 为什么与当前 Shell PID 一致？
+3. 为什么通过已知 PID 查询 worker，比只依赖名称搜索更精确？
+4. `ps` 与正常交互使用的 `top` 在观察方式上有什么区别？
+5. 哪些实际输出共同证明 worker 曾经运行，并且后来已经结束？
+6. 为什么进程搜索没有结果，不能直接证明对应软件没有安装？
+7. 从当前 Shell 启动 worker，到最后确认它消失，整个进程生命周期验证流程是什么？
 
 说明：
 
-- 只回答命令职责、权限边界和验证逻辑。
-- 不考命令参数、权限数字、错误状态码或系统实现细节。
+- 只回答程序、进程、PID/PPID、快照和生命周期的整体关系。
+- 不考命令参数、状态字母、数字状态码或 `top/htop` 操作按键。
 - 不要求填写每日总结。
 
 十、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day13 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day14 用户操作输出记录` 标题。请在该标题下记录：
 
-- 当前用户、所属组和两个文件的初始元数据。
-- `chmod` 前后及恢复后的 `stat` 输出。
-- 当前用户属于 `adm` 的证据。
-- `chown :adm` 成功后的元数据。
-- `chown :root` 的错误文字及失败后的元数据。
-- group 恢复为 `l` 后的元数据和文件内容比较结果。
-- 项目原文件未被修改的检查结果。
+- 当前 Shell PID、PPID、用户、状态、运行时间和命令。
+- 系统进程快照的前15行。
+- 临时 worker 的 PID、PPID、名称搜索、`ps` 和 `top` 输出。
+- worker 自然结束后的查询结果。
+- `htop` 是否可用的真实结果。
+- 当前 ROS2 相关进程的匹配结果或无匹配提示。
 - 对 7 个技术问题的回答。
 - 遇到问题时记录现象、判断、检查和解决；没有问题时无需额外总结。
 
-不要提前修改 Linux README。Day13 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day14 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
 十一、Git 提交要求
 
-- 开始学习前，由 AI 将 Day13 学习安排和 `out.md` 标题提交并推送到远程仓库。
-- Day13 完成、检查并归档后，由 AI 提交学习记录；Day13 不新增仓库脚本。
+- 开始学习前，由 AI 将 Day14 学习安排和 `out.md` 标题提交并推送到远程仓库。
+- Day14 完成、检查并归档后，由 AI 提交学习记录；Day14 不新增仓库脚本。
 - 不使用 `git add .`。
-- 不提交 `/tmp/day13-ownership-practice` 中的副本。
+- 不提交临时诊断 worker 或其他 `/tmp` 练习对象。
 - 不提交项目中的日志、报告、C++ 编译产物或 `temp.txt`。
 - `当前学习任务安排.txt`、《学习任务模板.md》、《学习问题记录模板.md》、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理，不得忽略。
 
-十二、Day13 简短执行计划
+十二、Day14 简短执行计划
 
-1. 复制项目配置 → 验证：原文件与副本路径和元数据清楚。
-2. 执行 `chmod` → 验证：只改变权限并成功恢复。
-3. 检查组成员身份 → 验证：当前用户属于 `adm`。
-4. 执行合法 `chown` → 验证：group 改为 `adm`，其他元数据不变。
-5. 复现失败 `chown` → 验证：目标组不允许，失败后状态不变。
-6. 恢复并比较内容 → 验证：group 恢复，文件内容未改变。
-7. 检查项目原文件 → 验证：仓库文件没有被实验修改。
+1. 查看当前 Shell → 验证：PID 与 `ps` 输出一致。
+2. 获取系统快照 → 验证：能找到进程的基本字段。
+3. 启动临时 worker → 验证：获得明确 PID 和 PPID。
+4. 使用 `ps/top` 观察 → 验证：多个证据指向同一 worker。
+5. 等待自然结束 → 验证：旧 PID 不再对应运行中的 worker。
+6. 检查 `htop` → 验证：如实记录是否可用。
+7. 检查 ROS2 相关进程 → 验证：如实记录匹配或无匹配结果。
 8. 完成记录 → 验证：`out.md` 包含真实输出和7个技术问题答案。
 
-十三、Day13 完成标准
+十三、Day14 完成标准
 
-- 理解 `chmod` 与 `chown` 修改不同的文件元数据。
-- 能根据变更前后的证据区分权限变化和归属变化。
-- 理解普通用户改变所属组的边界。
-- 已完成合法 group 变更、非法 group 变更和恢复验证。
-- 理解当前用户是 owner 时仍使用 owner 权限。
-- 已确认 `chmod/chown` 没有改变文件内容。
-- 已确认项目原文件未被实验修改。
+- 理解程序文件与进程实例的区别。
+- 理解 PID 和 PPID 的整体作用。
+- 能使用 `ps` 获取进程快照。
+- 能使用 `top` 观察目标进程和系统概要。
+- 已完成临时 worker 从出现到自然结束的生命周期验证。
+- 能根据进程证据判断目标当前是否正在运行。
+- 已如实检查当前 ROS2 相关进程，没有编造结果。
 - `out.md` 包含完整、真实的操作输出和7个技术问题答案。
-- Git 提交不包含临时副本、日志、报告、编译程序或 `temp.txt`。
+- Git 提交不包含临时对象、日志、报告、编译程序或 `temp.txt`。

@@ -1990,3 +1990,5 @@ before chmod: permissions=-rw-r----- | owner=seeway | group=l
 after chmod: permissions=-rw-rw---- | owner=seeway | group=l
 restored: permissions=-rw-r----- | owner=seeway | group=l
 seeway@test:~/workspace/learn/learn/robot-system-learning$
+
+# Day14 用户操作输出记录
