@@ -1,326 +1,347 @@
-Day16 详细学习安排：systemd、systemctl 与服务状态
+Day17 详细学习安排：journalctl 与服务日志收集
 
 一、今日目标
 
-- 理解 systemd 是系统与服务管理器，service unit 是它管理的一类对象。
-- 理解 `systemctl` 是查询和控制 systemd 的命令行工具，不是服务进程本身。
-- 能区分 unit 是否已加载、当前是否 active、是否配置为自动启动。
-- 使用 `systemctl --user status / start / stop` 完成一个安全的临时服务实验。
-- 将服务状态与对应进程 PID 联系起来，并在停止后重新验证。
-- 只读查看系统中的 SSH、CAN 或相关服务，不改变真实系统服务状态。
-- 完成正常启动、正常停止和 unit 不存在三条验证路径。
+- 理解 systemd-journald 负责收集 journal，`journalctl` 负责查询 journal。
+- 理解服务状态与服务日志是两类不同证据，日志用于查看事件和错误过程。
+- 能使用 `journalctl -u` 按 unit 查询受控服务日志。
+- 能使用 `--since` 限定本次实验的时间范围。
+- 能使用 `-f` 观察本次练习服务新产生的日志。
+- 创建项目脚本 `service_log_collect.sh`，将指定用户服务的日志保存到明确报告文件。
+- 完成正常收集和无效时间输入两条验证路径。
 
 说明：
 
-- Day16 严格保持固定计划的 `systemd`、`systemctl status / start / stop` 和查看 CAN、SSH 相关服务主题。
-- Day14、Day15 已学习进程观察与信号；今天在此基础上理解服务管理，不重复 PID 和 signal 基础。
-- Day17 才学习 `journalctl`，今天不提前学习日志查询参数。
-- 启停实验只操作本次创建的 `day16-practice.service` 用户服务。
-- SSH、CAN、系统级服务只允许查询，禁止对它们执行 `start`、`stop`、`restart`、`enable` 或 `disable`。
-- 不使用 `sudo`，不修改 `/etc/systemd/system` 或系统服务配置。
-- 如果 `systemctl --user` 提示无法连接 user bus，保留真实错误并停止启停实验，不得改为操作系统服务。
-- AI 已提供完整 unit 文件和命令，用户只需亲自在终端执行并理解整体逻辑。
-- 不要求背 systemctl 参数、unit 文件语法、状态码或 systemd 内部实现。
+- Day17 严格保持固定计划的 `journalctl`、`-u / -f / --since` 和日志收集脚本主题。
+- Day16 已学习 systemd 服务状态；今天复用 `day16-practice.service` 作为安全日志源，不重复服务基础。
+- 所有启停操作仍只针对 `day16-practice.service` 用户服务。
+- 不使用 `sudo`，不启停或修改 SSH、CAN、ROS2 及其他真实服务。
+- 不把真实 SSH、远程工具或业务服务日志写入 `out.md`，避免提交地址、用户名或其他敏感信息。
+- `-f` 实验使用 `timeout` 自动结束，不留下持续运行的日志观察进程。
+- 日志报告写入 `/tmp`，只用于验证，不提交到 Git。
+- AI 已提供完整脚本和命令，用户只需亲自在终端执行并理解整体流程。
+- 不要求背 journalctl 参数、时间格式、脚本语法、状态码或 journal 存储细节。
 - 不要求填写每日总结。
 - 今天只学习 Linux，不新增 C++、CAN 或 ROS2 代码。
 - 建议用时 40～50 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、理解 systemd、unit 与 systemctl
+二、理解 journald 与 journalctl
 
 任务 1：建立整体概念
 
 ```text
-unit 文件或系统配置
-        ↓ 交给 systemd
-systemd 管理服务生命周期和状态
-        ↑
-systemctl 查询或请求 start / stop
-        ↓
-状态、MainPID、成功或错误信息
+服务和系统组件产生日志事件
+             ↓
+systemd-journald 收集到 journal
+             ↓
+journalctl 按 unit、时间等条件查询
+             ↓
+终端输出或项目日志报告
 ```
 
 重点理解：
 
-- systemd 通常作为系统初始化与服务管理器，负责管理 service 等 unit。
-- service unit 描述“如何启动和管理一个服务”，服务启动后通常对应一个或多个进程。
-- `systemctl` 是用户与 systemd 交互的工具，负责发送查询或控制请求。
-- unit 文件是管理配置，不是运行中的服务进程。
-- 今天只理解输入、管理对象、状态输出和验证链路，不学习内部依赖算法。
+- systemd-journald 是日志收集服务，`journalctl` 是读取和筛选 journal 的查询工具。
+- `journalctl` 默认只读，不会因为查询而修改原始 journal。
+- unit 名称和时间范围是查询输入，匹配日志或错误文字是输出。
+- Day16 的 `status` 关注当前服务状态；Day17 的 journal 记录服务在一段时间内发生的事件。
+- 没有查询结果只表示当前条件下没有取得日志，不能单独证明服务不存在或一直正常。
 
 验证标准：
 
-- 后续能把 unit 文件、systemd、systemctl、服务进程和状态证据连成一条完整链路。
+- 后续能把日志产生、journald 收集、journalctl 查询和报告输出连成完整流程。
 
-三、确认当前 systemd 环境
+三、确认 journal 环境
 
-任务 2：检查系统管理器和用户管理器是否可用
+任务 2：检查 journalctl 和受控 unit
 
 执行：
 
 ```bash
-ps -p 1 -o pid,comm,args
-systemctl --version | head -n 1
-systemctl is-system-running
+journalctl --version | head -n 1
+journalctl --disk-usage
+
+cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
+project_unit="$PWD/day16-practice.service"
+
+systemd-analyze --user verify "$project_unit"
 systemctl --user is-system-running
 ```
 
 结果判断：
 
-- PID 1 的命令名通常是 `systemd`，说明当前系统由 systemd 初始化和管理。
-- `systemctl --version` 显示当前 systemd 版本。
-- `systemctl is-system-running` 可能显示 `running`、`degraded` 或其他真实状态，应如实记录。
-- `systemctl --user is-system-running` 能返回用户管理器状态时，才继续用户服务启停实验。
-- 如果出现 `Failed to connect to bus`，记录错误并停止任务 4 至任务 7，向 AI 反馈；不要使用 `sudo` 或改动系统服务。
-
-重点理解：
-
-- 系统级 systemd 和当前用户的 user manager 管理范围不同。
-- Day16 使用 `--user`，把实验范围限制在当前用户会话。
+- `journalctl --version` 显示 systemd 版本。
+- `--disk-usage` 显示 journal 当前占用空间，只记录总量，不需要清理 journal。
+- user manager 返回 `running` 后再继续实验。
+- 如果提示无法连接 user bus，保留错误并停止后续服务实验，不使用 sudo 或系统服务代替。
 
 验证标准：
 
-- 保留 PID 1、systemd 版本、系统状态和 user manager 状态的真实输出。
+- 保留版本、journal 占用和 user manager 状态。
+- `day16-practice.service` 语法检查没有错误。
 
-四、查看服务与 unit 文件快照
+四、准备受控用户服务
 
-任务 3：比较当前运行状态与自动启动配置
-
-执行：
-
-```bash
-printf '%s\n' '[RUNNING SERVICES]'
-systemctl list-units --type=service --state=running --no-pager | head -n 15
-
-printf '%s\n' '[SERVICE UNIT FILES]'
-systemctl list-unit-files --type=service --no-pager | head -n 15
-```
-
-重点理解：
-
-- `list-units` 主要展示 systemd 当前已加载的 unit 及其运行状态。
-- `list-unit-files` 主要展示磁盘上的 unit 文件及其启用状态。
-- `active` 描述当前运行状态；`enabled` 描述是否配置为随相应目标自动启动。
-- 服务可以当前 active 但不一定 enabled，也可以 enabled 但当前没有运行，两者不能混为一谈。
-
-验证标准：
-
-- 保留两组前15行真实输出。
-- 能根据输出区分“当前状态”和“自动启动配置”。
-
-五、创建 Day16 项目 unit
-
-任务 4：在 Linux 项目中创建安全的用户服务配置
-
-执行：
-
-```bash
-cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
-vim day16-practice.service
-```
-
-在 Vim 中写入下面的完整内容：
-
-```ini
-[Unit]
-Description=Day16 safe systemd user service practice
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/sleep infinity
-```
-
-保存后执行：
-
-```bash
-project_unit="$PWD/day16-practice.service"
-
-systemd-analyze --user verify "$project_unit"
-cat "$project_unit"
-git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/day16-practice.service
-```
-
-重点理解：
-
-- `[Unit]` 保存该 unit 的说明信息。
-- `[Service]` 描述服务进程如何启动。
-- 这里使用 `sleep infinity` 只是创建一个持续运行、可安全停止的练习进程。
-- unit 文件位于项目中，后续由 Git 管理；它本身存在不代表服务已经运行。
-- 不要求记住 unit 文件字段或语法。
-
-验证标准：
-
-- `systemd-analyze` 没有报告 unit 语法错误。
-- 文件内容与给定内容一致。
-- Git 显示 `day16-practice.service` 是新增文件。
-
-六、加载 unit 并检查初始状态
-
-任务 5：把项目 unit 链接到用户管理器
+任务 3：重新链接 Day16 项目 unit
 
 执行：
 
 ```bash
 systemctl --user link "$project_unit"
 systemctl --user daemon-reload
-
-systemctl --user show day16-practice.service \
-  -p LoadState -p ActiveState -p SubState -p UnitFileState
-
-systemctl --user status day16-practice.service --no-pager
-```
-
-预期：
-
-- `LoadState=loaded` 表示 user manager 已读取该 unit。
-- 尚未启动时，`ActiveState` 应为 `inactive`。
-- `UnitFileState` 可能显示 `linked`，表示用户管理器通过链接找到项目中的 unit 文件。
-- `status` 在 inactive 状态可能返回非零结果；以文字状态为准，不要求记忆状态码。
-
-重点理解：
-
-- 修改或新增 unit 后，`daemon-reload` 让 systemd 重新读取配置。
-- 已加载不等于正在运行。
-
-验证标准：
-
-- 保留加载状态、活动状态和 `status` 的真实输出。
-
-七、启动服务并关联进程
-
-任务 6：使用 systemctl start 启动用户服务
-
-执行：
-
-```bash
-systemctl --user start day16-practice.service
-
-systemctl --user status day16-practice.service --no-pager
-systemctl --user is-active day16-practice.service
-systemctl --user show day16-practice.service \
-  -p LoadState -p ActiveState -p SubState -p MainPID
-
-main_pid="$(systemctl --user show day16-practice.service -p MainPID --value)"
-printf 'service MainPID: %s\n' "$main_pid"
-ps -p "$main_pid" -o pid,ppid,user,stat,etime,cmd
-```
-
-预期：
-
-- 服务状态显示 `active (running)`，`is-active` 输出 `active`。
-- `MainPID` 是大于0的进程 PID。
-- `ps` 显示相同 PID，并且运行用户是当前用户，命令包含 `sleep infinity`。
-
-整体逻辑：
-
-```text
-systemctl --user start
-          ↓
-user systemd 读取 unit 的 ExecStart
-          ↓
-启动 sleep 练习进程并记录 MainPID
-          ↓
-status / show / ps 从不同层面确认结果
-```
-
-验证标准：
-
-- 保留 `active`、MainPID 和对应 `ps` 进程行。
-
-八、停止服务并回归验证
-
-任务 7：使用 systemctl stop 停止用户服务
-
-执行：
-
-```bash
 systemctl --user stop day16-practice.service
 
-systemctl --user is-active day16-practice.service ||
-  printf '%s\n' '[EXPECTED] day16 practice service is inactive'
-
 systemctl --user show day16-practice.service \
-  -p LoadState -p ActiveState -p SubState -p MainPID
-
-ps -p "$main_pid" -o pid,ppid,user,stat,etime,cmd ||
-  printf '%s\n' '[EXPECTED] previous MainPID is no longer running'
-```
-
-预期：
-
-- 服务状态变为 `inactive`，MainPID 变为 `0`。
-- 启动时保存的原 MainPID 不再对应运行中的练习进程。
-- 这说明 `stop` 请求已生效；不能只凭命令没有报错就判断服务停止。
-
-验证标准：
-
-- 保留停止后的 unit 状态和原 MainPID 消失证据。
-
-九、验证 unit 不存在的异常场景
-
-任务 8：查询一个明确不存在的练习 unit
-
-执行：
-
-```bash
-systemctl --user status day16-missing.service --no-pager
-
-systemctl --user show day16-missing.service \
   -p LoadState -p ActiveState -p SubState
 ```
 
 预期：
 
-- `status` 提示找不到 `day16-missing.service`。
-- `show` 中 `LoadState` 显示 `not-found`。
-
-重点理解：
-
-- unit 不存在与 unit 存在但 inactive 是两种不同状态。
-- `not-found` 时先检查 unit 名称和文件位置，再考虑 `daemon-reload`，不能直接猜服务进程故障。
-- 异常输出本身就是诊断证据，不要求记忆返回码。
+- unit 显示 `LoadState=loaded`。
+- 初始状态为 `inactive/dead`。
+- 今天只复用这个受控 unit 产生日志，不修改 unit 文件。
 
 验证标准：
 
-- 保留缺失 unit 的错误和 `LoadState` 证据。
+- 保留链接结果和初始状态。
 
-十、只读查看 SSH 与 CAN 相关服务
+五、使用 -u 与 --since 查询本次事件
 
-任务 9：完成固定计划中的相关服务检查
+任务 4：生成并查询明确时间范围内的日志
 
 执行：
 
 ```bash
-printf '%s\n' '[SSH/CAN UNIT FILE MATCHES]'
-systemctl list-unit-files --type=service --no-pager |
-  grep -Ei 'ssh|sshd|can|socketcan' ||
-  printf '%s\n' '[INFO] no matching SSH/CAN service unit files found'
+start_marker="$(date '+%Y-%m-%d %H:%M:%S')"
+printf 'start marker: %s\n' "$start_marker"
 
-printf '%s\n' '[SSH/CAN LOADED UNIT MATCHES]'
-systemctl list-units --type=service --all --no-pager |
-  grep -Ei 'ssh|sshd|can|socketcan' ||
-  printf '%s\n' '[INFO] no matching loaded SSH/CAN services found'
+systemctl --user start day16-practice.service
+sleep 1
+systemctl --user stop day16-practice.service
 
-printf '%s\n' '[SSH COMMON UNIT STATES]'
-systemctl show ssh.service sshd.service \
-  -p Id -p LoadState -p ActiveState -p SubState -p UnitFileState --no-pager
+journalctl --user -u day16-practice.service \
+  --since "$start_marker" --no-pager
 ```
 
-结果判断：
+预期：
 
-- 有匹配时，如实记录 unit 名称、加载状态和活动状态。
-- `LoadState=not-found` 表示对应名称的 unit 文件没有被找到，不等于 SSH 软件一定未安装。
-- 没有 CAN service 匹配，不等于系统不支持 CAN；CAN 也可能由网络配置、自定义 unit 或其他工具管理。
-- 这里只查询，不对任何真实 SSH、CAN 或系统服务执行状态修改。
+- 输出只查询 `start_marker` 之后与 `day16-practice.service` 相关的用户日志。
+- 日志中应出现练习服务启动和停止相关事件。
+- 日志时间不早于记录的 start marker。
+
+重点理解：
+
+- `-u` 把查询范围限制到指定 unit。
+- `--since` 把查询范围限制到指定时间之后。
+- 两个条件组合后，可以减少无关历史日志。
+- 记录时间标记必须发生在实验事件之前，才能覆盖完整过程。
 
 验证标准：
 
-- 保留真实匹配结果或无匹配提示。
-- 没有对真实服务执行启停或配置修改。
+- 保留 start marker、服务启停命令和对应日志输出。
 
-十一、清理用户管理器链接
+六、使用 -f 观察新增日志
 
-任务 10：停止练习服务并移除 user manager 中的链接
+任务 5：用自动超时方式观察新事件
+
+请将下面整段命令一次执行：
+
+```bash
+follow_output='/tmp/day17-journal-follow.out'
+follow_marker="$(date '+%Y-%m-%d %H:%M:%S')"
+
+: > "$follow_output"
+
+timeout 8s journalctl --user -f -u day16-practice.service \
+  --since "$follow_marker" --no-pager > "$follow_output" 2>&1 &
+follow_pid="$!"
+
+sleep 1
+systemctl --user start day16-practice.service
+sleep 1
+systemctl --user stop day16-practice.service
+
+wait "$follow_pid" 2>/dev/null || true
+
+cat "$follow_output"
+```
+
+预期：
+
+- `-f` 在运行期间等待新的匹配日志。
+- 启动和停止练习服务后，`follow_output` 中出现对应的新事件。
+- `timeout` 在8秒后结束观察，最终没有残留 follow 进程。
+
+回归检查：
+
+```bash
+ps -p "$follow_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] journal follow process has ended'
+```
+
+验证标准：
+
+- 保留实时观察取得的新日志和 follow 进程结束证据。
+- `/tmp/day17-journal-follow.out` 不提交到 Git。
+
+七、验证没有匹配日志的情况
+
+任务 6：查询明确不存在的练习 unit 日志
+
+执行：
+
+```bash
+journalctl --user -u day17-missing.service \
+  --since "$start_marker" --no-pager
+```
+
+预期：
+
+- 通常显示 `-- No entries --` 或没有日志行。
+
+重点理解：
+
+- 没有日志只说明当前 unit 和时间条件下没有取得记录。
+- 它不能单独证明 unit 文件不存在，也不能证明某个真实服务始终健康。
+- 判断 unit 是否存在仍应查询 `LoadState`；判断当前状态仍应查询 `ActiveState`。
+
+验证标准：
+
+- 保留无匹配结果，并正确解释证据边界。
+
+八、创建日志收集脚本
+
+任务 7：为 Robot System Diagnostic Tool 创建项目脚本
+
+执行：
+
+```bash
+vim service_log_collect.sh
+```
+
+在 Vim 中写入下面的完整内容：
+
+```bash
+#!/bin/bash
+
+unit_name="$1"
+since_time="$2"
+output_file="$3"
+
+if [[ -z "$unit_name" || -z "$since_time" || -z "$output_file" ]]; then
+    printf '%s\n' '[LOG COLLECTION ERROR] unit, since time and output file are required' >&2
+    exit 1
+fi
+
+{
+    printf '[LOG COLLECTION] unit=%s since=%s\n' "$unit_name" "$since_time"
+    journalctl --user -u "$unit_name" --since "$since_time" --no-pager
+} > "$output_file" 2>&1
+
+collect_status="$?"
+
+if (( collect_status != 0 )); then
+    printf '[LOG COLLECTION ERROR] failed; report=%s\n' "$output_file" >&2
+    exit "$collect_status"
+fi
+
+printf '[LOG COLLECTION COMPLETE] report=%s\n' "$output_file"
+```
+
+保存后执行：
+
+```bash
+bash -n service_log_collect.sh
+chmod u+x service_log_collect.sh
+ls -l service_log_collect.sh
+cat service_log_collect.sh
+```
+
+脚本整体逻辑：
+
+1. 接收 unit 名称、起始时间和输出文件三个输入。
+2. 缺少输入时输出错误并停止。
+3. 使用 journalctl 查询指定用户 unit 和时间范围。
+4. 将查询条件、日志或 journalctl 错误保存到报告。
+5. 查询成功时输出报告路径，失败时输出明确错误。
+
+说明：
+
+- 不要求记住脚本代码和参数，只需理解输入、查询、报告和错误的整体流程。
+- 脚本提交到 Git，脚本生成的日志报告不提交。
+
+验证标准：
+
+- 脚本语法通过并具有 owner 执行权限。
+- 文件位于 `robot-system-learning/linux/service_log_collect.sh`。
+
+九、验证正常日志收集
+
+任务 8：收集 Day16 练习服务日志
+
+执行：
+
+```bash
+normal_report='/tmp/day17-service-report.log'
+
+./service_log_collect.sh \
+  day16-practice.service "$start_marker" "$normal_report"
+
+cat "$normal_report"
+```
+
+预期：
+
+- 终端显示 `[LOG COLLECTION COMPLETE]` 和报告路径。
+- 报告开头显示 unit 名称与起始时间。
+- 报告中包含本次练习服务的 journal 日志。
+
+验证标准：
+
+- 保留脚本成功输出和报告内容。
+- 报告位于 `/tmp`，不提交到 Git。
+
+十、验证无效时间输入
+
+任务 9：制造可控的 journalctl 参数错误
+
+执行：
+
+```bash
+invalid_report='/tmp/day17-invalid-report.log'
+
+./service_log_collect.sh \
+  day16-practice.service 'not-a-valid-time' "$invalid_report"
+
+cat "$invalid_report"
+```
+
+预期：
+
+- 脚本输出 `[LOG COLLECTION ERROR]`。
+- 报告保留查询条件和 journalctl 的时间解析错误。
+- 错误发生在时间输入解析阶段，不代表服务进程故障。
+
+重点理解：
+
+- 异常场景应保留原始错误文字，不能只写“执行失败”。
+- 修正时间输入后，应重新执行正常收集作为回归验证。
+
+回归验证：
+
+```bash
+./service_log_collect.sh \
+  day16-practice.service "$start_marker" "$normal_report"
+```
+
+验证标准：
+
+- 保留无效时间错误和修正后的成功提示。
+
+十一、清理与 Git 状态检查
+
+任务 10：恢复用户管理器并检查提交范围
 
 执行：
 
@@ -333,111 +354,109 @@ systemctl --user show day16-practice.service \
   -p LoadState -p ActiveState -p SubState
 
 git -C "$HOME/workspace/learn/learn" status --short -- \
-  robot-system-learning/linux/day16-practice.service
+  robot-system-learning/linux/service_log_collect.sh
 ```
 
-结果判断：
+预期：
 
-- `disable` 用于移除 `systemctl link` 创建的用户配置链接，不删除项目中的 unit 文件。
-- 清理后可能显示 `LoadState=not-found`，项目文件仍应存在并显示为 Git 新增文件。
-- 如果 `disable` 提示该 unit 没有安装配置，继续检查 `LoadState` 和项目文件即可，如实记录输出。
+- 练习服务最终为 inactive，用户配置链接被移除。
+- `service_log_collect.sh` 显示为 Git 新增文件。
+- `/tmp` 中的 follow 输出和两份报告不出现在 Git 状态中。
 
 验证标准：
 
-- 练习服务最终没有运行。
-- 用户管理器中的练习链接已清理，项目 unit 文件仍然存在。
-- 不提交用户配置目录、临时对象或系统输出文件。
+- 服务与 follow 进程均已结束。
+- 只保留项目脚本作为 Day17 新增仓库文件。
 
-十二、服务问题的基础诊断顺序
+十二、日志问题的基础诊断顺序
 
-任务 11：形成 systemd 服务层面的取证流程
+任务 11：形成 journal 查询流程
 
 ```text
-确认 unit 名称与管理范围（系统级或 --user）
-                    ↓
-检查 LoadState，确认配置是否被找到并加载
-                    ↓
-检查 ActiveState / SubState，确认当前状态
-                    ↓
-查看 status 中的 MainPID 和错误信息
-                    ↓
-需要时检查对应进程
-                    ↓
-做最小修改后重新查询状态
+确认目标 unit 和管理范围（系统级或 --user）
+                     ↓
+确认本次问题发生的时间范围
+                     ↓
+使用 -u 与 --since 缩小查询范围
+                     ↓
+查看匹配日志或原始错误文字
+                     ↓
+需要观察新事件时使用限时 -f
+                     ↓
+修正输入或问题后重新查询验证
 ```
 
 重点理解：
 
-- 先确认对象和管理范围，再判断运行状态。
-- `not-found`、`inactive` 和 `active` 表示不同问题层级。
-- Day16 先使用状态和进程证据；服务日志的系统学习留到 Day17。
+- 先确认对象和时间，再读取日志，避免被大量无关记录干扰。
+- 日志是诊断证据，不应修改原始 journal。
+- 查询无结果、查询参数错误和服务没有运行是不同情况。
 
 验证标准：
 
-- 能按 unit 名称、加载状态、活动状态、MainPID 和回归查询的顺序说明过程。
+- 能按 unit、管理范围、时间、日志结果和回归查询说明整体流程。
 
 十三、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. systemd、service unit 和 `systemctl` 分别是什么，它们之间是什么关系？
-2. unit 文件存在为什么不能直接证明服务正在运行？
-3. `LoadState`、`ActiveState` 和 `UnitFileState` 分别回答什么问题？
-4. `start/stop` 与 `enable/disable` 关注的状态有什么区别？
-5. 哪些状态和进程证据共同证明 Day16 练习服务已经启动，后来又停止？
-6. 为什么真实 SSH、CAN 服务只能只读查看，不能直接拿来练习 `start/stop`？
-7. 查询服务提示 unit not found 时，应该按什么顺序检查？
+1. systemd-journald 与 `journalctl` 分别做什么，它们是什么关系？
+2. `-u`、`--since` 和 `-f` 分别怎样改变 journalctl 的查询结果？
+3. 为什么本次查询用户服务日志时必须使用 `--user`？
+4. 哪些实际输出证明限时 `-f` 取得了新日志，并且观察进程最终已经结束？
+5. 为什么 `-- No entries --` 不能单独证明 unit 不存在或服务一直正常？
+6. `service_log_collect.sh` 从接收输入到生成报告的整体流程是什么？
+7. 日志收集提示时间无法解析时，应该如何定位并回归验证？
 
 说明：
 
-- 只回答管理对象、状态区别、安全边界和诊断顺序。
-- 不考 systemctl 参数、unit 文件语法、状态码或 systemd 内部实现。
+- 只回答日志来源、查询范围、证据边界和收集流程。
+- 不考 journalctl 参数拼写、时间格式、脚本语法、状态码或 journal 存储实现。
 - 不要求填写每日总结。
 
 十四、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day16 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day17 用户操作输出记录` 标题。请在该标题下记录：
 
-- PID 1、systemd 版本、系统状态和 user manager 状态。
-- 运行中服务与 service unit 文件的快照。
-- `day16-practice.service` 文件内容、语法验证和 Git 状态。
-- unit 加载后但启动前的状态。
-- 启动后的 `active`、MainPID 和 `ps` 证据。
-- 停止后的 `inactive`、MainPID 和原进程消失证据。
-- 缺失 unit 的错误和 `LoadState=not-found` 证据。
-- SSH、CAN 相关服务的真实查询结果或无匹配提示。
-- 清理用户链接后的状态和项目文件状态。
+- journalctl 版本、journal 占用和 user manager 状态。
+- 受控 unit 的链接结果和初始状态。
+- `-u` 与 `--since` 查询的时间标记和真实日志。
+- 限时 `-f` 取得的新日志和 follow 进程结束证据。
+- 不存在 unit 的无日志结果。
+- `service_log_collect.sh` 内容、语法和权限。
+- 正常报告内容、无效时间错误和回归成功提示。
+- 清理后的 unit 状态和脚本 Git 状态。
 - 对 7 个技术问题的回答。
 
-不要提前修改 Linux README。Day16 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day17 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
 十五、Git 提交要求
 
-- 开始学习前，由 AI 将 Day16 学习安排和 `out.md` 标题提交并推送。
-- Day16 完成、检查并归档后，由 AI 提交学习记录和 `day16-practice.service`。
+- 开始学习前，由 AI 将 Day17 学习安排和 `out.md` 标题提交并推送。
+- Day17 完成、检查并归档后，由 AI 提交学习记录和 `service_log_collect.sh`。
 - 不使用 `git add .`。
-- 不提交用户 systemd 配置链接、终端输出文件、日志、报告、C++ 编译产物或 `temp.txt`。
+- 不提交 `/tmp` follow 输出、日志报告、真实服务日志、C++ 编译产物或 `temp.txt`。
 - 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十六、Day16 简短执行计划
+十六、Day17 简短执行计划
 
-1. 确认 systemd 环境 → 验证：系统和 user manager 状态有真实输出。
-2. 查看服务快照 → 验证：区分当前状态与自动启动配置。
-3. 创建项目 unit → 验证：文件正确且语法通过。
-4. 加载并启动 → 验证：状态为 active，MainPID 对应实际进程。
-5. 停止并回查 → 验证：状态为 inactive，原进程消失。
-6. 查询缺失 unit → 验证：获得 not-found 证据。
-7. 查看 SSH/CAN 服务 → 验证：只读记录真实结果。
-8. 清理链接并完成记录 → 验证：服务停止、项目文件保留、7题已回答。
+1. 确认 journal 环境 → 验证：版本、占用和 user manager 状态正常。
+2. 准备受控服务 → 验证：unit 已加载且初始 inactive。
+3. 练习 `-u/--since` → 验证：取得本次启停日志。
+4. 练习限时 `-f` → 验证：取得新日志且 follow 进程结束。
+5. 查询不存在 unit → 验证：取得无日志结果并理解边界。
+6. 创建收集脚本 → 验证：语法和权限正确。
+7. 验证正常与异常 → 验证：报告完整，错误保留，修正后成功。
+8. 清理并完成记录 → 验证：服务停止、链接清理、7题已回答。
 
-十七、Day16 完成标准
+十七、Day17 完成标准
 
-- 理解 systemd、service unit、systemctl 和服务进程的整体关系。
-- 能区分 loaded、active 和 enabled 所描述的不同状态。
-- 已安全完成用户练习服务的加载、启动、停止和回归验证。
-- 已完成 unit 不存在的异常验证。
-- 已只读查看 SSH、CAN 相关服务，没有改变真实服务状态。
-- `day16-practice.service` 存在且语法检查通过。
+- 理解 journald 收集日志、journalctl 查询日志的整体关系。
+- 能使用 unit 和时间条件缩小查询范围。
+- 已用限时 `-f` 取得受控服务的新日志，且观察进程最终结束。
+- 已理解无日志结果的证据边界。
+- `service_log_collect.sh` 存在、语法正确且具有 owner 执行权限。
+- 脚本正常收集、无效时间和修正后回归三项结果符合预期。
 - 用户管理器中的练习链接已清理，练习服务最终未运行。
 - `out.md` 包含完整、真实的操作输出和7个技术问题答案。
-- Git 提交不包含用户配置链接、日志、报告、编译程序或 `temp.txt`。
+- Git 提交不包含 `/tmp` 输出、日志报告、真实服务日志、编译程序或 `temp.txt`。

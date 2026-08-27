@@ -2456,3 +2456,5 @@ SUB    = The low-level unit activation state, values depend on unit type.
 1 loaded units listed.
 To show all installed unit files use 'systemctl list-unit-files'.
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+
+# Day17 用户操作输出记录
