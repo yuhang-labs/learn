@@ -1287,3 +1287,114 @@ day2_demo_if_for.sh
 - `process_check.sh` 已完成，能够区分运行中与不存在或不可访问的 PID。
 - 所有信号只发送给本次创建的临时进程或已确认不存在的安全测试 PID。
 - Day15 所有核心学习目标已通过检查。
+
+# Day16 systemd、systemctl 与服务状态学习记录
+
+## 1. 学习目标
+
+- 理解 systemd、service unit、`systemctl` 和服务进程的整体关系。
+- 区分 unit 的加载状态、当前运行状态和启用状态。
+- 使用用户服务安全完成 `status`、`start` 和 `stop` 实验。
+- 通过 MainPID 和进程查询验证服务状态变化。
+- 只读检查 SSH、CAN 相关服务，不修改真实系统服务。
+
+## 2. 核心概念
+
+### systemd、unit 与 systemctl
+
+- systemd 是系统和服务管理器，负责读取 unit 配置并管理服务生命周期。
+- service unit 是描述服务如何被启动和管理的配置，不是运行中的服务进程。
+- `systemctl` 是向 systemd 发送查询或控制请求的命令行工具。
+- unit 文件存在只表示配置存在，不能证明对应服务正在运行。
+
+### 三类状态
+
+- `LoadState` 回答 unit 配置是否被找到并加载。
+- `ActiveState` 和 `SubState` 回答服务当前是否运行以及更具体的运行状态。
+- `UnitFileState` 回答 unit 文件的安装或启用状态，例如 `enabled`、`disabled`、`static`、`masked` 或 `linked`。
+- `start/stop` 改变当前运行状态；`enable/disable` 改变自动启动配置，两者不能混为一谈。
+
+### 常见 UnitFileState
+
+- `static`：不能独立 enable，通常由其他 unit 依赖或手动启动。
+- `masked`：unit 被屏蔽，不能启动，比 disabled 限制更强。
+- `generated`：unit 由 systemd 在启动或重载时动态生成。
+- `alias`：该名称是另一个 unit 名称的别名。
+
+## 3. 实际执行与结果
+
+### systemd 环境
+
+- PID 1 是 `/sbin/init` 对应的 systemd。
+- systemd 版本为 `249`。
+- 系统状态显示 `degraded`，用户级 systemd manager 显示 `running`。
+- Day16 只使用用户级 manager 启停练习服务，没有使用 sudo 或修改系统服务。
+
+### 用户练习服务
+
+- 新增 `robot-system-learning/linux/day16-practice.service`。
+- unit 使用 `/usr/bin/sleep infinity` 创建持续运行且可安全停止的练习进程。
+- `systemd-analyze --user verify` 没有报告语法错误。
+- 链接并重新加载后，unit 为 `loaded/inactive/dead`，`UnitFileState=linked`。
+
+### 启动与停止验证
+
+- 启动后状态为 `active/running`，MainPID 为 `123162`。
+- `ps` 显示 PID `123162` 对应 `/usr/bin/sleep infinity`，运行用户为 `seeway`。
+- 停止后状态为 `inactive/dead`，MainPID 变为 `0`。
+- 再次查询原 PID 时没有进程行，证明练习服务进程已经停止。
+- 因此判断服务状态不能只看 start/stop 命令是否报错，还要结合 unit 状态、MainPID 和进程证据。
+
+### 缺失 unit 验证
+
+- 查询 `day16-missing.service` 时提示 unit 不存在。
+- `LoadState=not-found`、`ActiveState=inactive`、`SubState=dead`。
+- `not-found` 与 unit 已加载但 inactive 是不同状态，前者应先检查名称、管理范围和文件位置。
+
+### SSH 与 CAN 只读检查
+
+- 精确查询显示 `ssh.service` 为 enabled，并且当前 `loaded/active/running`。
+- `ssh@.service` 为 static，`sshd.service` 是 alias。
+- 精确查询没有显示 CAN 相关 service unit。
+- 没有 CAN service 匹配不等于系统不支持 CAN，CAN 也可能由其他配置或工具管理。
+- 全程只读查询，没有启停 SSH、CAN 或其他真实系统服务。
+
+### 清理结果
+
+- 最终再次停止练习服务，并使用 disable 撤销项目 unit 的用户配置链接。
+- 清理后 `LoadState=not-found`，服务为 `inactive/dead`。
+- 项目中的 `day16-practice.service` 文件仍然存在并由 Git 管理。
+
+## 4. 遇到的问题与纠正
+
+### Shell 续行没有结束
+
+- 第一次输入 inactive 提示命令时，行末多写了反斜杠，Shell 进入 `>` 续行等待。
+- 使用 `Ctrl+C` 取消后重新执行，正确得到 `inactive` 和预期提示。
+- 这说明 `>` 是 Shell 等待命令继续输入，不是 systemctl 的服务状态。
+
+### CAN 文本筛选产生误匹配
+
+- 初始使用包含普通 `can` 子串的 grep 模式，把名称含有 `supplicant` 的服务误判为 CAN 匹配。
+- 根因是 `supplicant` 文本本身包含连续的 `can` 字符，并不代表该服务与 CAN 总线有关。
+- 改用 systemctl 自身的 unit 名称模式后，只显示 SSH unit，没有 CAN unit。
+- 诊断筛选必须验证结果名称与目标对象的实际关系，不能只看字符串命中。
+
+### unit not found 的检查顺序
+
+1. 确认 unit 名称是否正确。
+2. 确认目标属于系统级还是 `--user` 管理范围。
+3. 检查 unit 文件是否位于对应搜索位置，或是否已正确链接。
+4. 新增或修改 unit 后执行 `daemon-reload`。
+5. 重新查询 `LoadState`，再判断后续状态。
+
+## 5. Day16 完成结论
+
+- 已理解 systemd、service unit、systemctl 与服务进程的关系。
+- 已能区分 loaded、active 和 enabled 所描述的不同状态。
+- 已完成用户服务加载、启动、停止和进程回归验证。
+- 已完成 unit 不存在的异常验证和正确诊断顺序。
+- 已掌握 static、masked、generated 和 alias 的整体含义。
+- 已只读确认 SSH 服务状态，并纠正了 CAN 文本筛选的误匹配。
+- 练习服务链接已清理，真实系统服务未被修改。
+- Day16 所有核心学习目标已通过检查。

@@ -1,0 +1,6 @@
+[Unit]
+Description=Day16 safe systemd user service practice
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/sleep infinity

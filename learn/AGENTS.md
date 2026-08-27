@@ -38,6 +38,7 @@
     │   ├── day2_demo_if_for.sh
     │   ├── day2_demo.sh
     │   ├── day3_args.sh
+    │   ├── day16-practice.service
     │   ├── day4_system_check.sh
     │   ├── day5_find_logs.sh
     │   ├── day6_log_analyzer.sh
@@ -97,6 +98,7 @@
 - 我明确告知你不要再有这种验收标准《能说明两份日志分别用于验证什么场景。》，我不需要知道日志用于什么场景
 - 要是某天内容已经学过，就记录归档跳过，开始学习下一天那天,禁止不要擅自修改学习计划
 - 禁止询问学习安排相关问题
+- git diff --check 格式问题你必须自己修复
 
 ## 解决方案
 

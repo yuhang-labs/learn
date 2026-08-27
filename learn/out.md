@@ -14,14 +14,14 @@ buff@buff:/home$ ls
 buff
 buff@buff:/home$ pwd
 /home
-buff@buff:/home$ 
+buff@buff:/home$
 
 
 2.
 buff@buff:/home$ ls /
 bin   cdrom  etc   lib    lib64   lost+found  mnt  proc  run   snap  swapfile  tmp  var
 boot  dev    home  lib32  libx32  media       opt  root  sbin  srv   sys       usr
-buff@buff:/home$ 
+buff@buff:/home$
 
 
 3.buff@buff:/home$ ls
@@ -49,7 +49,7 @@ buff@buff:~/Workspace/learn/robot-system-learning$ ls
 can  cpp  linux  ros2
 buff@buff:~/Workspace/learn/robot-system-learning$ ls
 can  cpp  linux  ros2
-buff@buff:~/Workspace/learn/robot-system-learning$ 
+buff@buff:~/Workspace/learn/robot-system-learning$
 
 
 4.ff@buff:~/Workspace/learn$ cd robot-system-learning/
@@ -66,7 +66,7 @@ can  cpp  linux  ros2
 ./linux:
 
 ./ros2:
-buff@buff:~/Workspace/learn/robot-system-learning$ 
+buff@buff:~/Workspace/learn/robot-system-learning$
 
 /是系统根目录
 home 存放用户个人文件
@@ -90,7 +90,7 @@ dev 设备文件目录（硬件设备）
 
 buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./hello
 hello day1
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$
 
 buff@buff:~/workspace/learn$ cd robot-system-learning/
 buff@buff:~/workspace/learn/robot-system-learning$ ls
@@ -100,14 +100,14 @@ buff@buff:~/workspace/learn/robot-system-learning/cpp$ g++ hello.cpp -o hello
 buff@buff:~/workspace/learn/robot-system-learning/cpp$ ls
 hello  hello.cpp
 
-buff@buff:~/workspace/learn/robot-system-learning$ cat linux/README.md 
+buff@buff:~/workspace/learn/robot-system-learning$ cat linux/README.md
 本文件存放每日学习笔记，项目实践
 
 buff@buff:~/workspace/learn/robot-system-learning$ cd can
 buff@buff:~/workspace/learn/robot-system-learning/can$ touch README.md
 buff@buff:~/workspace/learn/robot-system-learning/can$ cp README.md ../cpp
 buff@buff:~/workspace/learn/robot-system-learning/can$ cp README.md ../ros2
-buff@buff:~/workspace/learn/robot-system-learning/can$ 
+buff@buff:~/workspace/learn/robot-system-learning/can$
 
 
 
@@ -121,7 +121,7 @@ Date:   Sun Aug 16 19:12:58 2026 +0800
 commit 45aaebbffbc89f6b76ceebc8481178020d51283b
 Author: liang686 <3218058764@qq.com>
 Date:   Sun Aug 16 19:10:15 2026 +0800
-buff@buff:~/workspace/learn/robot-system-learning/can$ 
+buff@buff:~/workspace/learn/robot-system-learning/can$
 
 
 robot-system-learning
@@ -154,7 +154,7 @@ buff@buff:~/workspace/learn$ git push
 remote: Resolving deltas: 100% (4/4), completed with 3 local objects.
 To https://github.com/user189397lyh/learn.git
    f1e04c7..981b6db  main -> main
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 
 
 buff@buff:~/workspace/learn$ git push
@@ -167,7 +167,7 @@ buff@buff:~/workspace/learn$ git push
 remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
 To https://github.com/user189397lyh/learn.git
    981b6db..eaa8d16  main -> main
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 
 
 
@@ -182,7 +182,7 @@ buff@buff:~/workspace/learn$ ls
 AGENTS.md
 out.md
 robot-system-learning
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 
 相比ls多了.gitignore文件
 buff@buff:~/workspace/learn$ ls -a
@@ -196,7 +196,7 @@ AGENTS.md
 .gitignore
 out.md
 robot-system-learning
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 
 buff@buff:~/workspace/learn$ ls -h
 12个月每日学习与项目实践计划_机器人系统方向.txt
@@ -206,7 +206,7 @@ buff@buff:~/workspace/learn$ ls -h
 AGENTS.md
 out.md
 robot-system-learning
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 为什么ls -h没有显示出文件大小,而ls -lh显示出了文件大小
 buff@buff:~/workspace/learn$ ls -lh
 总计 1.3M
@@ -217,7 +217,7 @@ buff@buff:~/workspace/learn$ ls -lh
 -rw-rw-r-- 1 buff buff 3.7K  8月 17 15:39 AGENTS.md
 -rw-rw-r-- 1 buff buff 6.9K  8月 17 15:41 out.md
 drwxrwxr-x 6 buff buff 4.0K  8月 16 18:51 robot-system-learning
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 
 buff@buff:~/workspace/learn$ ls -lth
 总计 1.3M
@@ -228,7 +228,7 @@ drwxrwxr-x 6 buff buff 4.0K  8月 16 18:51 robot-system-learning
 -rw-rw-r-- 1 buff buff 789K  8月 16 13:16 365天机器人系统每日理论知识点手册.txt
 -rw-rw-r-- 1 buff buff 448K  8月 16 13:16 365天机器人系统学习实战手册_完整版.txt
 -rw-rw-r-- 1 buff buff  17K  8月 16 13:16 12个月每日学习与项目实践计划_机器人系统方向.txt
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 
 buff@buff:~/workspace/learn$ ls
 12个月每日学习与项目实践计划_机器人系统方向.txt
@@ -249,7 +249,7 @@ buff@buff:~/workspace/learn/robot-system-learning$ ls
 can  cpp  linux  ros2
 buff@buff:~/workspace/learn/robot-system-learning$ mkdir -p linux/day2-demo/subdir
 buff@buff:~/workspace/learn/robot-system-learning$ touch linux/day2-demo/a.txt
-buff@buff:~/workspace/learn/robot-system-learning$ echo 'hello day2' > linux/day2-demo/a.txt 
+buff@buff:~/workspace/learn/robot-system-learning$ echo 'hello day2' > linux/day2-demo/a.txt
 buff@buff:~/workspace/learn/robot-system-learning$ ls
 can  cpp  linux  ros2
 buff@buff:~/workspace/learn/robot-system-learning$ cd linux/
@@ -260,7 +260,7 @@ buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ ls
 a.txt  subdir
 buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ cp a.txt backup.txt
 buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ mv backup.txt renamed.txt
-buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$
 
 cp是复制文件到另一个文件，原来的文件不会丢失
 mv是移动文件到另一个文件，原来的文件位置/名称都会改变
@@ -270,27 +270,27 @@ mv是移动文件到另一个文件，原来的文件位置/名称都会改变
 
 buff@buff:~/workspace/learn/robot-system-learning$ ls
 can  cpp  linux  ros2
-buff@buff:~/workspace/learn/robot-system-learning$ cat linux/day2-demo/a.txt 
+buff@buff:~/workspace/learn/robot-system-learning$ cat linux/day2-demo/a.txt
 hello day2
-buff@buff:~/workspace/learn/robot-system-learning$ head -n 5 linux/day2-demo/a.txt 
+buff@buff:~/workspace/learn/robot-system-learning$ head -n 5 linux/day2-demo/a.txt
 hello day2
-buff@buff:~/workspace/learn/robot-system-learning$ head -n 5 linux/day2-demo/a.txt 
+buff@buff:~/workspace/learn/robot-system-learning$ head -n 5 linux/day2-demo/a.txt
 hello day2
 1
 2
 3
 4
-buff@buff:~/workspace/learn/robot-system-learning$ 
+buff@buff:~/workspace/learn/robot-system-learning$
 
 
 4
-buff@buff:~/workspace/learn/robot-system-learning$ tail -n 5 linux/day2-demo/a.txt 
+buff@buff:~/workspace/learn/robot-system-learning$ tail -n 5 linux/day2-demo/a.txt
 3
 4
 5
 6
 7
-buff@buff:~/workspace/learn/robot-system-learning$ 
+buff@buff:~/workspace/learn/robot-system-learning$
 
 head -n 5是从文件头开始数前五行内容
 tail -n 5是从文件末尾开始后五行内容
@@ -301,7 +301,7 @@ buff@buff:~/workspace/learn/robot-system-learning$ grep 'hello' linux/day2-demo/
 hello day2
 buff@buff:~/workspace/learn/robot-system-learning$ wc -l linux/day2-demo/a.txt
 8 linux/day2-demo/a.txt
-buff@buff:~/workspace/learn/robot-system-learning$ 
+buff@buff:~/workspace/learn/robot-system-learning$
 
 wc 是统计文件的行数 ，但是-l参数是什么意思呢？
 
@@ -310,25 +310,25 @@ wc 是统计文件的行数 ，但是-l参数是什么意思呢？
 buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ touch demo.sh
 buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ ls
 a.txt  demo.sh  renamed.txt  subdir
-buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ chmod 755 demo.sh 
+buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ chmod 755 demo.sh
 buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ ls
 a.txt  demo.sh  renamed.txt  subdir
-buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ ./demo.sh 
+buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ ./demo.sh
 hello world
-buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$
 buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ ls
 a.txt  demo.sh  renamed.txt  subdir
-buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ ls -l a.txt demo.sh 
+buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ ls -l a.txt demo.sh
 -rw-r--r-- 1 buff buff 25  8月 17 15:51 a.txt
 -rwxr-xr-x 1 buff buff 18  8月 17 16:10 demo.sh
-buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux/day2-demo$
 文件不能执行是因为没有添加执行权限，需要+x添加执行权限
 chmod  用于修改权限
 
 buff@buff:~/workspace/learn/robot-system-learning$ find . -name '*.txt'
 ./linux/day2-demo/renamed.txt
 ./linux/day2-demo/a.txt
-buff@buff:~/workspace/learn/robot-system-learning$ 
+buff@buff:~/workspace/learn/robot-system-learning$
 find 中 .是什么意思 从当前文件夹开始查找吗？
 -name呢？是什么意思
 
@@ -342,7 +342,7 @@ buff@buff:~/workspace/learn/robot-system-learning$ find . -type f | head
 ./linux/day2-demo/renamed.txt
 ./linux/day2-demo/a.txt
 ./linux/day2-demo/demo.sh
-buff@buff:~/workspace/learn/robot-system-learning$ 
+buff@buff:~/workspace/learn/robot-system-learning$
 
 其中-type是什么意思 f呢？ | head呢？ 我不理解
 
@@ -353,13 +353,13 @@ ls用于查看当前文件夹下有哪些内容
 buff@buff:~/workspace/learn/robot-system-learning$ vim linux/day2_demo.sh
 buff@buff:~/workspace/learn/robot-system-learning$ ls
 can  cpp  linux  ros2
-buff@buff:~/workspace/learn/robot-system-learning$ chmod +x linux/day2_demo.sh 
-buff@buff:~/workspace/learn/robot-system-learning$ vim linux/day2_demo.sh 
-buff@buff:~/workspace/learn/robot-system-learning$ ./linux/day2_demo.sh 
+buff@buff:~/workspace/learn/robot-system-learning$ chmod +x linux/day2_demo.sh
+buff@buff:~/workspace/learn/robot-system-learning$ vim linux/day2_demo.sh
+buff@buff:~/workspace/learn/robot-system-learning$ ./linux/day2_demo.sh
 Today is 2026年 08月 17日 星期一 16:33:57 CST
 Hello robot
 Current path: /home/buff/workspace/learn/robot-system-learning
-buff@buff:~/workspace/learn/robot-system-learning$ 
+buff@buff:~/workspace/learn/robot-system-learning$
 
 我喜欢用vim 不喜欢用nano
 
@@ -374,19 +374,19 @@ can  cpp  linux  ros2
 buff@buff:~/workspace/learn/robot-system-learning$ chmod +x linux/day2_demo_if_for.sh
 buff@buff:~/workspace/learn/robot-system-learning$ ls
 can  cpp  linux  ros2
-buff@buff:~/workspace/learn/robot-system-learning$ ./linux/day2_demo_if_for.sh 
+buff@buff:~/workspace/learn/robot-system-learning$ ./linux/day2_demo_if_for.sh
 missing
 1
 2
 3
-buff@buff:~/workspace/learn/robot-system-learning$ 
+buff@buff:~/workspace/learn/robot-system-learning$
 我不理解fi是什么意思
 不理解for中的do done
 不理解for loop中的loop
 
 
 
-buff@buff:~/workspace/learn/robot-system-learning$ echo 'hello' > linux/day2-demo/a.txt 
+buff@buff:~/workspace/learn/robot-system-learning$ echo 'hello' > linux/day2-demo/a.txt
 buff@buff:~/workspace/learn/robot-system-learning$ ls | head
 can
 cpp
@@ -398,17 +398,17 @@ day2-demo
 day2_demo_if_for.sh
 day2_demo.sh
 README.md
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 ls | head 其中head不加-n参数默认输出前四个吗？
 
  我的理解：>与>>的区别我不知道
  管道符的作用就是将前一个命令的输出作为后一个命令的输入
  举个例子cat files.txt | grep 'files*' | wc -l 其中cat 输出文件内容，grep过滤文件内容中有files的行，wc统计fgrep过滤出来的行数
- buff@buff:~/workspace/learn/robot-system-learning/linux$ cat files.txt | wc -l 
+ buff@buff:~/workspace/learn/robot-system-learning/linux$ cat files.txt | wc -l
 5
-buff@buff:~/workspace/learn/robot-system-learning/linux$ cat files.txt | grep 'files*' | wc -l 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat files.txt | grep 'files*' | wc -l
 1
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
   （使用 "git restore <文件>..." 丢弃工作区的改动）
         修改：     ../../.gitignore
@@ -428,7 +428,7 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$
         ../../../learn_ros2/
 
 修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
 
  "../../\345\255\246\344\271\240\344\273\273\345\212\241\346\250\241\346\235\277.md"
@@ -443,10 +443,10 @@ index 8d02ef0..d154830 100644
 @@ -73,8 +73,6 @@ Thumbs.db
  ../deepseek/
  ../learn_ros2/
- 
+
 -# out.txt (execution output)
 -out.txt
- 
+
  # 学习笔记
  /learn
 @@ -84,4 +82,8 @@ out.txt
@@ -460,7 +460,7 @@ git diff怎么去查看的？看不懂上面的内容
 
 
 buff@buff:~/workspace/learn/robot-system-learning/linux$ git diff --staged
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 --staged是什么意思，为什么没有输出呢？
 
 
@@ -470,7 +470,7 @@ modified / staged这两个我都不理解
 
 git diff 和 git status 的区别是什么？
 
-buff@buff:~/workspace/learn/robot-system-learning/linux$ git add day2_demo.sh 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git add day2_demo.sh
 buff@buff:~/workspace/learn/robot-system-learning/linux$ git commit -m "day2: add linux shell practice"
 [main 4a53db3] day2: add linux shell practice
  1 file changed, 5 insertions(+)
@@ -497,7 +497,7 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$ git checkout -- somefil
 error: 路径规格 'somefile' 未匹配任何 git 已知文件
 buff@buff:~/workspace/learn/robot-system-learning/linux$ git restore -- somefile
 error: 路径规格 'somefile' 未匹配任何 git 已知文件
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 git checkout用于切换分支
 git restore不知道用于干什么
 
@@ -507,26 +507,26 @@ buff@buff:~/workspace/learn/robot-system-learning/cpp$ ls
 hello  hello.cpp  hello_day2.cpp  README.md
 buff@buff:~/workspace/learn/robot-system-learning/cpp$ g++ hello_day2.cpp -o hello_day2
 
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./hello_day2 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./hello_day2
 a = 10
 b = 3.14
 name = robot
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$
 
 int整型，double浮点型，string字符串型
 
 buff@buff:~/workspace/learn/robot-system-learning/cpp$ touch condition.cpp
 buff@buff:~/workspace/learn/robot-system-learning/cpp$ g++ condition.cpp -o condition
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$
 
 
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./condition 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./condition
 input score: 60
 pass
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./condition 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./condition
 input score: 50
 fail
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$
 
 buff@buff:~/workspace/learn/robot-system-learning/cpp$ g++ add.cpp -o add
 add.cpp: In function ‘int main()’:
@@ -536,13 +536,13 @@ add.cpp:2:14: error: ‘cout’ was not declared in this scope
 add.cpp:2:35: error: ‘endl’ was not declared in this scope
     2 | int main() { cout << add(3, 5) << endl; }
       |                                   ^~~~
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$
 
 buff@buff:~/workspace/learn/robot-system-learning/cpp$ g++ add.cpp -o add
 buff@buff:~/workspace/learn/robot-system-learning/cpp$ ^C
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./add 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$ ./add
 8
-buff@buff:~/workspace/learn/robot-system-learning/cpp$ 
+buff@buff:~/workspace/learn/robot-system-learning/cpp$
 引入头文件问题，你写的时候没有加入对应的头文件
 
 函数可以反复调用，增加可读性和复用性
@@ -579,9 +579,9 @@ buff@buff:~/workspace/learn$ git push
 remote: Resolving deltas: 100% (7/7), completed with 3 local objects.
 To https://github.com/user189397lyh/learn.git
    eaa8d16..8f4060e  main -> main
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 
-仔细查看，我忘记加忽略文件了，将cpp的编译文件提交到远程了，如何可以直接忽略所有的编译程序 
+仔细查看，我忘记加忽略文件了，将cpp的编译文件提交到远程了，如何可以直接忽略所有的编译程序
 
 # day3用户操作输出记录
 
@@ -609,7 +609,7 @@ buff@buff:~/workspace/learn$ ls -ld /home/buff/
 drwxr-x--- 32 buff buff 4096  8月 18 10:45 /home/buff/
 buff@buff:~/workspace/learn$ ls -ld /home
 drwxr-xr-x 3 root root 4096  3月 26 23:56 /home
-buff@buff:~/workspace/learn$ 
+buff@buff:~/workspace/learn$
 
 pwd与pwd -P区别是是什么我不懂
 .是当前目录，..是上级目录
@@ -640,21 +640,21 @@ mkdir 创建文件夹 touch创建文本文件 cp复制 mv移动、改名  rm删�
 
 
 buff@buff:~/workspace/learn/robot-system-learning/linux$ echo 'first line' > demo/day3/log.txt
-buff@buff:~/workspace/learn/robot-system-learning/linux$ echo 'second line' >> demo/day3/log.txt 
-buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo 'second line' >> demo/day3/log.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt
 first line
 second line
-buff@buff:~/workspace/learn/robot-system-learning/linux$ echo 'third line' > demo/day3/log.txt 
-buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo 'third line' > demo/day3/log.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt
 third line
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
 我已经清楚 > 是覆盖写入 >> 是追加写入
 
 buff@buff:~/workspace/learn/robot-system-learning/linux$ ls > list.txt 2> err.txt
 buff@buff:~/workspace/learn/robot-system-learning/linux$ ls
 day2-demo  day2_demo_if_for.sh  day2_demo.sh  demo  err.txt  files.txt  list.txt  README.md  somefile
-buff@buff:~/workspace/learn/robot-system-learning/linux$ cat list.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat list.txt
 day2-demo
 day2_demo_if_for.sh
 day2_demo.sh
@@ -664,16 +664,16 @@ files.txt
 list.txt
 README.md
 somefile
-buff@buff:~/workspace/learn/robot-system-learning/linux$ cat err.txt 
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat err.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 为什么err.txt中没有内容
 
 
 buff@buff:~/workspace/learn/robot-system-learning/linux$ ls notexist >  out.txt 2> err.txt
-buff@buff:~/workspace/learn/robot-system-learning/linux$ cat err.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat err.txt
 ls: 无法访问 'notexist': 没有那个文件或目录
-buff@buff:~/workspace/learn/robot-system-learning/linux$ cat out.txt 
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat out.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
 下面三个我都不能理解，也不懂，需要你讲解与说明
 - 能理解标准输出和标准错误
@@ -681,44 +681,44 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$
 - 能说明重定向用于记录日志的意义
 
 
-buff@buff:~/workspace/learn/robot-system-learning/linux$ grep 'day3' demo/day3/log.txt 
-buff@buff:~/workspace/learn/robot-system-learning/linux$ grep -n 'day3' demo/day3/log.txt 
-buff@buff:~/workspace/learn/robot-system-learning/linux$ sort demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ grep 'day3' demo/day3/log.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ grep -n 'day3' demo/day3/log.txt
+buff@buff:~/workspace/learn/robot-system-learning/linux$ sort demo/day3/log.txt
 third line
-buff@buff:~/workspace/learn/robot-system-learning/linux$ uniq demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ uniq demo/day3/log.txt
 third line
-buff@buff:~/workspace/learn/robot-system-learning/linux$ sed -n '1.5p' demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ sed -n '1.5p' demo/day3/log.txt
 sed: -e 表达式 #1, 字符 2: 未知的命令：“.”↵
-buff@buff:~/workspace/learn/robot-system-learning/linux$ sed -n '1,5p' demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ sed -n '1,5p' demo/day3/log.txt
 third line
-buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ cat demo/day3/log.txt
 third line
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
 
 grep 是过滤出自己想要的内容
 sort不知道，uniq不知道，sed不知道，需要你讲解基本用途
-buff@buff:~/workspace/learn/robot-system-learning/linux$ grep 't*' -n demo/day3/log.txt 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ grep 't*' -n demo/day3/log.txt
 1:third line
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 已经理解grep -n 可以显示出行号
 
 不理解过滤文本与排序文本的区别,需要你讲解
 
 
 buff@buff:~/workspace/learn/robot-system-learning/linux$ VAR_NAME='day3'
-buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $VAR_NAME 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $VAR_NAME
 day3
 buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $HO
-$HOME      $HOSTNAME  $HOSTTYPE  
+$HOME      $HOSTNAME  $HOSTTYPE
 buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $HOME
 /home/buff
-buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $PATH 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $PATH
 /home/buff/bin:/home/buff/.config/Code/User/globalStorage/github.copilot-chat/debugCommand:/home/buff/.config/Code/User/globalStorage/github.copilot-chat/copilotCli:/home/buff/bin:/home/buff/bin:/home/buff/.nvm/versions/node/v24.19.0/bin:/home/buff/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin
 buff@buff:~/workspace/learn/robot-system-learning/linux$ export TEST_VAR='hello'
-buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $TEST_VAR 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ echo $TEST_VAR
 hello
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
 我不理解变量和环境变量的区别，需要讲解与回答
 我不能说明 $HOME、$PATH 是什么，需要讲解与回答
@@ -730,13 +730,13 @@ day2-demo  day2_demo_if_for.sh  day2_demo.sh  demo  err.txt  files.txt  list.txt
 buff@buff:~/workspace/learn/robot-system-learning/linux$ touch day3_args.sh
 buff@buff:~/workspace/learn/robot-system-learning/linux$ ls
 day2-demo  day2_demo_if_for.sh  day2_demo.sh  day3_args.sh  demo  err.txt  files.txt  list.txt  out.txt  README.md  somefile
-buff@buff:~/workspace/learn/robot-system-learning/linux$ chmod +x day3_args.sh 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ chmod +x day3_args.sh
 buff@buff:~/workspace/learn/robot-system-learning/linux$ ./day3_args.sh robot linux
 脚本名: ./day3_args.sh
 第一个参数: robot
 第二个参数: linux
 全部参数: robot linux
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
 下面两个问题需要你回答与讲解，我做完操作之后没懂：
 - 解释 $0、$1、$2、$@ 的意义
@@ -751,7 +751,7 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$ for item in ${arr[*]}; 
 linux
 cpp
 ros2
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 arr[0]是数组中下标序号为0数，通常是数组中的第一个数
 arr[*]是数组中所有的数
 for 循环遍历输出：
@@ -768,7 +768,7 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$ if [ $num -gt 5 ]; then
 大于5
 buff@buff:~/workspace/learn/robot-system-learning/linux$ if [ -f "a.txt" ]; then echo "文件存在"; elif [ -d "a.txt" ]; then echo " 是目录"; else echo "都不是"; fi
 都不是
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
 我能理解 if/else/elif 结构
 我不知道 -gt、-lt、-eq 的含义，需要回答与讲解
@@ -786,7 +786,7 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$ until [ $count -gt 3 ];
 1
 2
 3
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 我能区分 while 和 until
 我能理解循环退出条件
 我能说出什么情况下用循环
@@ -795,7 +795,7 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$
 buff@buff:~/workspace/learn/robot-system-learning/linux$ git branch
 * main
 buff@buff:~/workspace/learn/robot-system-learning/linux$ git branch day3-practice
-buff@buff:~/workspace/learn/robot-system-learning/linux$ git checkout day3-practice 
+buff@buff:~/workspace/learn/robot-system-learning/linux$ git checkout day3-practice
 M       learn/AGENTS.md
 M       learn/out.md
 M       learn/robot-system-learning/can/README.md
@@ -806,7 +806,7 @@ M       learn/robot-system-learning/ros2/README.md
 buff@buff:~/workspace/learn/robot-system-learning/linux$ git branch
 * day3-practice
   main
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 
 每个人都有自己的开发分支，方便同时协作开发，又能隔离代码，最后合入主分支进行存档
 checkout与switch都是用于切换分支的
@@ -822,7 +822,7 @@ buff@buff:~/workspace/learn/robot-system-learning/linux$ git log --oneline -n 3
 1cc8c46 (HEAD -> day3-practice) day3: add branch note
 8f4060e (origin/main, main) day2:linux shell and cpp basics
 4a53db3 day2: add linux shell practice
-buff@buff:~/workspace/learn/robot-system-learning/linux$ 
+buff@buff:~/workspace/learn/robot-system-learning/linux$
 提交记录可以清晰的知道本次提交的是什么内容，哪个分支修改的，哪个分支提交的，清晰定位问题
 
 commit信息写本次修改主要内容
@@ -839,7 +839,7 @@ Your branch is up to date with 'origin/main'.
 
 nothing to commit, working tree clean
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git restore sample.txt
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 我做这个任务之后发现，首先我新建sample.txt文件之后保存
 之后执行git add sample.txt之后加入暂存区
 后面我继续使用vscode手动修改sample.txt文件，修改之后保存
@@ -879,7 +879,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git stash pop
 
 修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
 丢弃了 refs/stash@{0}（899b9a680d4875569c61e6130ad2c8a8b53e888d）
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 stash的用途是保存临时的工作目录，便于下次回来时修改
 我不理解“保存现场 → 后续恢复”，需要你帮我梳理
 
@@ -887,9 +887,9 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ touch day3_array.
 seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ls
 add  add.cpp  condition  condition.cpp  day3_array.cpp  hello.cpp  hello_day2  hello_day2.cpp  README.md
 seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ g++ day3_array.cpp -o day3_array
-seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_array 
-1 2 3 4 5 
-seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_array
+1 2 3 4 5
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$
 - 能解释数组是什么
 - 能理解下标从 0 开始
 - 能说明 for 循环和数组结合可以遍历所有元素
@@ -911,15 +911,15 @@ day3_loop.cpp:4:14: error: ‘cout’ was not declared in this scope
 day3_loop.cpp:4:40: error: ‘endl’ was not declared in this scope
     4 |         else cout << i << " is odd" << endl;
       |                                        ^~~~
-seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$
 编译失败了，我的理解是因为头文件缺失
-seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_loop 
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_loop
 1 is odd
 2 is even
 3 is odd
 4 is even
 5 is odd
-seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$
 头文件加入之后正常编译执行输出
 - 能解释 for 循环的三部分：初始化 / 条件 / 更新
 - 能理解 if/else 判断
@@ -939,29 +939,29 @@ day3_func.cpp:7:5: error: ‘cout’ was not declared in this scope
 day3_func.cpp:7:34: error: ‘endl’ was not declared in this scope
     7 |     cout << "sum = " << total << endl;
       |                                  ^~~~
-seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$
 依旧是缺少头文件，下次你注意必须给出完整可复制粘贴执行代码
 
 seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ g++ day3_func.cpp day3_func
 /usr/bin/ld: 找不到 day3_func: 没有那个文件或目录
 collect2: error: ld returned 1 exit status
 seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ g++ day3_func.cpp -o day3_func
-seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_func 
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ ./day3_func
 sum = 15
 function sum: 8
-seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/cpp$
 其中sum函数复用在main中，函数方便复用，在修改其他代码时可以直接调用这个函数
 total+=i是total=total+i
 sum函数的参数是a,b返回值是a+b
 main没有参数，返回值是0
 
 
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ file day3_args.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ file day3_args.sh
 day3_args.sh: Bourne-Again shell script, Unicode text, UTF-8 text executable
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 Unicode text这是什么意思？
 
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ stat day3_args.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ stat day3_args.sh
   文件：day3_args.sh
   大小：110             块：8          IO 块大小：4096   普通文件
 设备：10302h/66306d     Inode：48522843    硬链接：1
@@ -970,17 +970,17 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ stat day3_args.
 修改时间：2026-08-21 17:37:19.017295859 +0800
 变更时间：2026-08-21 17:37:19.017295859 +0800
 创建时间：2026-08-21 17:37:19.017295859 +0800
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ stat -c '名称=%n 类型=%F 大小=%s 权限=%A 所有者=%U:%G inode=%i' day3_args.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ stat -c '名称=%n 类型=%F 大小=%s 权限=%A 所有者=%U:%G inode=%i' day3_args.sh
 名称=day3_args.sh 类型=普通文件 大小=110 权限=-rwxr-xr-x 所有者=seeway:l inode=48522843
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 file和stat有什么区别？
 名称=day3_args.sh 类型=普通文件 大小=110 权限=-rwxr-xr-x 所有者=seeway:l inode=48522843
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 这个可以看到大小、权限、所有者、修改时间和 inode。
 
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ uname -r 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ uname -r
 6.8.0-136-generic
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 这是什么意思
 
@@ -992,7 +992,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ hostname
 test
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ uname -a
 Linux test 6.8.0-136-generic #136~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Jul  3 16:29:11 UTC  x86_64 x86_64 x86_64 GNU/Linux
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 这是我设置的主机名字是test,其中seeway@test中的test就是主机名字
 
 
@@ -1009,7 +1009,7 @@ SUPPORT_URL="https://help.ubuntu.com/"
 BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
 PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
 UBUNTU_CODENAME=jammy
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 这是我安装的ubuntu发行版的信息
 
 
@@ -1025,7 +1025,7 @@ tmpfs           5.0M  4.0K  5.0M    1% /run/lock
 efivarfs        256K  132K  120K   53% /sys/firmware/efi/efivars
 /dev/nvme0n1p1  511M  6.1M  505M    2% /boot/efi
 tmpfs           3.2G  204K  3.2G    1% /run/user/1000
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cd ..
 seeway@test:~/workspace/learn/learn/robot-system-learning$ ls
 can  cpp  linux  ros2
@@ -1036,15 +1036,15 @@ seeway@test:~/workspace/learn/learn$ ls
 365天机器人系统每日理论知识点手册.txt            robot-system-learning  当前学习任务安排.txt
 seeway@test:~/workspace/learn/learn$ du -sh robot-system-learning/
 260K    robot-system-learning/
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 seeway@test:~/workspace/learn/learn$ free -h
                total        used        free      shared  buff/cache   available
 内存：       31Gi        11Gi       9.5Gi       185Mi        10Gi        20Gi
 交换：      2.0Gi          0B       2.0Gi
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 seeway@test:~/workspace/learn/learn$ uptime
  15:10:21 up 1 day, 21:30,  1 user,  load average: 0.61, 0.46, 0.40
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 df 是查看整个文件系统的使用情况
 du 是查看指定文件或当前文件的大小
 free -h 中内存的total是31G，used是11G，可用的是20G
@@ -1074,15 +1074,15 @@ seeway@test:~/workspace/learn/learn$为什么是127了？
 seeway@test:~/workspace/learn/learn$ command -v day4_missing_command
 seeway@test:~/workspace/learn/learn$ echo $?
 1
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 
 
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh
 bash: ./day4_system_check.sh: 权限不够
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x day4_system_check.sh 
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x day4_system_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 没有输出是为什么？
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat day4_system_check.log
 cat: day4_system_check.log: 没有那个文件或目录
@@ -1093,13 +1093,13 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ at day4_custom.
 sudo apt install at
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat day4_custom.log
 cat: day4_custom.log: 没有那个文件或目录
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ DAY4_TEST_MISSING=1 ./day4_system_check.sh day4_failed.log
 [ERROR] missing command: day4_missing_command
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ test -e day4_failed.log
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x robot-system-learning/linux/day4_system_check.sh
 cd robot-system-learning/linux
@@ -1135,7 +1135,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
 
 
 补充：
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh
 [OK] date
 [OK] uname
 [OK] hostname
@@ -1163,7 +1163,7 @@ Architecture: x86_64
 
 --- Uptime And Load ---
  19:41:36 up 2 days,  2:01,  1 user,  load average: 0.90, 0.82, 0.82
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day4_system_check.sh day4_custom.log
 [OK] date
@@ -1206,7 +1206,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ test -e day4_failed.log
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 1
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 
 8. `command -v` 的用途是什么？Shell 当前环境下能不能找到某个命令，以及这个命令实际对应什么。
 9. `${1:-day4_system_check.log}` 是什么意思？常见的 Shell 参数设计方式。
@@ -1274,30 +1274,30 @@ out_file是输出文件，保存执行日志
 seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes\n'
 day4_system_check.log | 560 bytes
 day4_custom.log | 560 bytes
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 这条命令的搜索起点是robot-system-learning/linux，并且只在当前目录层级搜索，不去更深层级,-type f 是指普通文件，-name是指区分大小写，*.log表示后缀是.log的文件， -printf是指搜索到的文件怎么去输出，输出格式为是文件名+字节数
 
 seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -printf '%f | %s bytes | %TY-%Tm-%Td %TH:%TM\n'
 day4_system_check.log | 560 bytes | 2026-08-24 19:41
 day4_custom.log | 560 bytes | 2026-08-24 19:51
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 起点是这条命令的搜索起点是robot-system-learning/linux，并且只在当前目录层级搜索，不去更深层级，与第一条的区别是文件的输出格式不同，增加了一个修改时间
 
 seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -iname 'DAY4_CUSTOM.LOG' -printf '%f\n'
 day4_custom.log
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 这条命令与第一条的区别是： -iname不区分大小写 输出格式只有文件名，搜索方式是指定文件名搜索
 
 seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -size +500c -printf '%f | %s bytes\n'
 day4_system_check.log | 560 bytes
 day4_custom.log | 560 bytes
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 这条命令与第一条的区别是： 只有大于500bytes的文件并且后缀是.log的文件才会被搜索
 
 seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -newermt '2 days ago' -printf '%f | %TY-%Tm-%Td %TH:%TM\n'
 day4_system_check.log | 2026-08-24 19:41
 day4_custom.log | 2026-08-24 19:51
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 这条命令与第一条的区别是：文件修改时间是近2天修改的文件，没有输出字节，有日期
 
 - 如果某条命令没有输出，要根据文件大小或修改时间判断这是正常无匹配还是命令错误
@@ -1309,13 +1309,13 @@ seeway@test:~/workspace/learn/learn$ 没有输出是因为在linux文件夹中�
 seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'Kernel' {} +
 robot-system-learning/linux/day4_system_check.log:4:Kernel: 6.8.0-136-generic
 robot-system-learning/linux/day4_custom.log:4:Kernel: 6.8.0-136-generic
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 
 
 seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'DAY5_NOT_FOUND' {} +
 echo $?
 1
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 seeway@test:~/workspace/learn/learn$ find robot-system-learning/linux -maxdepth 1 -type f -name '*.log' -exec grep -Hn -- 'DAY5_NOT_FOUND' {} +
 seeway@test:~/workspace/learn/learn$ echo $?
 1
@@ -1324,7 +1324,7 @@ robot-system-learning/linux/day4_system_check.log:4:Kernel: 6.8.0-136-generic
 robot-system-learning/linux/day4_custom.log:4:Kernel: 6.8.0-136-generic
 seeway@test:~/workspace/learn/learn$ echo $?
 0
-seeway@test:~/workspace/learn/learn$ 
+seeway@test:~/workspace/learn/learn$
 需要你教学这些：为什么第二组的 `echo $?` 可能仍然是 `0`。项目脚本为什么需要直接保存 `grep` 的退出状态。
 
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ practice_dir='/tmp/day5-delete-practice'
@@ -1338,7 +1338,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice_dir" -maxdepth 1 -type f -name '*.log' -delete
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice_dir" -maxdepth 1 -type f -printf '%f\n'
 keep.txt
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 预览可以确保你要删除的文件是可以安全删除的，很重要，本次删除的精确搜索起点是/tmp/day5-delete-practice，深度是day5-delete-practice，只在本级目录搜索，类型是普通文件，名称条件是.log后缀区分大小写
 
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh . Kernel
@@ -1354,23 +1354,23 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_log
 [INFO] no matching line: DAY5_NOT_FOUND
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 1
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$  
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh ./day5_missing_dir Kernel
 [ERROR] directory not found: ./day5_missing_dir
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 2
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh ./demo Kernel
 [INFO] no log files found in: ./demo
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 3
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day5_find_logs.sh . -n
 [INFO] searched log files: 2
 [INFO] no matching line: -n
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 1
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 1. `find` 命令中的搜索起点与筛选条件分别是什么？这个问题答案在上面，自行寻找
 2. `-maxdepth 1` 限制了什么？限制了搜索目录的层级
 3. `-name` 与 `-iname` 有什么区别？是否区分大小写的区别
@@ -1394,7 +1394,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ find "$practice
 warning.log | 81 bytes
 clean.log | 86 bytes
 error.log | 139 bytes
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 clean代表的场景是正常场景
 warning代表的场景是有警告但是不影响正常运行，但有风险
 error代表的是无法正常执行场景，必须修复
@@ -1404,11 +1404,11 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -n -- '[ER
 3:10:02:02 [ERROR] motor timeout
 4:10:02:03 [INFO] retry motor
 5:10:02:04 [ERROR] CAN offline
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -Fn -- '[ERROR]' "$practice_dir/error.log"
 3:10:02:02 [ERROR] motor timeout
 5:10:02:04 [ERROR] CAN offline
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 第一组是因为[error]中只需要匹配其中任意一个即可
 第二组是严格匹配error整个字符
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -En -- 'temp=[0-9]+' "$practice_dir/error.log"
@@ -1417,25 +1417,25 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -En -- '\[
 2:10:02:01 [WARN] temp=82
 3:10:02:02 [ERROR] motor timeout
 5:10:02:04 [ERROR] CAN offline
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 其中固定文本过滤是用 -F,需要表达“数字范围、多个可能模式”等变化时再使用正则。
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -Fn -C 1 -- '[ERROR]' "$practice_dir/error.log"
 2-10:02:01 [WARN] temp=82
 3:10:02:02 [ERROR] motor timeout
 4-10:02:03 [INFO] retry motor
 5:10:02:04 [ERROR] CAN offline
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 如果单独查看error motor timeout,则不确定在哪一步造成了timeout,此时查看带有上下文的grep则更方便的定位问题
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ touch day6_log_analyzer.sh
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x day6_log_analyzer.sh 
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh 
-[ANALYZER ERROR] log file not found: 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod +x day6_log_analyzer.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh
+[ANALYZER ERROR] log file not found:
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh day4_system_check.log
 Log file: day4_system_check.log
 ERROR count: 0
 WARN count: 0
 [STATUS] HEALTHY
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh /tmp/day6-grep-practice/clean.log
 echo $?
 Log file: /tmp/day6-grep-practice/clean.log
@@ -1443,7 +1443,7 @@ ERROR count: 0
 WARN count: 0
 [STATUS] HEALTHY
 0
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh /tmp/day6-grep-practice/warning.log
 Log file: /tmp/day6-grep-practice/warning.log
 ERROR count: 0
@@ -1455,7 +1455,7 @@ WARN count: 1
 [STATUS] WARN
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 1
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh /tmp/day6-grep-practice/error.log
 Log file: /tmp/day6-grep-practice/error.log
 ERROR count: 2
@@ -1468,12 +1468,12 @@ WARN count: 1
 [STATUS] ERROR
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 2
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day6_log_analyzer.sh /tmp/day6-grep-practice/missing.log
 [ANALYZER ERROR] log file not found: /tmp/day6-grep-practice/missing.log
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ echo $?
 3
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 2. 搜索固定标签 `[ERROR]` 时，为什么字面量搜索比普通正则更准确？因为字面量匹配更精准
 3. 什么情况下适合使用正则表达式？我明确告诉你，不需要管这个事情自然有AI帮助我解答
 4. 查看错误前后的上下文能提供什么额外证据？提供更清晰的前后步骤，更容易确定错误内容
@@ -1513,7 +1513,7 @@ seeway@test:~/workspace/learn$ wc -l "$practice_dir/mixed.log" "$practice_dir/cl
   5 /tmp/day8-pipeline-practice/mixed.log
   3 /tmp/day8-pipeline-practice/clean.log
   8 总计
-seeway@test:~/workspace/learn$ 
+seeway@test:~/workspace/learn$
 能说明两份日志分别用于验证什么场景。我明确告知你不要再有这种验收标准，我不需要知道日志用于什么场景，我只需要知道日志中分析出什么问题
 seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log"
 [WARN] motor temperature high
@@ -1521,7 +1521,7 @@ seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/m
 [ERROR] CAN offline
 seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log" | wc -l
 3
-seeway@test:~/workspace/learn$ 
+seeway@test:~/workspace/learn$
 - 能指出每个阶段接收什么、输出什么。
 - 能说明 `wc` 统计的是筛选后的内容，而不是原日志全部五行。
 grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log" 这个阶段输出[WARN] motor temperature high[ERROR] motor
@@ -1535,7 +1535,7 @@ seeway@test:~/workspace/learn$ {
 [NORMAL] diagnostic output
 seeway@test:~/workspace/learn$ cat "$practice_dir/stdout-only.txt"
 [NORMAL] diagnostic output
-seeway@test:~/workspace/learn$ 
+seeway@test:~/workspace/learn$
 [NORMAL] 是标准输出，会经过管道进入 tee，因此既显示在终端又写入 stdout-only.txt；[ERROR STREAM] 带有 >&2，是标准错误，默认绕过管道直接显示在终端。
 因此我们不能非常确定所有的终端错误输出都放在了我们设置的stdout-only.txt中，要有这个意识
 seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/mixed.log" \
@@ -1553,7 +1553,7 @@ seeway@test:~/workspace/learn$ grep -F -e '[ERROR]' -e '[WARN]' "$practice_dir/c
     | tee "$practice_dir/attention-report.txt"
 seeway@test:~/workspace/learn$ wc -l "$practice_dir/attention-report.txt"
 0 /tmp/day8-pipeline-practice/attention-report.txt
-seeway@test:~/workspace/learn$ 
+seeway@test:~/workspace/learn$
 旧报告残留保存在report.txt中，会导致分析的结果不是当前问题的原因
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day8_diagnostic_pipeline.sh \
     /tmp/day8-pipeline-practice/mixed.log \
@@ -1566,7 +1566,7 @@ Report file: /tmp/day8-pipeline-practice/script-report.txt
 [ERROR] CAN offline
 Matched lines: 3
 [RESULT] attention required
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day8_diagnostic_pipeline.sh \
     /tmp/day8-pipeline-practice/clean.log \
     /tmp/day8-pipeline-practice/script-report.txt
@@ -1577,12 +1577,12 @@ Matched lines: 0
 [RESULT] no warning or error found
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ wc -l /tmp/day8-pipeline-practice/script-report.txt
 0 /tmp/day8-pipeline-practice/script-report.txt
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day8_diagnostic_pipeline.sh \
     /tmp/day8-pipeline-practice/missing.log \
     /tmp/day8-pipeline-practice/script-report.txt
 [PIPELINE ERROR] input log not found: /tmp/day8-pipeline-practice/missing.log
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./day8_diagnostic_pipeline.sh \
     /tmp/day8-pipeline-practice/missing.log \
     /tmp/day8-pipeline-practice/script-report.txt
@@ -1599,7 +1599,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ grep -F -e '[ER
 [ERROR] motor timeout
 [ERROR] CAN offline
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat /tmp/day8-pipeline-practice/script-report.txt
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 2. 在“日志 → 筛选 → 统计”中，每个阶段的输入和输出是什么？第一阶段确认日志是否存在，之后筛选警告与错误信息，筛选的结果作为|后面统计的输入
 3. 为什么屏幕上的错误文字不一定会进入管道后的报告文件？因为标准错误只会输出在终端不一会进入报告文件
 4. `tee` 在诊断管道中解决了什么问题？同一份标准输入既显示在屏幕，又写入文件”，它不会自动把标准错误送进报告。
@@ -1628,11 +1628,11 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'current
 current shell local: local-value
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'current shell environment: %s\n' "$DAY10_ENV"
 current shell environment: environment-value
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -c 'printf "child local: %s\n" "${DAY10_LOCAL:-<empty>}"; printf "child environment: %s\n" "${DAY10_ENV:-<empty>}"'
 child local: <empty>
 child environment: environment-value
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 当前输出中 只有export设置的变量可以传递给当前shell的子进程，普通的变量则不会
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf '%s\n' "$PATH" | tr ':' '\n'
 /home/l/.config/Code/User/globalStorage/github.copilot-chat/debugCommand
@@ -1651,13 +1651,13 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf '%s\n' "
 /usr/local/games
 /snap/bin
 /snap/bin
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v bash
 /usr/bin/bash
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v day8_diagnostic_pipeline.sh || printf '%s\n' '[NOT FOUND] day8 script is not in PATH'
 [NOT FOUND] day8 script is not in PATH
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 shell在以下目录中寻找可执行命令
 /home/l/.config/Code/User/globalStorage/github.copilot-chat/debugCommand
 /home/l/.config/Code/User/globalStorage/github.copilot-chat/copilotCli
@@ -1679,16 +1679,16 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ /tmp/day10-bin/
 [ROBOT] health check ready
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v robot-health || printf '%s\n' '[NOT FOUND] robot-health is not in PATH'
 [NOT FOUND] robot-health is not in PATH
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ export PATH="/tmp/day10-bin:$PATH"
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v robot-health
 /tmp/day10-bin/robot-health
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ robot-health
 [ROBOT] health check ready
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ saved_day10_path="$PATH"
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ PATH='/tmp/day10-bin'
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 command -v robot-health
 /tmp/day10-bin/robot-health
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v ls || printf '%s\n' '[NOT FOUND] ls is not in the current PATH'
@@ -1704,7 +1704,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v ls
 alias ls='ls --color=auto'
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls --version | head -n 1
 ls (GNU coreutils) 8.32
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ touch robot_env.sh
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n robot_env.sh
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ unset ROBOT_PROJECT_ROOT ROBOT_LOG_DIR
@@ -1718,7 +1718,7 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v day8
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ mkdir -p "$ROBOT_LOG_DIR"
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ test -d "$ROBOT_LOG_DIR" && printf '%s\n' '[OK] robot log directory exists'
 [OK] robot log directory exists
-seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 
 1. 普通 Shell 变量与导出的环境变量，对子进程有什么不同？普通shell变量不会被子进程继承，导出的环境变量会被继承
 2. `PATH` 保存的是什么，Shell 只收到一个命令名时如何找到程序？path保存的是文件目录，shell受到命令时在path中顺序查找可执行文件目录之后找到程序执行
@@ -1726,12 +1726,12 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 4. 为什么更新 `PATH` 时应保留原来的内容，而不能只写项目目录？如果不保留原来的内容，那么shell将找不到之前安装软件的可执行程序，会造成很多问题
 5. 出现“命令找不到”时，应按什么顺序检查命令文件、执行权限和 `PATH`？应线检查命令文件中是否存在，之后检查有没有执行权限，最后看path中有没有该命令项目目录
 6. `robot_env.sh` 集中保存了哪些配置，加载后对当前 Shell 有什么影响？保存了项目目录，日志目录，最后写入了path,加载后可以使用命令执行项目下的可执行文件,类似于下面执行的内容
-seeway@test:~/workspace$ day3_args.sh 
+seeway@test:~/workspace$ day3_args.sh
 脚本名: /home/l/workspace/learn/learn/robot-system-learning/linux/day3_args.sh
-第一个参数: 
-第二个参数: 
-全部参数: 
-seeway@test:~/workspace$ 
+第一个参数:
+第二个参数:
+全部参数:
+seeway@test:~/workspace$
 7. 为什么今天不直接把 `robot_env.sh` 写入 `~/.bashrc`？避免后续学习重复内容，但是这种问题和我学习相关吗？我根本不需要关心这个
 seeway@test:~/workspace$ saved_day10_path="$PATH"
 PATH='/tmp/day10-bin'
@@ -1750,7 +1750,7 @@ command ls --version | head -n 1
 ls：未找到命令
 /usr/bin/ls
 ls (GNU coreutils) 8.32
-seeway@test:~/workspace$ 
+seeway@test:~/workspace$
 
 # Day11 用户操作输出记录
 seeway@test:~/workspace$ practice_dir='/tmp/day11-source-practice'
@@ -1759,9 +1759,9 @@ seeway@test:~/workspace$ vim "$practice_dir/day11_config.sh"
 seeway@test:~/workspace$ cat "$practice_dir/day11_config.sh
 > ^C
 seeway@test:~/workspace$ cat "$practice_dir/day11_config.sh
-> 
-> 
-> 
+>
+>
+>
 > ^C
 seeway@test:~/workspace$ cat "$practice_dir/day11_config.sh"
 #!/bin/bash
@@ -1771,7 +1771,7 @@ export DAY11_MODE='diagnostic'
 day11_status() {
     echo "[DAY11] mode=$DAY11_MODE"
 }
-seeway@test:~/workspace$ 
+seeway@test:~/workspace$
 seeway@test:~/workspace$ bash -n "$practice_dir/day11_config.sh"
 seeway@test:~/workspace$ chmod +x "$practice_dir/day11_config.sh"
 seeway@test:~/workspace$ unset DAY11_MODE
@@ -1781,24 +1781,24 @@ seeway@test:~/workspace$ printf 'after direct run: %s\n' "${DAY11_MODE:-<empty>}
 after direct run: <empty>
 seeway@test:~/workspace$ type day11_status 2>&1
 bash: type: day11_status: 未找到
-seeway@test:~/workspace$ 
+seeway@test:~/workspace$
 seeway@test:~/workspace$ source "$practice_dir/day11_config.sh"
 seeway@test:~/workspace$ printf 'after source: %s\n' "$DAY11_MODE"
 after source: diagnostic
 seeway@test:~/workspace$ type day11_status
 day11_status 是函数
-day11_status () 
-{ 
+day11_status ()
+{
     echo "[DAY11] mode=$DAY11_MODE"
 }
 seeway@test:~/workspace$ day11_status
 [DAY11] mode=diagnostic
-seeway@test:~/workspace$ 
+seeway@test:~/workspace$
 seeway@test:~/workspace$ source "$practice_dir/missing_config.sh"
 bash: /tmp/day11-source-practice/missing_config.sh: 没有那个文件或目录
 seeway@test:~/workspace$ printf '%s\n' '[CHECK] current shell is still running'
 [CHECK] current shell is still running
-seeway@test:~/workspace$ 
+seeway@test:~/workspace$
 seeway@test:~/workspace$ day11_status
 [DAY11] mode=diagnostic
 seeway@test:~/workspace$ source "$practice_dir/missing_config.sh"
@@ -1821,14 +1821,14 @@ seeway@test:/tmp$ command -v day8_diagnostic_pipeline.sh
 /home/l/workspace/learn/learn/robot-system-learning/linux/day8_diagnostic_pipeline.sh
 seeway@test:/tmp$ day11_status
 [DAY11] mode=diagnostic
-seeway@test:/tmp$ 
+seeway@test:/tmp$
 seeway@test:/tmp$ unset DAY11_MODE
 seeway@test:/tmp$ unset -f day11_status
 seeway@test:/tmp$ printf 'after cleanup: %s\n' "${DAY11_MODE:-<empty>}"
 after cleanup: <empty>
 seeway@test:/tmp$ type day11_status 2>&1
 bash: type: day11_status: 未找到
-seeway@test:/tmp$ 
+seeway@test:/tmp$
 1. `source` 对文件做了什么，文件内容在哪个 Shell 中执行？source 让当前shell读取并执行文件内容
 2. 为什么直接运行 `day11_config.sh` 后，当前 Shell 看不到其变量和函数？直接运行脚本会启动子 Shell，变量和函数只存在于子 Shell；子 Shell 结束后不会回写当前 Shell。unset 只是清理测试前的旧内容。
 3. 为什么使用 `source` 后，当前 Shell 可以继续使用该文件定义的变量和函数？source读取day11_config.sh并执行了这个脚本,source 在当前 Shell 中执行文件，所以变量赋值和函数定义都会留
@@ -2226,3 +2226,233 @@ else
 fi
 
 # Day16 用户操作输出记录
+seeway@test:~$ ps -p 1 -o pid,comm,args
+    PID COMMAND         COMMAND
+      1 systemd         /sbin/init splash
+seeway@test:~$ systemctl --version | head -n 1
+systemd 249 (249.11-0ubuntu3.22)
+seeway@test:~$ systemctl is-system-running
+degraded
+seeway@test:~$ systemctl --user is-system-running
+running
+seeway@test:~$
+seeway@test:~$ printf '%s\n' '[RUNNING SERVICES]'
+[RUNNING SERVICES]
+seeway@test:~$ systemctl list-units --type=service --state=running --no-pager | head -n 15
+  UNIT                          LOAD   ACTIVE SUB     DESCRIPTION
+  accounts-daemon.service       loaded active running Accounts Service
+  acpid.service                 loaded active running ACPI event daemon
+  avahi-daemon.service          loaded active running Avahi mDNS/DNS-SD Stack
+  colord.service                loaded active running Manage, Install and Generate Color Profiles
+  containerd.service            loaded active running containerd container runtime
+  cron.service                  loaded active running Regular background program processing daemon
+  cups-browsed.service          loaded active running Make remote CUPS printers available locally
+  cups.service                  loaded active running CUPS Scheduler
+  dbus.service                  loaded active running D-Bus System Message Bus
+  docker.service                loaded active running Docker Application Container Engine
+  gdm.service                   loaded active running GNOME Display Manager
+  irqbalance.service            loaded active running irqbalance daemon
+  jenkins.service               loaded active running Jenkins Continuous Integration Server
+  kerneloops.service            loaded active running Tool to automatically collect and submit kernel crash signatures
+seeway@test:~$ printf '%s\n' '[SERVICE UNIT FILES]'
+[SERVICE UNIT FILES]
+seeway@test:~$ systemctl list-unit-files --type=service --no-pager | head -n 15
+UNIT FILE                                  STATE           VENDOR PRESET
+accounts-daemon.service                    enabled         enabled
+acpid.service                              disabled        enabled
+alsa-restore.service                       static          -
+alsa-state.service                         static          -
+alsa-utils.service                         masked          enabled
+anacron.service                            enabled         enabled
+apparmor.service                           enabled         enabled
+apport-autoreport.service                  static          -
+apport-forward@.service                    static          -
+apport.service                             generated       -
+apt-daily-upgrade.service                  static          -
+apt-daily.service                          static          -
+apt-news.service                           static          -
+autovt@.service                            alias           -
+seeway@test:~$
+从list-units输出中可以看到runing当前运行中，状态为active
+从list-units-files中可以看到enabled根据配置开机自启动，disabled开机不启动,其他static,masked,generated是什么状态？static：不能独立 enable，通常由其他 unit 依赖或手动启动。
+masked：被屏蔽，不能启动，比 disabled 更严格。
+generated：由 systemd 在启动或重载时动态生成。
+alias：另一个 unit 名称的别名。
+seeway@test:~$ cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+day2-demo            day4_system_check.log        demo       process_check.sh  temp.txt
+day2_demo_if_for.sh  day4_system_check.sh         err.txt    README.md
+day2_demo.sh         day5_find_logs.sh            files.txt  robot_env.sh
+day3_args.sh         day6_log_analyzer.sh         list.txt   sample.txt
+day4_custom.log      day8_diagnostic_pipeline.sh  out.txt    somefile
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ vim day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ project_unit="$PWD/day16-practice.service"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemd-analyze --user verify "$project_unit"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat "$project_unit"
+[Unit]
+Description=Day16 safe systemd user service practice
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/sleep infinity
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/day16-practice.service
+?? robot-system-learning/linux/day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user link "$project_unit"
+Created symlink /home/l/.config/systemd/user/day16-practice.service → /home/l/workspace/learn/learn/robot-system-learning/linux/day16-practice.service.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user daemon-reload
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState -p UnitFileState
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=linked
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user status day16-practice.service --no-pager
+○ day16-practice.service - Day16 safe systemd user service practice
+     Loaded: loaded (/home/l/.config/systemd/user/day16-practice.service; linked; vendor preset: enabled)
+     Active: inactive (dead)
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user start day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user status day16-practice.service --no-pager
+● day16-practice.service - Day16 safe systemd user service practice
+     Loaded: loaded (/home/l/.config/systemd/user/day16-practice.service; linked; vendor preset: enabled)
+     Active: active (running) since Thu 2026-08-27 16:37:34 CST; 5s ago
+   Main PID: 123162 (sleep)
+      Tasks: 1 (limit: 38040)
+     Memory: 184.0K
+        CPU: 3ms
+     CGroup: /user.slice/user-1000.slice/user@1000.service/app.slice/day16-practice.service
+             └─123162 /usr/bin/sleep infinity
+
+Aug 27 16:37:34 test systemd[1994]: Started Day16 safe systemd user service practice.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user is-active day16-practice.service
+active
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState -p MainPID
+MainPID=123162
+LoadState=loaded
+ActiveState=active
+SubState=running
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ main_pid="$(systemctl --user show day16-practice.service -p MainPID --value)"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'service MainPID: %s\n' "$main_pid"
+service MainPID: 123162
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ps -p "$main_pid" -o pid,ppid,user,stat,etime,cmd
+    PID    PPID USER     STAT     ELAPSED CMD
+ 123162    1994 seeway   Ss         00:32 /usr/bin/sleep infinity
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user stop day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user is-active day16-practice.service ||
+  printf '%s\n' '[EXPECTED] day16 practice service is inactive'\
+> ^C
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user is-active day16-practice.service ||   printf '%s\n' '[EXPECTED] day16 practice service is inactive'\
+>
+inactive
+[EXPECTED] day16 practice service is inactive
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState -p MainPID
+MainPID=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ps -p "$main_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] previous MainPID is no longer running'
+    PID    PPID USER     STAT     ELAPSED CMD
+[EXPECTED] previous MainPID is no longer running
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user status day16-missing.service --no-pager
+Unit day16-missing.service could not be found.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user show day16-missing.service \
+  -p LoadState -p ActiveState -p SubState
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf '%s\n' '[SSH/CAN UNIT FILE MATCHES]'
+[SSH/CAN UNIT FILE MATCHES]
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl list-unit-files --type=service --no-pager |
+  grep -Ei 'ssh|sshd|can|socketcan' ||
+  printf '%s\n' '[INFO] no matching SSH/CAN service unit files found'
+dbus-fi.w1.wpa_supplicant1.service         alias           -
+ssh.service                                enabled         enabled
+ssh@.service                               static          -
+sshd.service                               alias           -
+wpa_supplicant-nl80211@.service            disabled        enabled
+wpa_supplicant-wired@.service              disabled        enabled
+wpa_supplicant.service                     enabled         enabled
+wpa_supplicant@.service                    disabled        enabled
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf '%s\n' '[SSH/CAN LOADED UNIT MATCHES]'
+systemctl list-units --type=service --all --no-pager |
+  grep -Ei 'ssh|sshd|can|socketcan' ||
+  printf '%s\n' '[INFO] no matching loaded SSH/CAN services found'
+[SSH/CAN LOADED UNIT MATCHES]
+  ssh.service                                           loaded    active   running OpenBSD Secure Shell server
+  wpa_supplicant.service                                loaded    active   running WPA supplicant
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+printf '%s\n' '[SSH COMMON UNIT STATES]'
+[SSH COMMON UNIT STATES]
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl show ssh.service sshd.service \
+  -p Id -p LoadState -p ActiveState -p SubState -p UnitFileState --no-pager
+Id=ssh.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+
+Id=ssh.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user stop day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user disable day16-practice.service
+Removed /home/l/.config/systemd/user/day16-practice.service.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user daemon-reload
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/day16-practice.service
+?? robot-system-learning/linux/day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+诊断：
+确认 unit 名称与管理范围（系统级或 --user）
+                    ↓
+检查 LoadState，确认配置是否被找到并加载
+                    ↓
+检查 ActiveState / SubState，确认当前状态
+                    ↓
+查看 status 中的 MainPID 和错误信息
+                    ↓
+需要时检查对应进程
+                    ↓
+做最小修改后重新查询状态
+1. systemd、service unit 和 `systemctl` 分别是什么，它们之间是什么关系？systemd是系统的服务管理，service unit是unit配置文件，systemctl是用于和用户交互的系统操作，关系如下，用户使用systemctl发送给systemd,systemd寻找到unit配置文件，并启动这个服务
+2. unit 文件存在为什么不能直接证明服务正在运行？unit 文件只是启动和管理配置；只有查询到 ActiveState=active、SubState=running 才能证明服务正在运行。
+3. `LoadState`、`ActiveState` 和 `UnitFileState` 分别回答什么问题？load回答有没有读取这个unit文件，active回答用户启动状态，UnitFileState它表示 unit 文件的安装或启用状态，例如 enabled、disabled、static、masked、linked，不只是“是否通过链接找到”。
+4. `start/stop` 与 `enable/disable` 关注的状态有什么区别？start/stop关注的是服务本身有没有正常启动，而不是配置文件中有没有写开机自启动，enable/disable关注的状态是开机是否自启动
+5. 哪些状态和进程证据共同证明 Day16 练习服务已经启动，后来又停止？启动后 ActiveState=active、SubState=running、MainPID 大于 0，并且 ps 找到相同 PID；停止后状态为 inactive/dead、MainPID=0，且 ps 查不到原 PID。
+6. 为什么真实 SSH、CAN 服务只能只读查看，不能直接拿来练习 `start/stop`？停止 SSH 可能断开远程连接；停止 CAN 相关服务可能中断机器人通信，并影响其他程序或用户。
+7. 查询服务提示 unit not found 时，应该按什么顺序检查？确认 unit 名称 → 确认系统级还是 --user → 检查 unit 文件位置 → 新增或修改过文件时执行 daemon-reload → 重新查询 LoadState。
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl list-unit-files --type=service --no-pager \
+  'ssh*.service' 'sshd*.service' 'can*.service' 'socketcan*.service'
+
+systemctl list-units --type=service --all --no-pager \
+  'ssh*.service' 'sshd*.service' 'can*.service' 'socketcan*.service'
+UNIT FILE    STATE   VENDOR PRESET
+ssh.service  enabled enabled
+ssh@.service static  -
+sshd.service alias   -
+
+3 unit files listed.
+  UNIT        LOAD   ACTIVE SUB     DESCRIPTION
+  ssh.service loaded active running OpenBSD Secure Shell server
+
+LOAD   = Reflects whether the unit definition was properly loaded.
+ACTIVE = The high-level unit activation state, i.e. generalization of SUB.
+SUB    = The low-level unit activation state, values depend on unit type.
+1 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
