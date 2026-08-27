@@ -1,318 +1,403 @@
-Day14 详细学习安排：进程、PID、ps 与 top
+Day15 详细学习安排：kill、pkill 与 signal
 
 一、今日目标
 
-- 理解程序是磁盘上的可执行文件，进程是程序运行时的实例。
-- 理解 PID 用于标识一个正在运行的进程，PPID 表示启动它的父进程。
-- 能用 `ps` 获取某一时刻的进程快照。
-- 能用 `top` 观察系统和目标进程的动态状态。
-- 能根据 PID、PPID、用户、状态、运行时间和命令确认目标进程。
-- 启动一个会自然结束的临时诊断 worker，记录其出现、运行和消失的完整证据。
-- 检查当前系统是否存在名称可识别的 ROS2 相关进程，并如实记录结果。
+- 理解 signal 是发送给进程的通知，`kill` 命令的核心作用是发送信号。
+- 理解 `TERM` 用于请求进程结束，进程可以在退出前执行清理逻辑。
+- 能在发送信号前根据 PID 确认目标，在发送后重新查询确认结果。
+- 能区分 `kill` 按 PID 定位与 `pkill` 按名称或模式匹配的作用范围。
+- 只对本次创建的临时进程发送信号，不影响系统进程或其他用户进程。
+- 创建项目脚本 `process_check.sh`，检查指定 PID 是否仍在运行或可访问。
+- 完成正常结束、无效目标和名称批量匹配三条验证路径。
 
 说明：
 
-- Day14 严格保持原学习计划的“进程/ps/top”与“进程和 PID”主题。
-- Day10、Day11 只涉及父子 Shell 和环境继承，没有学习进程列表、PID、PPID 或运行状态，因此 Day14 不跳过。
-- 今天只观察进程，不终止进程；`kill/signal` 是 Day15 内容，不提前学习。
-- 项目当前未提供正在运行的 ROS2 节点，今天先检查实际系统；没有匹配结果时不得伪造。
-- 临时诊断 worker 使用系统已有程序并在8秒后自然结束，不新增仓库脚本。
-- `htop` 只检查是否安装；未安装时不使用 `sudo` 安装，继续使用 `ps/top` 即可。
-- AI 已提供全部命令，用户只需亲自在终端执行并理解整体流程。
-- 不要求背命令参数、进程状态字母或数字状态码。
+- Day15 严格保持原学习计划的 `kill/signal`、`kill/pkill` 和 `process_check.sh` 主题。
+- Day14 已学习识别进程和 PID；今天学习向明确目标发送信号，不重复进程列表基础。
+- 所有终止实验只操作本次由当前 Shell 创建的临时 worker。
+- 禁止对系统进程、ROS2 进程、服务进程、未知 PID 或不明确的名称执行 `kill/pkill`。
+- 不对 Day14 的旧 PID 发送信号，因为旧 PID 可能已经被系统复用。
+- 今天只实践 `TERM`；不实践强制终止信号，不使用 `sudo`。
+- AI 已提供全部脚本和命令，用户只需创建、执行并理解整体逻辑。
+- 不要求背信号编号、命令参数、Shell 语法或数字状态码。
 - 不要求填写每日总结。
 - 今天只学习 Linux，不新增 C++、CAN、ROS2 代码。
-- 建议用时 30～40 分钟。
+- 建议用时 40～50 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、认识当前 Shell 进程
+二、理解 kill 与 signal
 
-任务 1：查看当前 Shell 的 PID 和进程信息
-
-执行：
-
-```bash
-printf 'current shell PID: %s\n' "$$"
-ps -p "$$" -o pid,ppid,user,stat,etime,cmd
-```
-
-重点观察：
-
-- 第一条输出当前 Shell 的 PID。
-- `ps` 中的 PID 应与 `$$` 输出一致。
-- PPID 是启动当前 Shell 的父进程 PID。
-- USER 是运行该进程的用户。
-- STAT 表示当前状态，ETIME 表示进程已经运行多久，CMD 表示启动命令。
-
-整体逻辑：
+任务 1：建立整体概念
 
 ```text
-终端或上级程序
-       ↓ 启动
-当前 Shell 进程
-       ↓
-获得自己的 PID，并记录父进程 PPID
+发送方进程
+    ↓ 使用 kill/pkill
+向目标进程发送 signal
+    ↓
+目标进程根据 signal 继续、清理或结束
 ```
 
 重点理解：
 
-- PID 标识的是一次运行实例，不是磁盘文件的永久编号。
-- 同一个程序多次运行时，每个进程会有各自的 PID。
-- 不要求记住输出列参数，只需能从结果中找到 PID、PPID 和命令。
+- `kill` 的核心动作是向进程发送信号，不等于无条件强制结束。
+- 本次使用的 `TERM` 表示“请求结束”，目标程序可以在退出前清理。
+- 发送命令没有报错，只能证明请求被系统接受；还要检查目标进程和清理输出。
+- `kill` 按明确 PID 定位实例；`pkill` 按名称或模式匹配，可能同时影响多个进程。
+- 执行 `pkill` 前必须先查看完全相同模式的匹配范围。
 
 验证标准：
 
-- 保留 `$$` 和 `ps` 的真实输出。
-- 两处 Shell PID 一致。
+- 后续实验同时保留发送前、发送后和回归查询证据。
 
-三、查看系统进程快照
+三、创建能处理 TERM 的临时 worker
 
-任务 2：用 ps 获取当前时刻的进程证据
+任务 2：在 `/tmp` 创建信号实验 worker
 
 执行：
 
 ```bash
-ps -eo pid,ppid,user,stat,etime,comm --sort=pid | head -n 15
+practice_dir='/tmp/day15-signal-practice'
+worker_script="$practice_dir/day15_worker.sh"
+worker_log="$practice_dir/day15_worker.log"
+
+mkdir -p "$practice_dir"
+vim "$worker_script"
+```
+
+在 Vim 中写入下面的完整内容：
+
+```bash
+#!/bin/bash
+
+trap 'printf "%s\n" "[WORKER] TERM received; cleanup complete"; exit 0' TERM
+
+printf '[WORKER] ready pid=%s\n' "$$"
+
+while true; do
+    sleep 1
+done
+```
+
+保存后执行：
+
+```bash
+bash -n "$worker_script"
+chmod u+x "$worker_script"
+cat "$worker_script"
 ```
 
 重点理解：
 
-- `ps` 输出是执行命令那个时刻的快照。
-- 进程可能在下一刻启动、结束或改变状态，因此旧快照不能永久代表当前系统。
-- 一行通常代表一个进程实例，不同 PID 表示不同运行实例。
+- `trap` 让 worker 收到 `TERM` 时先输出清理信息，再退出。
+- 循环只是让临时 worker 保持运行，不要求学习代码细节。
+- worker 和日志位于 `/tmp`，不提交到 Git。
 
 验证标准：
 
-- 保留前15行真实输出。
-- 能指出其中任意一行的 PID、PPID、USER 和命令名。
+- 文件内容正确，`bash -n` 没有语法错误。
 
-四、临时诊断 worker 生命周期实验
+四、按 PID 发送 TERM
 
-任务 3：启动、观察并等待一个临时后台进程自然结束
+任务 3：启动 worker，确认目标后请求其正常结束
 
-请将下面整段命令一次执行：
+启动并获取证据：
 
 ```bash
-shell_pid="$$"
-
-bash -c 'exec -a robot-system-diagnostic-worker sleep 8' &
+: > "$worker_log"
+"$worker_script" > "$worker_log" 2>&1 &
 worker_pid="$!"
 
-printf 'shell PID: %s\n' "$shell_pid"
+sleep 1
+
 printf 'worker PID: %s\n' "$worker_pid"
-
-printf '%s\n' '[PS] exact worker snapshot'
 ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd
+cat "$worker_log"
+```
 
-printf '%s\n' '[PS] children of current shell'
-ps --ppid "$shell_pid" -o pid,ppid,user,stat,etime,cmd
+预期：
 
-printf '%s\n' '[SEARCH] worker by name'
-pgrep -af 'robot-system-diagnostic-worker'
+- `ps` 显示的 PID 与 `worker_pid` 一致。
+- worker 由当前用户运行。
+- 日志显示 `[WORKER] ready pid=...`，其中 PID 与目标一致。
 
-printf '%s\n' '[TOP] worker snapshot'
-top -b -n 1 -p "$worker_pid" | head -n 12
+确认无误后执行：
 
+```bash
+kill -TERM "$worker_pid"
 wait "$worker_pid"
 
-printf '%s\n' '[PS] after worker finished'
+cat "$worker_log"
 ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd ||
-  printf '%s\n' '[EXPECTED] worker is no longer running'
+  printf '%s\n' '[EXPECTED] worker stopped after TERM'
 ```
 
 预期：
 
-- `worker_pid` 是后台 worker 的 PID。
-- worker 的 PPID 与 `shell_pid` 一致，证明当前 Shell 启动了它。
-- `ps`、名称搜索和 `top` 都能在 worker 存活期间找到它。
-- worker 命令行包含 `robot-system-diagnostic-worker`。
-- `wait` 只等待 worker 自然结束，没有发送终止信号。
-- 最后再次查询该 PID 时，显示预期的“不再运行”结果。
+- 日志新增 `[WORKER] TERM received; cleanup complete`。
+- 最终 `ps` 不再显示该 worker。
+- 清理文字证明 worker 收到并处理了 `TERM`。
 
-生命周期：
+整体流程：
 
 ```text
-当前 Shell
-    ↓ 启动
-临时 worker 获得 PID
-    ↓
-ps / top 获取运行证据
-    ↓
-8秒后自然结束
-    ↓
-原 PID 不再对应该 worker
+启动 worker → 记录 PID → ps 与日志确认目标
+                           ↓
+                    kill 发送 TERM
+                           ↓
+                 worker 执行清理并退出
+                           ↓
+                查看日志并重新查询 PID
 ```
 
-重点理解：
-
-- `$!` 提供当前 Shell 最近启动的后台进程 PID；不要求记忆写法，只需理解本次如何得到精确目标。
-- 后台运行表示 Shell 可以在 worker 存活期间继续执行观察命令。
-- PID 只在进程存在期间用于定位该实例；进程结束后不能继续把旧 PID 当成有效运行证据。
-- 不要求理解 `exec -a` 细节，它只为临时 worker 设置便于搜索的名称。
-
 验证标准：
 
-- 保留 worker PID、PPID、`ps`、名称搜索和 `top` 输出。
-- 保留 worker 自然结束后的查询结果。
-- 根据输出确认 worker 的父进程是当前 Shell。
+- 保留发送前的目标证据、清理日志和发送后的查询结果。
 
-五、理解 ps 与 top 的证据差异
+五、安全验证不存在的目标
 
-任务 4：根据刚才的实际输出比较两种观察方式
-
-`ps` 的整体作用：
-
-- 获取执行时刻的进程快照。
-- 适合记录明确的 PID、PPID、用户、状态、运行时间和命令。
-- 再次执行才会得到新的当前状态。
-
-`top` 的整体作用：
-
-- 正常交互使用时会持续刷新系统和进程状态。
-- 本次使用批处理单次输出，便于把结果记录到 `out.md`。
-- 输出同时包含系统负载、CPU、内存概要和目标进程信息。
-
-验证标准：
-
-- 能根据实际输出指出两者都找到了同一个 worker PID。
-- 理解 `ps` 是快照，`top` 通常用于持续观察；不要求记住操作按键。
-
-六、检查 htop 是否可用
-
-任务 5：只检查工具是否安装
+任务 4：只对确定不可能存在的 PID 复现错误
 
 执行：
 
 ```bash
-command -v htop || printf '%s\n' '[INFO] htop is not installed; continue with ps and top'
+invalid_pid='99999999'
+
+ps -p "$invalid_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] invalid PID is not running'
+
+kill -TERM "$invalid_pid"
 ```
 
 预期：
 
-- 已安装时显示 `htop` 路径。
-- 未安装时显示提示文字，这不影响 Day14 完成。
+- 查询先确认 PID `99999999` 不存在。
+- `kill` 提示“没有那个进程”或 `No such process`。
 
 重点理解：
 
-- `htop` 是另一种交互式进程观察工具。
-- 今天的核心进程证据已经由 `ps` 和 `top` 提供，不为了单个练习安装软件。
+- 异常测试也必须先确认目标，不能随意使用可能属于其他进程的 PID。
+- 不重新使用旧 PID，因为数字可能被复用。
+- 读懂错误文字即可，不要求记忆状态码。
 
 验证标准：
 
-- 保留真实检查结果。
+- 保留发送前的无目标证据和 `kill` 错误文字。
 
-七、检查当前 ROS2 相关进程
+六、使用 pkill 处理唯一名称的临时进程
 
-任务 6：在系统进程快照中查找可识别的 ROS2 相关命令
+任务 5：创建两个同名临时 worker，观察名称匹配范围
+
+请将下面整段命令一次执行，不修改匹配模式：
+
+```bash
+bash -c 'exec -a day15-pkill-worker sleep 60' &
+pkill_pid_one="$!"
+
+bash -c 'exec -a day15-pkill-worker sleep 60' &
+pkill_pid_two="$!"
+
+sleep 1
+
+printf 'worker one PID: %s\n' "$pkill_pid_one"
+printf 'worker two PID: %s\n' "$pkill_pid_two"
+
+printf '%s\n' '[BEFORE] exact name matches'
+pgrep -af '^day15-pkill-worker '
+
+pkill -TERM -f '^day15-pkill-worker '
+
+wait "$pkill_pid_one" 2>/dev/null || true
+wait "$pkill_pid_two" 2>/dev/null || true
+
+printf '%s\n' '[AFTER] exact name matches'
+pgrep -af '^day15-pkill-worker ' ||
+  printf '%s\n' '[EXPECTED] no day15 pkill workers remain'
+```
+
+预期：
+
+- 发送前显示两个不同 PID。
+- 精确模式只匹配两个本次创建的临时进程。
+- 发送后不再显示这两个进程。
+
+重点理解：
+
+- `kill` 使用 PID 指向一个明确实例。
+- `pkill` 根据名称或命令行模式选择目标，一次可能匹配多个实例。
+- 名称模式过宽可能影响无关进程，必须先用相同模式查看结果。
+- 禁止将本次模式改成宽泛的 `sleep`、`bash` 或 `robot`。
+
+验证标准：
+
+- 保留发送前两个 PID 和发送后无匹配的证据。
+
+七、项目实践：创建 process_check.sh
+
+任务 6：为 Robot System Diagnostic Tool 创建 PID 检查脚本
 
 执行：
 
 ```bash
-ps -eo pid,ppid,user,stat,etime,cmd |
-  grep -E '[r]os2|[r]obot_state_publisher' ||
-  printf '%s\n' '[INFO] no matching ROS2-related process is currently visible'
+cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
+vim process_check.sh
 ```
 
-结果判断：
+在 Vim 中写入下面的完整内容：
 
-- 有输出时：记录匹配进程的 PID、PPID、用户和命令。
-- 无输出时：如实保留提示，表示本次快照没有发现名称匹配的进程。
-- 名称没有匹配不等于 ROS2 软件没有安装，也不能证明系统永远没有 ROS2 节点；它只说明本次搜索没有取得匹配证据。
+```bash
+#!/bin/bash
+
+target_pid="$1"
+
+if [[ -z "$target_pid" ]]; then
+    printf '%s\n' '[PROCESS CHECK ERROR] PID is required' >&2
+    exit 1
+fi
+
+if [[ ! "$target_pid" =~ ^[0-9]+$ ]]; then
+    printf '[PROCESS CHECK ERROR] invalid PID: %s\n' "$target_pid" >&2
+    exit 1
+fi
+
+if kill -0 "$target_pid" 2>/dev/null; then
+    printf '[PROCESS RUNNING] PID=%s\n' "$target_pid"
+    ps -p "$target_pid" -o pid,ppid,user,stat,etime,cmd
+else
+    printf '[PROCESS NOT RUNNING OR NOT ACCESSIBLE] PID=%s\n' "$target_pid"
+    exit 1
+fi
+```
+
+保存后执行：
+
+```bash
+bash -n process_check.sh
+chmod u+x process_check.sh
+ls -l process_check.sh
+```
+
+脚本整体逻辑：
+
+1. 接收一个 PID。
+2. 检查 PID 是否为空或格式无效。
+3. 使用 `kill -0` 检查目标是否存在且当前用户可访问，不发送终止信号。
+4. 可访问时输出运行状态和 `ps` 证据。
+5. 不存在或不可访问时输出明确提示。
 
 重点理解：
 
-- 只有正在运行的程序才会出现在进程列表中。
-- 磁盘上存在程序文件，不代表它当前一定有对应进程。
-- 以后实际启动 ROS2 节点时，可以根据启动命令、已知进程名或 PID 使用同样方法观察。
+- `kill -0` 不会结束进程，只做存在性和权限检查。
+- 检查失败可能表示进程不存在，也可能表示当前用户无权访问。
+- 只需理解输入、检查和输出证据的整体框架，不要求记住代码语法。
 
 验证标准：
 
-- 保留真实匹配结果或无匹配提示。
-- 不编造不存在的 ROS2 节点或 PID。
+- 脚本语法通过并具有 owner 执行权限。
+- 文件位于 `robot-system-learning/linux/process_check.sh`。
 
-八、进程问题的基础诊断顺序
+八、验证 process_check.sh
 
-任务 7：形成进程层面的取证流程
+任务 7：分别检查运行中和结束后的临时进程
 
-当预期的程序似乎没有运行时，按下面顺序思考：
+执行：
 
-1. 明确预期运行的程序或命令名称。
-2. 用进程快照搜索匹配对象。
-3. 有结果时记录 PID、PPID、USER、STAT、ETIME 和 CMD。
-4. 无结果时区分“进程已经结束”和“搜索名称不准确”，不能直接认定程序未安装。
-5. 对已知 PID 再做精确查询，确认该实例当前是否仍存在。
-6. 需要持续观察时使用动态工具，重新获取当前证据。
+```bash
+bash -c 'exec -a day15-check-worker sleep 60' &
+check_pid="$!"
 
-说明：
+sleep 1
 
-- Day14 只负责识别和观察进程。
-- 不对系统服务或不熟悉的进程执行任何修改或终止操作。
+./process_check.sh "$check_pid"
+
+kill -TERM "$check_pid"
+wait "$check_pid" 2>/dev/null || true
+
+./process_check.sh "$check_pid"
+```
+
+预期：
+
+- 第一次显示 `[PROCESS RUNNING]` 和对应 PID 信息。
+- 发送 `TERM` 并等待后，第二次显示 `[PROCESS NOT RUNNING OR NOT ACCESSIBLE]`。
+
+随后检查项目文件：
+
+```bash
+bash -n process_check.sh
+git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/process_check.sh
+```
+
+预期：
+
+- 语法检查仍通过。
+- Git 显示 `process_check.sh` 是新增文件。
 
 验证标准：
 
-- 能按目标、搜索、确认身份、观察状态、重新验证的顺序说明过程。
+- 同一脚本正确区分运行中与已结束的临时 worker。
+- 不提交任何 `/tmp` worker 或日志。
 
 九、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. 磁盘上的程序文件与正在运行的进程有什么区别？
-2. PID 和 PPID 分别表示什么？本次 worker 的 PPID 为什么与当前 Shell PID 一致？
-3. 为什么通过已知 PID 查询 worker，比只依赖名称搜索更精确？
-4. `ps` 与正常交互使用的 `top` 在观察方式上有什么区别？
-5. 哪些实际输出共同证明 worker 曾经运行，并且后来已经结束？
-6. 为什么进程搜索没有结果，不能直接证明对应软件没有安装？
-7. 从当前 Shell 启动 worker，到最后确认它消失，整个进程生命周期验证流程是什么？
+1. signal 是什么？`kill` 命令对目标进程执行的核心动作是什么？
+2. 哪些日志和进程证据证明临时 worker 收到 `TERM` 后执行了清理再退出？
+3. 为什么发送信号前必须确认 PID 对应的目标，发送后还要重新查询？
+4. `kill` 与 `pkill` 的目标选择方式有什么区别，哪一种更容易一次影响多个进程？
+5. 为什么执行 `pkill` 前必须用相同的精确模式查看匹配结果？
+6. `process_check.sh` 中的 `kill -0` 做什么？检查失败为什么不能只解释为进程不存在？
+7. `process_check.sh` 从接收 PID 到输出运行或不可访问结果，整体流程是什么？
 
 说明：
 
-- 只回答程序、进程、PID/PPID、快照和生命周期的整体关系。
-- 不考命令参数、状态字母、数字状态码或 `top/htop` 操作按键。
+- 只回答信号、目标范围、安全检查和回归验证的整体关系。
+- 不考信号编号、命令参数、Shell 语法或数字状态码。
 - 不要求填写每日总结。
 
 十、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day14 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day15 用户操作输出记录` 标题。请在该标题下记录：
 
-- 当前 Shell PID、PPID、用户、状态、运行时间和命令。
-- 系统进程快照的前15行。
-- 临时 worker 的 PID、PPID、名称搜索、`ps` 和 `top` 输出。
-- worker 自然结束后的查询结果。
-- `htop` 是否可用的真实结果。
-- 当前 ROS2 相关进程的匹配结果或无匹配提示。
+- 临时 worker 文件内容和语法检查结果。
+- worker 启动后的 PID、`ps` 和 ready 日志。
+- 发送 `TERM` 后的清理日志与进程消失证据。
+- 不存在 PID 的发送前检查和错误文字。
+- 两个 `pkill` worker 发送前后的名称匹配结果。
+- `process_check.sh` 文件内容、语法和权限。
+- 脚本检查运行中与已结束 worker 的结果。
+- Git 对 `process_check.sh` 的状态。
 - 对 7 个技术问题的回答。
-- 遇到问题时记录现象、判断、检查和解决；没有问题时无需额外总结。
 
-不要提前修改 Linux README。Day14 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day15 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
 十一、Git 提交要求
 
-- 开始学习前，由 AI 将 Day14 学习安排和 `out.md` 标题提交并推送到远程仓库。
-- Day14 完成、检查并归档后，由 AI 提交学习记录；Day14 不新增仓库脚本。
+- 开始学习前，由 AI 将 Day15 学习安排和 `out.md` 标题提交并推送。
+- Day15 完成、检查并归档后，由 AI 提交学习记录和 `process_check.sh`。
 - 不使用 `git add .`。
-- 不提交临时诊断 worker 或其他 `/tmp` 练习对象。
-- 不提交项目中的日志、报告、C++ 编译产物或 `temp.txt`。
-- `当前学习任务安排.txt`、《学习任务模板.md》、《学习问题记录模板.md》、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理，不得忽略。
+- 不提交 `/tmp/day15-signal-practice` 中的 worker 或日志。
+- 不提交其他日志、报告、C++ 编译产物或 `temp.txt`。
+- 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十二、Day14 简短执行计划
+十二、Day15 简短执行计划
 
-1. 查看当前 Shell → 验证：PID 与 `ps` 输出一致。
-2. 获取系统快照 → 验证：能找到进程的基本字段。
-3. 启动临时 worker → 验证：获得明确 PID 和 PPID。
-4. 使用 `ps/top` 观察 → 验证：多个证据指向同一 worker。
-5. 等待自然结束 → 验证：旧 PID 不再对应运行中的 worker。
-6. 检查 `htop` → 验证：如实记录是否可用。
-7. 检查 ROS2 相关进程 → 验证：如实记录匹配或无匹配结果。
-8. 完成记录 → 验证：`out.md` 包含真实输出和7个技术问题答案。
+1. 创建 TERM worker → 验证：文件正确且语法通过。
+2. 按 PID 发送 TERM → 验证：清理日志出现且进程消失。
+3. 验证不存在目标 → 验证：发送前确认无目标并获得错误。
+4. 验证 `pkill` → 验证：精确模式只处理两个临时进程。
+5. 创建 `process_check.sh` → 验证：语法和权限正确。
+6. 测试项目脚本 → 验证：区分运行中与结束后的 worker。
+7. 完成记录 → 验证：`out.md` 包含真实输出和7个技术问题答案。
 
-十三、Day14 完成标准
+十三、Day15 完成标准
 
-- 理解程序文件与进程实例的区别。
-- 理解 PID 和 PPID 的整体作用。
-- 能使用 `ps` 获取进程快照。
-- 能使用 `top` 观察目标进程和系统概要。
-- 已完成临时 worker 从出现到自然结束的生命周期验证。
-- 能根据进程证据判断目标当前是否正在运行。
-- 已如实检查当前 ROS2 相关进程，没有编造结果。
+- 理解 signal 与 `kill` 命令的整体关系。
+- 理解 `TERM` 可以让目标进程执行清理后退出。
+- 能在发送信号前确认目标，并在发送后重新验证。
+- 能区分 `kill` 的 PID 目标与 `pkill` 的名称匹配范围。
+- 所有信号只发送给明确创建的临时进程或已确认不存在的安全测试 PID。
+- `process_check.sh` 存在、语法正确且具有执行权限。
+- 项目脚本能区分运行中与结束后的临时进程。
 - `out.md` 包含完整、真实的操作输出和7个技术问题答案。
-- Git 提交不包含临时对象、日志、报告、编译程序或 `temp.txt`。
+- Git 提交不包含临时 worker、日志、报告、编译程序或 `temp.txt`。

@@ -2079,3 +2079,5 @@ seeway@test:~/workspace/learn/learn/robot-system-learning$
 ps、pgrep 和 top 都显示 PID 95307，共同证明 worker 当时正在运行；wait 之后最终 ps 只剩表头并显示预期提示，证明该 worker 已结束。
 6. 为什么进程搜索没有结果，不能直接证明对应软件没有安装？这种可能是程序安装了，但是没有运行的实例，就搜索不到对应的结果
 7. 从当前 Shell 启动 worker，到最后确认它消失，整个进程生命周期验证流程是什么？当前shell运行程序worker,此时ps或者top都可以看到该进程id,等待自然结束之后，ps/top就看不到worker的pid了
+
+# Day15 用户操作输出记录
