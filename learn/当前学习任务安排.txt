@@ -1,341 +1,344 @@
-Day12 详细学习安排：用户、组与权限
+Day13 详细学习安排：chmod 与 chown
 
 一、今日目标
 
-- 理解 Linux 使用用户和组表示“谁在访问文件”。
-- 能用 `whoami`、`id` 和 `groups` 确认当前用户及所属组。
-- 理解文件权限分为 owner（所有者）、group（所属组）和 other（其他用户）三组。
-- 能结合当前身份、文件所有者和权限位，判断 Shell 为什么允许或拒绝访问。
-- 能用 `ls -l` 和 `stat` 获取文件权限、所有者与所属组的证据。
-- 在 `/tmp` 创建测试目录和文件，安全复现一次“权限不够”，再恢复访问。
-- 检查 Robot System Diagnostic Tool 现有脚本的所有者、所属组和权限。
+- 理解 `chmod` 修改权限，`chown` 修改文件的 owner 或 group。
+- 能通过变更前后的 `stat` 输出判断究竟是哪项元数据发生变化。
+- 理解文件 owner 通常可以修改自己的文件权限。
+- 理解普通用户只能在有限范围内改变文件所属组，不能随意改变文件 owner 或改成自己不属于的组。
+- 使用当前用户已经所属的 `adm` 组完成一次合法的 group 变更。
+- 使用当前用户不属于的 `root` 组安全复现一次 `chown` 失败，并确认失败后元数据没有被错误改变。
+- 验证 `chmod/chown` 修改的是文件元数据，不会修改文件内容。
 
 说明：
 
-- Day12 严格保持原学习计划的“用户、组与权限”主题。
-- Day2 已练习过 `r/w/x`、`chmod 755`、`chmod 644` 和 `ls -l`；Day4 也使用过 `stat`。今天不重复数字权限换算，重点补齐身份、组和权限匹配的整体逻辑。
-- Day13 专门学习 `chmod/chown`，所以今天只用最少的 `chmod` 建立测试条件，不学习所有者变更，也不使用 `chown`。
-- 不使用 `sudo`，不修改系统文件，不修改项目脚本权限。
-- AI 已提供全部命令，用户只需亲自在终端执行并理解整体判断过程。
-- 不要求背命令参数、权限数字或用户数据库细节。
+- Day13 严格保持原学习计划的 `chmod/chown` 主题。
+- Day2 已练习数字形式的 `chmod 755/644`，Day12 已练习符号形式的权限增减并掌握 owner/group/other。今天不重复权限数字换算和三组权限结构。
+- Day13 的新增重点是区分 `chmod` 与 `chown` 的职责，以及普通用户执行 `chown` 的权限边界。
+- 所有修改都作用于 `/tmp` 中的项目文件副本，不修改仓库中的 `robot_env.sh`。
+- 不使用 `sudo`，不创建用户或组，不修改系统文件。
+- AI 已提供全部命令，用户只需亲自在终端执行并理解整体变化。
+- 不要求背命令参数、数字权限或错误状态码。
 - 不要求填写每日总结。
-- 今天只学习 Linux，不新增 C++、CAN、ROS2 内容。
-- 建议用时 30～45 分钟。
-- 所有真实输出和问题答案写入 `out.md`。
+- 今天只学习 Linux，不新增 C++、CAN、ROS2 内容，也不新增仓库脚本。
+- 建议用时 30～40 分钟。
+- 所有真实输出和技术问题答案写入 `out.md`。
 
-二、确认当前用户和所属组
+二、准备项目配置副本
 
-任务 1：获取“谁正在执行命令”的证据
+任务 1：复制 `robot_env.sh` 到临时练习目录
 
 执行：
 
 ```bash
-whoami
+practice_dir='/tmp/day13-ownership-practice'
+source_file="$HOME/workspace/learn/learn/robot-system-learning/linux/robot_env.sh"
+test_file="$practice_dir/robot_env.test.sh"
+
+mkdir -p "$practice_dir"
+cp "$source_file" "$test_file"
+chmod u=rw,g=r,o= "$test_file"
+
 id
 groups
+ls -l "$source_file" "$test_file"
+stat -c 'permissions=%A | owner=%U | group=%G | file=%n' "$source_file" "$test_file"
 ```
 
-重点观察：
+预期：
 
-- `whoami` 显示当前有效用户名。
-- `id` 同时显示用户 ID、主组和附加组。
-- `groups` 直接列出当前用户所属的组。
+- 当前用户仍为 `seeway`，所属组中包含主组 `l` 和附加组 `adm`。
+- 项目原文件与临时副本内容相同，但它们是两个不同路径下的文件。
+- 临时副本由当前用户拥有，初始 group 为 `l`，权限为 `-rw-r-----`。
+
+重点理解：
+
+- 今天把真实项目配置复制到 `/tmp`，后续只修改副本的元数据。
+- `chmod` 在这里仅用于建立明确的初始状态，不重复学习权限数字。
+- 项目原文件是对照对象，整个实验都不修改它。
+
+验证标准：
+
+- 保留当前身份、组和两个文件初始元数据的真实输出。
+- 确认 `test_file` 路径位于 `/tmp/day13-ownership-practice`。
+
+三、验证 chmod 只修改权限
+
+任务 2：只给副本的 group 增加写权限
+
+变更前再次记录：
+
+```bash
+stat -c 'before chmod: permissions=%A | owner=%U | group=%G' "$test_file"
+```
+
+执行权限变更：
+
+```bash
+chmod g+w "$test_file"
+stat -c 'after chmod:  permissions=%A | owner=%U | group=%G' "$test_file"
+```
+
+预期：
+
+- 权限从 `-rw-r-----` 变为 `-rw-rw----`。
+- owner 仍为 `seeway`。
+- group 仍为 `l`。
 
 整体逻辑：
 
 ```text
-当前 Shell 中的进程
-        ↓
-携带当前用户身份和所属组
-        ↓
-访问文件时，用这些身份信息与文件的 owner/group 比较
+chmod 接收文件和目标权限
+          ↓
+修改权限位
+          ↓
+owner、group 和文件内容保持不变
 ```
+
+随后恢复初始权限：
+
+```bash
+chmod g-w "$test_file"
+stat -c 'restored: permissions=%A | owner=%U | group=%G' "$test_file"
+```
+
+验证标准：
+
+- 保留变更前、变更后和恢复后的 `stat` 输出。
+- 根据证据确认 `chmod` 只改变权限，没有改变 owner 或 group。
+
+四、确认允许使用的测试组
+
+任务 3：在执行 chown 前先确认当前用户属于 `adm`
+
+执行：
+
+```bash
+groups
+id -nG | tr ' ' '\n' | grep -Fx 'adm'
+```
+
+预期：
+
+- `groups` 输出包含 `adm`。
+- 第二条命令单独输出 `adm`。
 
 重点理解：
 
-- 用户表示一个操作身份，组用于把多个用户归入同一个权限集合。
-- 组名不是文件夹名；它是访问控制中的身份信息。
-- 不要求记住数字 UID 或 GID，只需能从输出中找到用户名和组名。
+- 文件 owner 可以把文件 group 改成自己所属的组。
+- 先用身份和组证据确认变更条件，再执行 `chown`，不要盲目尝试。
+- 今天只改变 group，不尝试把文件 owner 改成其他用户。
 
 验证标准：
 
-- 保留三个命令的真实输出。
-- 能指出当前用户名、主组以及当前用户所属的组。
+- 保留当前用户属于 `adm` 的真实证据。
 
-三、查看测试目录和文件的权限归属
+五、验证 chown 修改所属组
 
-任务 2：在 `/tmp` 创建只属于本次练习的测试对象
+任务 4：使用 chown 将副本的 group 从 `l` 改为 `adm`
 
 执行：
 
 ```bash
-practice_dir='/tmp/day12-permission-practice'
-mkdir -p "$practice_dir"
-printf '%s\n' 'robot status: ready' > "$practice_dir/status.txt"
+stat -c 'before chown: permissions=%A | owner=%U | group=%G' "$test_file"
 
-chmod u=rwx,go= "$practice_dir"
-chmod u=rw,go= "$practice_dir/status.txt"
+chown :adm "$test_file"
 
-ls -ld "$practice_dir"
-ls -l "$practice_dir/status.txt"
-stat -c 'permissions=%A | owner=%U | group=%G | file=%n' "$practice_dir" "$practice_dir/status.txt"
+stat -c 'after chown:  permissions=%A | owner=%U | group=%G' "$test_file"
 ```
 
 预期：
 
-- 目录和文件的 owner 是当前用户。
-- 目录的 owner 具有读、写、进入权限，group 和 other 没有权限。
-- 文件的 owner 具有读、写权限，group 和 other 没有权限。
-- `stat` 将权限、所有者、所属组和路径显示在同一行，方便对照。
-
-如何阅读 `ls -l` 的权限部分：
-
-```text
-- rw- --- ---
-│  │   │   └─ other：其他用户
-│  │   └───── group：文件所属组
-│  └───────── owner：文件所有者
-└──────────── 文件类型；“-”表示普通文件，“d”表示目录
-```
-
-重点理解：
-
-- owner、group、other 是三类访问身份，不是三个同时叠加的权限包。
-- 当前进程访问文件时，系统先根据身份判断应使用哪一组权限，再检查该组是否允许本次操作。
-- 文件名存在只证明目录中有这个对象，不证明当前身份一定能读取它。
-- 这里使用符号形式的 `chmod` 只是为了建立明确测试状态，不要求记忆写法。
-
-验证标准：
-
-- 保留 `ls -ld`、`ls -l` 和 `stat` 的真实输出。
-- 能从输出中指出文件类型、owner、group，以及三组权限的位置。
-
-四、验证正常读取
-
-任务 3：在 owner 具有读权限时读取文件
-
-执行：
-
-```bash
-cat "$practice_dir/status.txt"
-```
-
-预期：
-
-```text
-robot status: ready
-```
-
-判断过程：
-
-1. 当前用户与文件 owner 相同。
-2. 因此本次访问使用 owner 权限。
-3. owner 权限中有 `r`。
-4. `cat` 可以读取文件内容。
-
-验证标准：
-
-- 保留正常读取结果。
-- 能根据身份匹配和 owner 权限解释为什么读取成功。
-
-五、安全复现权限拒绝并恢复
-
-任务 4：只修改临时文件，观察同一个用户失去读权限后的结果
-
-执行：
-
-```bash
-chmod u-r "$practice_dir/status.txt"
-ls -l "$practice_dir/status.txt"
-cat "$practice_dir/status.txt"
-```
-
-预期：
-
-- `ls -l` 显示 owner 的读权限已经消失。
-- `cat` 提示“权限不够”或 `Permission denied`。
-- 这次失败是实验预期，不代表命令输错。
-
-随后立即恢复并回归验证：
-
-```bash
-chmod u+r "$practice_dir/status.txt"
-ls -l "$practice_dir/status.txt"
-cat "$practice_dir/status.txt"
-```
-
-预期：
-
-- owner 的读权限恢复。
-- `cat` 再次显示 `robot status: ready`。
+- group 从 `l` 变为 `adm`。
+- owner 仍为 `seeway`。
+- 权限仍为 `-rw-r-----`。
 
 整体逻辑：
 
 ```text
-同一当前用户 + 同一文件
-          ↓
-只移除 owner 的读取权限
-          ↓
-读取失败
-          ↓
-恢复 owner 的读取权限
-          ↓
-读取成功
+当前用户是文件 owner，并且属于 adm 组
+                    ↓
+chown 只请求把文件 group 改为 adm
+                    ↓
+系统允许变更
+                    ↓
+group 改变，owner 和权限保持不变
 ```
 
 重点理解：
 
-- 这个最小实验只改变一个条件，因此可以证明失败与 owner 的读权限有关。
-- 系统不会因为 group 或 other 可能有权限，就把 owner 自动改当成另一类身份；身份匹配后使用对应的权限组。
-- 不需要记忆错误状态码，读懂错误文字并用权限证据定位即可。
+- `chown` 可以修改 owner，也可以只修改 group；本次只使用它修改 group。
+- 不要求记住 `:adm` 的具体写法，只需理解这次输入指定了目标 group。
+- 当前用户仍然是文件 owner，因此后续访问仍优先使用 owner 权限，不会因为 group 改成 `adm` 就改用 group 权限。
 
 验证标准：
 
-- 同时保留拒绝访问和恢复后成功访问的真实输出。
-- 能说明实验中唯一改变的条件是什么。
+- 保留变更前后的 `stat` 输出。
+- 根据输出确认只有 group 发生变化。
 
-六、权限问题的诊断顺序
+六、安全复现 chown 失败
 
-任务 5：根据证据逐层判断，不直接猜测
+任务 5：尝试把副本改为当前用户不属于的 `root` 组
 
-出现“权限不够”时，按下面顺序执行和思考：
+先确认当前用户不属于 `root` 组：
 
 ```bash
-whoami
-id
-ls -ld "$practice_dir"
-ls -l "$practice_dir/status.txt"
-stat -c 'permissions=%A | owner=%U | group=%G | file=%n' "$practice_dir" "$practice_dir/status.txt"
+id -nG | tr ' ' '\n' | grep -Fx 'root' || printf '%s\n' '[EXPECTED] current user is not in group root'
 ```
 
-诊断顺序：
+随后执行预期失败的变更：
 
-1. 确认当前用户和所属组。
-2. 确认路径中的目录及目标文件真实存在。
-3. 查看目录和文件的 owner、group 与权限。
-4. 判断当前身份匹配 owner、group 还是 other。
-5. 检查匹配到的权限组是否允许所需操作。
-6. 只在明确根因后，针对测试对象做最小修改并重新验证。
+```bash
+chown :root "$test_file"
+stat -c 'after failed chown: permissions=%A | owner=%U | group=%G' "$test_file"
+```
+
+预期：
+
+- 第一组命令确认当前用户不属于 `root`。
+- `chown :root` 提示“操作不允许”或 `Operation not permitted`。
+- 失败后 owner 仍为 `seeway`，group 仍为 `adm`，权限仍为 `-rw-r-----`。
+
+调试逻辑：
+
+1. 读取错误文字，确认是权限边界问题。
+2. 用 `id` 或 `groups` 检查当前用户是否属于目标组。
+3. 用 `stat` 检查失败后文件元数据是否保持原状。
+4. 只对允许的目标组做恢复，不使用更高权限绕过实验。
 
 重点理解：
 
-- `ls -l` 能证明文件当前的权限、所有者和所属组，但不能单独证明“当前进程是谁”，所以还需要 `whoami` 或 `id`。
-- 目录权限也会影响能否通过路径访问文件，因此排查时不能只看目标文件。
-- 今天只建立诊断思路，不展开目录权限的每种组合。
+- 普通用户不能任意决定文件 owner 或 group。
+- 命令失败后不能只看错误，还要检查文件当前状态，确认没有发生部分变更。
+- 今天不要求了解 Linux capability 或内核检查细节。
 
 验证标准：
 
-- 保留诊断命令的真实输出。
-- 能按身份、路径、归属、匹配权限、回归验证的顺序说明排查过程。
+- 保留预期错误文字。
+- 保留失败后的 `stat` 输出，确认 group 没有变成 `root`。
 
-七、项目实践：检查现有诊断工具
+七、恢复所属组并验证文件内容
 
-任务 6：只读检查项目文件，不修改它们
+任务 6：将副本 group 恢复为主组 `l`，并证明文件内容未改变
 
 执行：
 
 ```bash
-project_linux="$HOME/workspace/learn/learn/robot-system-learning/linux"
+chown :l "$test_file"
+stat -c 'final: permissions=%A | owner=%U | group=%G' "$test_file"
 
-ls -l \
-  "$project_linux/day4_system_check.sh" \
-  "$project_linux/day5_find_logs.sh" \
-  "$project_linux/day6_log_analyzer.sh" \
-  "$project_linux/day8_diagnostic_pipeline.sh" \
-  "$project_linux/robot_env.sh"
-
-stat -c 'permissions=%A | owner=%U | group=%G | file=%n' \
-  "$project_linux/day4_system_check.sh" \
-  "$project_linux/day5_find_logs.sh" \
-  "$project_linux/day6_log_analyzer.sh" \
-  "$project_linux/day8_diagnostic_pipeline.sh" \
-  "$project_linux/robot_env.sh"
+cmp -s "$source_file" "$test_file" && printf '%s\n' '[OK] file content unchanged'
 ```
 
-重点观察：
+预期：
 
-- 每个文件都有明确的 owner 和 group。
-- 现有诊断脚本具有执行权限。
-- `robot_env.sh` 用于被 `source` 加载，不需要依靠执行权限。
-- 今天只检查和解释现状，不对项目文件执行 `chmod` 或 `chown`。
+- 副本的 group 恢复为 `l`。
+- owner 仍为 `seeway`，权限为 `-rw-r-----`。
+- 内容比较显示 `[OK] file content unchanged`。
 
-项目中的整体关系：
+整体逻辑：
 
 ```text
-当前用户与所属组
-        ↓ 比较
-项目文件的 owner 与 group
-        ↓ 选择
-owner / group / other 中对应的一组权限
-        ↓
-决定能否读取、修改或直接执行
+chmod → 修改权限元数据
+chown → 修改 owner/group 元数据
+cmp   → 验证文件内容仍与项目原文件相同
 ```
+
+重点理解：
+
+- 权限和归属属于文件元数据，不是文件正文。
+- `chmod/chown` 成功不代表文件内容被重新写入。
+- 最终同时检查权限、owner、group 和内容，才构成完整回归验证。
 
 验证标准：
 
-- 保留五个项目文件的 `ls -l` 和 `stat` 输出。
-- 能解释为什么诊断脚本可以直接执行，而 `robot_env.sh` 可以通过 `source` 读取。
+- group 已恢复为 `l`。
+- 项目原文件和临时副本内容仍然相同。
 
-八、必须回答的问题
+八、项目原文件回归检查
 
-把答案写入 `out.md`，只回答用途和整体逻辑：
+任务 7：确认仓库中的 `robot_env.sh` 没有被实验修改
 
-1. 用户和组分别表示什么？当前 Shell 执行命令时，如何确认自己的用户和所属组？
-2. `ls -l` 权限字符串中，owner、group、other 三组分别对应谁？
-3. 当前用户正好是文件 owner 时，系统使用哪组权限？是否会再把三组权限相加？
-4. 为什么文件明明存在，`cat` 仍然可能提示“权限不够”？
-5. `ls -l` 能提供哪些权限证据？为什么判断访问结果时还要查看 `whoami` 或 `id`？
-6. 遇到权限问题时，应按什么顺序检查和验证？
-7. 为什么今天只在 `/tmp` 的测试对象上复现问题，不使用 `sudo`、不修改系统文件，也不对项目文件执行 `chown`？
+执行：
+
+```bash
+ls -l "$source_file"
+stat -c 'project file: permissions=%A | owner=%U | group=%G | file=%n' "$source_file"
+git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/robot_env.sh
+```
+
+预期：
+
+- 项目原文件保持原有权限、owner 和 group。
+- Git 对 `robot_env.sh` 没有显示任何修改。
+
+验证标准：
+
+- 保留项目原文件的最终元数据和 Git 检查结果。
+- Git 命令无输出表示该项目文件没有未提交改动。
+
+九、必须回答的技术问题
+
+把答案写入 `out.md`，只回答整体逻辑：
+
+1. `chmod` 和 `chown` 分别修改文件的什么信息？
+2. 为什么执行 `chmod g+w` 后，权限发生变化，但 owner 和 group 没有变化？
+3. 为什么当前用户可以把自己文件的 group 改成 `adm`，改成 `root` 却失败？
+4. 文件 group 改成 `adm` 后，当前用户仍然是 owner；系统访问该文件时使用 owner、group 还是 other 权限？
+5. 为什么 `chmod/chown` 执行后，文件内容仍然可以与原文件完全相同？
+6. `chown` 提示操作不允许时，应检查哪些身份和文件证据？
+7. 如何验证一次 `chmod/chown` 变更确实达到预期，并且没有意外修改其他元数据或文件内容？
 
 说明：
 
-- 不考 UID/GID 数字、命令参数、数字权限换算或用户数据库细节。
+- 只回答命令职责、权限边界和验证逻辑。
+- 不考命令参数、权限数字、错误状态码或系统实现细节。
 - 不要求填写每日总结。
 
-九、操作与问题记录要求
+十、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day12 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day13 用户操作输出记录` 标题。请在该标题下记录：
 
-- `whoami`、`id` 和 `groups` 的真实输出。
-- 测试目录和文件创建后的 `ls`、`stat` 输出。
-- 文件正常读取的结果。
-- 移除 owner 读权限后的拒绝访问结果。
-- 恢复权限后的回归验证结果。
-- 按诊断顺序重新获取的身份、目录和文件证据。
-- 五个项目文件的权限、owner 和 group 输出。
-- 对 7 个整体逻辑问题的回答。
+- 当前用户、所属组和两个文件的初始元数据。
+- `chmod` 前后及恢复后的 `stat` 输出。
+- 当前用户属于 `adm` 的证据。
+- `chown :adm` 成功后的元数据。
+- `chown :root` 的错误文字及失败后的元数据。
+- group 恢复为 `l` 后的元数据和文件内容比较结果。
+- 项目原文件未被修改的检查结果。
+- 对 7 个技术问题的回答。
 - 遇到问题时记录现象、判断、检查和解决；没有问题时无需额外总结。
 
-不要提前修改 Linux README。Day12 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day13 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
-十、Git 提交要求
+十一、Git 提交要求
 
-- 开始学习前，由 AI 将 Day12 学习安排和 `out.md` 标题提交并推送到远程仓库。
-- Day12 完成、检查并归档后，由 AI 提交学习记录；Day12 不新增仓库脚本。
+- 开始学习前，由 AI 将 Day13 学习安排和 `out.md` 标题提交并推送到远程仓库。
+- Day13 完成、检查并归档后，由 AI 提交学习记录；Day13 不新增仓库脚本。
 - 不使用 `git add .`。
-- 不提交 `/tmp/day12-permission-practice` 中的练习对象。
+- 不提交 `/tmp/day13-ownership-practice` 中的副本。
 - 不提交项目中的日志、报告、C++ 编译产物或 `temp.txt`。
 - `当前学习任务安排.txt`、《学习任务模板.md》、《学习问题记录模板.md》、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理，不得忽略。
 
-十一、Day12 简短执行计划
+十二、Day13 简短执行计划
 
-1. 确认当前身份 → 验证：能指出当前用户和所属组。
-2. 创建临时测试对象 → 验证：能读懂 owner、group、other 三组权限。
-3. 验证正常读取 → 验证：能根据身份匹配解释成功原因。
-4. 复现拒绝访问并恢复 → 验证：同一文件在权限变化前后呈现不同结果。
-5. 按顺序诊断 → 验证：能用身份、归属和权限证据定位原因。
-6. 检查项目文件 → 验证：只读确认诊断脚本和环境文件的权限差异。
-7. 完成记录 → 验证：`out.md` 包含真实输出和整体逻辑答案。
+1. 复制项目配置 → 验证：原文件与副本路径和元数据清楚。
+2. 执行 `chmod` → 验证：只改变权限并成功恢复。
+3. 检查组成员身份 → 验证：当前用户属于 `adm`。
+4. 执行合法 `chown` → 验证：group 改为 `adm`，其他元数据不变。
+5. 复现失败 `chown` → 验证：目标组不允许，失败后状态不变。
+6. 恢复并比较内容 → 验证：group 恢复，文件内容未改变。
+7. 检查项目原文件 → 验证：仓库文件没有被实验修改。
+8. 完成记录 → 验证：`out.md` 包含真实输出和7个技术问题答案。
 
-十二、Day12 完成标准
+十三、Day13 完成标准
 
-- 理解用户、组和权限共同解决“谁可以对文件做什么”的问题。
-- 能用命令确认当前用户及所属组。
-- 能从 `ls -l` 或 `stat` 找到 owner、group 和权限。
-- 能判断当前身份应使用 owner、group 还是 other 权限。
-- 能根据最小实验解释正常读取、拒绝访问和恢复成功。
-- 能按证据顺序排查权限问题。
-- 已只读检查现有诊断工具的权限和归属，没有修改项目文件。
-- `out.md` 包含完整、真实的操作输出和 7 个问题的回答。
-- Git 提交不包含临时对象、日志、报告、编译程序或 `temp.txt`。
+- 理解 `chmod` 与 `chown` 修改不同的文件元数据。
+- 能根据变更前后的证据区分权限变化和归属变化。
+- 理解普通用户改变所属组的边界。
+- 已完成合法 group 变更、非法 group 变更和恢复验证。
+- 理解当前用户是 owner 时仍使用 owner 权限。
+- 已确认 `chmod/chown` 没有改变文件内容。
+- 已确认项目原文件未被实验修改。
+- `out.md` 包含完整、真实的操作输出和7个技术问题答案。
+- Git 提交不包含临时副本、日志、报告、编译程序或 `temp.txt`。
