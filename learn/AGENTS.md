@@ -48,6 +48,7 @@
     │   │       ├── a.txt
     │   │       └── subdir
     │   ├── files.txt
+    │   ├── process_check.sh
     │   ├── README.md
     │   └── somefile
     └── ros2

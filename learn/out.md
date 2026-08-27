@@ -2081,3 +2081,146 @@ ps、pgrep 和 top 都显示 PID 95307，共同证明 worker 当时正在运行�
 7. 从当前 Shell 启动 worker，到最后确认它消失，整个进程生命周期验证流程是什么？当前shell运行程序worker,此时ps或者top都可以看到该进程id,等待自然结束之后，ps/top就看不到worker的pid了
 
 # Day15 用户操作输出记录
+seeway@test:~/workspace/learn/learn/robot-system-learning$ practice_dir='/tmp/day15-signal-practice'
+seeway@test:~/workspace/learn/learn/robot-system-learning$ worker_script="$practice_dir/day15_worker.sh"
+worker_log="$practice_dir/day15_worker.log"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ mkdir -p "$practice_dir"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ vim "$worker_script"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ bash -n "$worker_script"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ chmod u+x "$worker_script"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cat "$worker_script"
+#!/bin/bash
+
+trap 'printf "%s\n" "[WORKER] TERM received; cleanup complete"; exit 0' TERM
+
+printf '[WORKER] ready pid=%s\n' "$$"
+
+while true; do
+    sleep 1
+done
+seeway@test:~/workspace/learn/learn/robot-system-learning$ : > "$worker_log"
+"$worker_script" > "$worker_log" 2>&1 &
+worker_pid="$!"
+
+sleep 1
+
+printf 'worker PID: %s\n' "$worker_pid"
+ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd
+cat "$worker_log"
+[2] 101498
+worker PID: 101498
+    PID    PPID USER     STAT     ELAPSED CMD
+ 101498    4994 seeway   S          00:01 /bin/bash /tmp/day15-signal-practice/day15_worker.sh
+[WORKER] ready pid=101498
+seeway@test:~/workspace/learn/learn/robot-system-learning$ kill -TERM "$worker_pid"
+seeway@test:~/workspace/learn/learn/robot-system-learning$ wait "$worker_pid"
+[2]+  已完成               "$worker_script" > "$worker_log" 2>&1
+seeway@test:~/workspace/learn/learn/robot-system-learning$ cat "$worker_log"
+[WORKER] ready pid=101498
+[WORKER] TERM received; cleanup complete
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] worker stopped after TERM'
+    PID    PPID USER     STAT     ELAPSED CMD
+[EXPECTED] worker stopped after TERM
+seeway@test:~/workspace/learn/learn/robot-system-learning$ invalid_pid='99999999'
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ps -p "$invalid_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] invalid PID is not running'
+    PID    PPID USER     STAT     ELAPSED CMD
+[EXPECTED] invalid PID is not running
+seeway@test:~/workspace/learn/learn/robot-system-learning$ kill -TERM "$invalid_pid"
+bash: kill: (99999999) - 没有那个进程
+eeway@test:~/workspace/learn/learn/robot-system-learning$ bash -c 'exec -a day15-pkill-worker sleep 60' &
+pkill_pid_one="$!"
+
+bash -c 'exec -a day15-pkill-worker sleep 60' &
+pkill_pid_two="$!"
+
+sleep 1
+
+printf 'worker one PID: %s\n' "$pkill_pid_one"
+printf 'worker two PID: %s\n' "$pkill_pid_two"
+
+printf '%s\n' '[BEFORE] exact name matches'
+pgrep -af '^day15-pkill-worker '
+
+pkill -TERM -f '^day15-pkill-worker '
+
+wait "$pkill_pid_one" 2>/dev/null || true
+wait "$pkill_pid_two" 2>/dev/null || true
+
+printf '%s\n' '[AFTER] exact name matches'
+pgrep -af '^day15-pkill-worker ' ||
+  printf '%s\n' '[EXPECTED] no day15 pkill workers remain'
+[2] 102017
+[3] 102018
+worker one PID: 102017
+worker two PID: 102018
+[BEFORE] exact name matches
+102017 day15-pkill-worker 60
+102018 day15-pkill-worker 60
+[2]-  已终止               bash -c 'exec -a day15-pkill-worker sleep 60'
+[3]+  已终止               bash -c 'exec -a day15-pkill-worker sleep 60'
+[AFTER] exact name matches
+[EXPECTED] no day15 pkill workers remain
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+day2-demo            day3_args.sh           day4_system_check.sh  day8_diagnostic_pipeline.sh  files.txt  README.md     somefile
+day2_demo_if_for.sh  day4_custom.log        day5_find_logs.sh     demo                         list.txt   robot_env.sh  temp.txt
+day2_demo.sh         day4_system_check.log  day6_log_analyzer.sh  err.txt                      out.txt    sample.txt
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ vim process_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n process_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod u+x process_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls -l process_check.sh
+-rwxr--r-- 1 seeway l 516 Aug 27 14:32 process_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -c 'exec -a day15-check-worker sleep 60' &
+check_pid="$!"
+[2] 102608
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ sleep 1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./process_check.sh "$check_pid"
+[PROCESS RUNNING] PID=102608
+    PID    PPID USER     STAT     ELAPSED CMD
+ 102608    4994 seeway   S          00:09 day15-check-worker 60
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ kill -TERM "$check_pid"
+[2]+  已终止               bash -c 'exec -a day15-check-worker sleep 60'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$wait "$check_pid" 2>/dev/null || true
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+./process_check.sh "$check_pid"
+[PROCESS NOT RUNNING OR NOT ACCESSIBLE] PID=102608
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$bash -n process_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$git -C "$HOME/workspace/learn/learn" status --short -- robot-system-learning/linux/process_check.sh
+?? robot-system-learning/linux/process_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+1. signal 是什么？`kill` 命令对目标进程执行的核心动作是什么？signal是发给进程的通知，kill核心动作是给进程发信号
+2. 哪些日志和进程证据证明临时 worker 收到 `TERM` 后执行了清理再退出？[2] 101498
+启动时的 PID、ps 和 ready 日志证明 worker 正在运行；[WORKER] TERM received; cleanup complete 证明它收到 TERM 并执行了清理；随后 ps 查不到该 PID，证明它已经退出。
+3. 为什么发送信号前必须确认 PID 对应的目标，发送后还要重新查询？发送之前确认是安全范围内kill的进程，不影响其他进程，发送之后需要确认进程是否被kill掉
+4. `kill` 与 `pkill` 的目标选择方式有什么区别，哪一种更容易一次影响多个进程？pkill 是按名称或模式匹配，不一定是模糊搜索。本次使用 -f 配合带首尾限制的模式匹配完整命令行。kill是进程id搜索.其中pkill更容易影响多个进程，进程的pid不同但是名字可能相同
+5. 为什么执行 `pkill` 前必须用相同的精确模式查看匹配结果？确定pkill的影响范围，确认不会影响到其他进程
+6. `process_check.sh` 中的 `kill -0` 做什么？检查失败为什么不能只解释为进程不存在？kill -0是做检查进程是否存在，且当前用户是否可访问，不发送终止信号。检查失败有可能是因为用户不可访问
+7. `process_check.sh` 从接收 PID 到输出运行或不可访问结果，整体流程是什么？
+  1. 接收一个 PID。
+  2. 检查 PID 是否为空或格式无效。
+  3. 使用 `kill -0` 检查目标是否存在且当前用户可访问，不发送终止信号。
+  4. 可访问时输出运行状态和 `ps` 证据。
+  5. 不存在或不可访问时输出明确提示。
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat process_check.sh
+#!/bin/bash
+
+target_pid="$1"
+
+if [[ -z "$target_pid" ]]; then
+    printf '%s\n' '[PROCESS CHECK ERROR] PID is required' >&2
+    exit 1
+fi
+
+if [[ ! "$target_pid" =~ ^[0-9]+$ ]]; then
+    printf '[PROCESS CHECK ERROR] invalid PID: %s\n' "$target_pid" >&2
+    exit 1
+fi
+
+if kill -0 "$target_pid" 2>/dev/null; then
+    printf '[PROCESS RUNNING] PID=%s\n' "$target_pid"
+    ps -p "$target_pid" -o pid,ppid,user,stat,etime,cmd
+else
+    printf '[PROCESS NOT RUNNING OR NOT ACCESSIBLE] PID=%s\n' "$target_pid"
+    exit 1
+fi
