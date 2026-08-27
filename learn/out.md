@@ -1622,3 +1622,132 @@ script-report.txt 却为空，是因为它之前被正常日志覆盖，之后�
 Day9 主题为重定向。现有 Day3、Day4 和 Day8 记录已覆盖并验证该内容，因此归档后跳过重复学习。
 
 # Day10 用户操作输出记录
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ DAY10_LOCAL='local-value'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ export DAY10_ENV='environment-value'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'current shell local: %s\n' "$DAY10_LOCAL"
+current shell local: local-value
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'current shell environment: %s\n' "$DAY10_ENV"
+current shell environment: environment-value
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -c 'printf "child local: %s\n" "${DAY10_LOCAL:-<empty>}"; printf "child environment: %s\n" "${DAY10_ENV:-<empty>}"'
+child local: <empty>
+child environment: environment-value
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+当前输出中 只有export设置的变量可以传递给当前shell的子进程，普通的变量则不会
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf '%s\n' "$PATH" | tr ':' '\n'
+/home/l/.config/Code/User/globalStorage/github.copilot-chat/debugCommand
+/home/l/.config/Code/User/globalStorage/github.copilot-chat/copilotCli
+/home/l/.local/bin
+/opt/ros/humble/bin
+/home/l/.nvm/versions/node/v24.19.0/bin
+/home/l/.local/bin
+/usr/local/sbin
+/usr/local/bin
+/usr/sbin
+/usr/bin
+/sbin
+/bin
+/usr/games
+/usr/local/games
+/snap/bin
+/snap/bin
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v bash
+/usr/bin/bash
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v day8_diagnostic_pipeline.sh || printf '%s\n' '[NOT FOUND] day8 script is not in PATH'
+[NOT FOUND] day8 script is not in PATH
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+shell在以下目录中寻找可执行命令
+/home/l/.config/Code/User/globalStorage/github.copilot-chat/debugCommand
+/home/l/.config/Code/User/globalStorage/github.copilot-chat/copilotCli
+/home/l/.local/bin
+/opt/ros/humble/bin
+/home/l/.nvm/versions/node/v24.19.0/bin
+/home/l/.local/bin
+/usr/local/sbin
+/usr/local/bin
+/usr/sbin
+/usr/bin
+/sbin
+/bin
+/usr/games
+/usr/local/games
+/snap/bin
+/snap/bin
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ /tmp/day10-bin/robot-health
+[ROBOT] health check ready
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v robot-health || printf '%s\n' '[NOT FOUND] robot-health is not in PATH'
+[NOT FOUND] robot-health is not in PATH
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ export PATH="/tmp/day10-bin:$PATH"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v robot-health
+/tmp/day10-bin/robot-health
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ robot-health
+[ROBOT] health check ready
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ saved_day10_path="$PATH"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ PATH='/tmp/day10-bin'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+command -v robot-health
+/tmp/day10-bin/robot-health
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v ls || printf '%s\n' '[NOT FOUND] ls is not in the current PATH'
+alias ls='ls --color=auto'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ PATH="$saved_day10_path"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v ls || printf '%s\n' '[NOT FOUND] ls is not in the current PATH'
+alias ls='ls --color=auto'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls
+day2-demo            day3_args.sh           day4_system_check.sh  day8_diagnostic_pipeline.sh  files.txt  README.md   temp.txt
+day2_demo_if_for.sh  day4_custom.log        day5_find_logs.sh     demo                         list.txt   sample.txt
+day2_demo.sh         day4_system_check.log  day6_log_analyzer.sh  err.txt                      out.txt    somefile
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v ls
+alias ls='ls --color=auto'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls --version | head -n 1
+ls (GNU coreutils) 8.32
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ touch robot_env.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n robot_env.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ unset ROBOT_PROJECT_ROOT ROBOT_LOG_DIR
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ source ./robot_env.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'project root: %s\n' "$ROBOT_PROJECT_ROOT"
+project root: /home/l/workspace/learn/learn/robot-system-learning
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'log directory: %s\n' "$ROBOT_LOG_DIR"
+log directory: /tmp/robot-system-logs
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v day8_diagnostic_pipeline.sh
+/home/l/workspace/learn/learn/robot-system-learning/linux/day8_diagnostic_pipeline.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ mkdir -p "$ROBOT_LOG_DIR"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ test -d "$ROBOT_LOG_DIR" && printf '%s\n' '[OK] robot log directory exists'
+[OK] robot log directory exists
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ 
+
+1. 普通 Shell 变量与导出的环境变量，对子进程有什么不同？普通shell变量不会被子进程继承，导出的环境变量会被继承
+2. `PATH` 保存的是什么，Shell 只收到一个命令名时如何找到程序？path保存的是文件目录，shell受到命令时在path中顺序查找可执行文件目录之后找到程序执行
+3. 为什么 `/tmp/day10-bin/robot-health` 一开始能运行，只输入 `robot-health` 却找不到？因为/tmp/day10-bin/robot-health`带有路径，并且一开始没有加入path,只输入robot-health当然找不到
+4. 为什么更新 `PATH` 时应保留原来的内容，而不能只写项目目录？如果不保留原来的内容，那么shell将找不到之前安装软件的可执行程序，会造成很多问题
+5. 出现“命令找不到”时，应按什么顺序检查命令文件、执行权限和 `PATH`？应线检查命令文件中是否存在，之后检查有没有执行权限，最后看path中有没有该命令项目目录
+6. `robot_env.sh` 集中保存了哪些配置，加载后对当前 Shell 有什么影响？保存了项目目录，日志目录，最后写入了path,加载后可以使用命令执行项目下的可执行文件,类似于下面执行的内容
+seeway@test:~/workspace$ day3_args.sh 
+脚本名: /home/l/workspace/learn/learn/robot-system-learning/linux/day3_args.sh
+第一个参数: 
+第二个参数: 
+全部参数: 
+seeway@test:~/workspace$ 
+7. 为什么今天不直接把 `robot_env.sh` 写入 `~/.bashrc`？避免后续学习重复内容，但是这种问题和我学习相关吗？我根本不需要关心这个
+seeway@test:~/workspace$ saved_day10_path="$PATH"
+PATH='/tmp/day10-bin'
+
+type -P ls || printf '%s\n' '[NOT FOUND] ls executable is not in PATH'
+command ls
+
+PATH="$saved_day10_path"
+type -P ls
+command ls --version | head -n 1
+[NOT FOUND] ls executable is not in PATH
+命令 “ls” 可在以下位置找到
+ * /bin/ls
+ * /usr/bin/ls
+由于 /bin:/usr/bin 不在 PATH 环境变量中，故无法找到该命令。
+ls：未找到命令
+/usr/bin/ls
+ls (GNU coreutils) 8.32
+seeway@test:~/workspace$ 
