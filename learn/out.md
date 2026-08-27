@@ -1992,3 +1992,90 @@ restored: permissions=-rw-r----- | owner=seeway | group=l
 seeway@test:~/workspace/learn/learn/robot-system-learning$
 
 # Day14 用户操作输出记录
+seeway@test:~/workspace/learn/learn/robot-system-learning$ printf 'current shell PID: %s\n' "$$"
+current shell PID: 4994
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ps -p "$$" -o pid,ppid,user,stat,etime,cmd
+    PID    PPID USER     STAT     ELAPSED CMD
+   4994    4880 seeway   Ss      21:12:59 /usr/bin/bash --init-file /usr/share/code/resources/app/out/vs/workbench/contrib/terminal/common/scripts
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ps -eo pid,ppid,user,stat,etime,comm --sort=pid | head -n 15
+    PID    PPID USER     STAT     ELAPSED COMMAND
+      1       0 root     Ss      21:15:47 systemd
+      2       0 root     S       21:15:47 kthreadd
+      3       2 root     S       21:15:47 pool_workqueue_release
+      4       2 root     I<      21:15:47 kworker/R-rcu_g
+      5       2 root     I<      21:15:47 kworker/R-rcu_p
+      6       2 root     I<      21:15:47 kworker/R-slub_
+      7       2 root     I<      21:15:47 kworker/R-netns
+      9       2 root     I<      21:15:47 kworker/0:0H-events_highpri
+     12       2 root     I<      21:15:47 kworker/R-mm_pe
+     13       2 root     I       21:15:47 rcu_tasks_kthread
+     14       2 root     I       21:15:47 rcu_tasks_rude_kthread
+     15       2 root     I       21:15:47 rcu_tasks_trace_kthread
+     16       2 root     S       21:15:47 ksoftirqd/0
+     17       2 root     I       21:15:47 rcu_preempt
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+第一行的pid是1,ppid是0,user是root,命令名是systemd,任意一行的这些东西我都知道
+seeway@test:~/workspace/learn/learn/robot-system-learning$ shell_pid="$$"
+
+bash -c 'exec -a robot-system-diagnostic-worker sleep 8' &
+worker_pid="$!"
+
+printf 'shell PID: %s\n' "$shell_pid"
+printf 'worker PID: %s\n' "$worker_pid"
+
+printf '%s\n' '[PS] exact worker snapshot'
+ps -p "$worker_pid" -o pid,ppid,user,stat,etime,cmd
+
+printf '%s\n' '[PS] children of current shell'
+ps --ppid "$shell_pid" -o pid,ppid,user,stat,etime,cmd
+
+printf '%s\n' '[SEARCH] worker by name'
+pgrep -af 'robot-system-diagnostic-worker'
+
+printf '%s\n' '[TOP] worker snapshot'
+  printf '%s\n' '[EXPECTED] worker is no longer running'
+[1] 95307
+shell PID: 4994
+worker PID: 95307
+[PS] exact worker snapshot
+    PID    PPID USER     STAT     ELAPSED CMD
+  95307    4994 seeway   S          00:00 robot-system-diagnostic-worker 8
+[PS] children of current shell
+    PID    PPID USER     STAT     ELAPSED CMD
+  95307    4994 seeway   S          00:01 robot-system-diagnostic-worker 8
+  95309    4994 seeway   R+         00:00 ps --ppid 4994 -o pid,ppid,user,stat,etime,cmd
+[SEARCH] worker by name
+95307 robot-system-diagnostic-worker 8
+[TOP] worker snapshot
+top - 13:31:48 up 21:17,  1 user,  load average: 0.84, 0.88, 0.79
+任务:   1 total,   0 running,   1 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  1.1 us,  2.8 sy,  0.0 ni, 96.1 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+MiB Mem :  31948.2 total,  15011.4 free,   9427.5 used,   7509.2 buff/cache
+MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.  22790.2 avail Mem
+
+ 进程号 USER      PR  NI    VIRT    RES    SHR    %CPU  %MEM     TIME+ COMMAND
+  95307 seeway    20   0   11788   2100   1996 S   0.0   0.0   0:00.00 sleep
+[1]+  已完成               bash -c 'exec -a robot-system-diagnostic-worker sleep 8'
+[PS] after worker finished
+    PID    PPID USER     STAT     ELAPSED CMD
+[EXPECTED] worker is no longer running
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+根据输出可以看到当前shell的pid是4994,worker的ppid也是4994，可以确认worker的父进程是4994进程当前shell
+seeway@test:~/workspace/learn/learn/robot-system-learning$ command -v htop || printf '%s\n' '[INFO] htop is not installed; continue with ps and top'
+[INFO] htop is not installed; continue with ps and top
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+seeway@test:~/workspace/learn/learn/robot-system-learning$ ps -eo pid,ppid,user,stat,etime,cmd |
+  grep -E '[r]os2|[r]obot_state_publisher' ||
+  printf '%s\n' '[INFO] no matching ROS2-related process is currently visible'
+[INFO] no matching ROS2-related process is currently visible
+seeway@test:~/workspace/learn/learn/robot-system-learning$
+1. 磁盘上的程序文件与正在运行的进程有什么区别？程序是存储在磁盘上的代码文件，即使没有运行也可以存在；进程是程序运行后产生的实例，具有 PID、运行状态和资源，结束后进程消失，但程序文件通常仍在。
+2. PID 和 PPID 分别表示什么？本次 worker 的 PPID 为什么与当前 Shell PID 一致？pid表示进程的id信息，ppid表示进程的父进程id信息，本次的worker的父进程是shell,所以一致
+3. 为什么通过已知 PID 查询 worker，比只依赖名称搜索更精确？PID 不是永久唯一，进程结束后可能被系统重新使用。准确答案：
+名称可能对应多个进程；已知 PID 可以精确查询当前时刻的目标实例。但进程结束后 PID 可能被复用，因此仍要重新查询确认。
+4. `ps` 与正常交互使用的 `top` 在观察方式上有什么区别？ps是快照，输出当前的状态。top是动态更新的，适合动态观察
+5. 哪些实际输出共同证明 worker 曾经运行，并且后来已经结束？仅打印 $! 得到 PID，不能单独证明进程仍在运行。准确答案：
+ps、pgrep 和 top 都显示 PID 95307，共同证明 worker 当时正在运行；wait 之后最终 ps 只剩表头并显示预期提示，证明该 worker 已结束。
+6. 为什么进程搜索没有结果，不能直接证明对应软件没有安装？这种可能是程序安装了，但是没有运行的实例，就搜索不到对应的结果
+7. 从当前 Shell 启动 worker，到最后确认它消失，整个进程生命周期验证流程是什么？当前shell运行程序worker,此时ps或者top都可以看到该进程id,等待自然结束之后，ps/top就看不到worker的pid了
