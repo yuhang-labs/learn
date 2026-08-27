@@ -1753,3 +1753,86 @@ ls (GNU coreutils) 8.32
 seeway@test:~/workspace$ 
 
 # Day11 用户操作输出记录
+seeway@test:~/workspace$ practice_dir='/tmp/day11-source-practice'
+seeway@test:~/workspace$ mkdir -p "$practice_dir"
+seeway@test:~/workspace$ vim "$practice_dir/day11_config.sh"
+seeway@test:~/workspace$ cat "$practice_dir/day11_config.sh
+> ^C
+seeway@test:~/workspace$ cat "$practice_dir/day11_config.sh
+> 
+> 
+> 
+> ^C
+seeway@test:~/workspace$ cat "$practice_dir/day11_config.sh"
+#!/bin/bash
+
+export DAY11_MODE='diagnostic'
+
+day11_status() {
+    echo "[DAY11] mode=$DAY11_MODE"
+}
+seeway@test:~/workspace$ 
+seeway@test:~/workspace$ bash -n "$practice_dir/day11_config.sh"
+seeway@test:~/workspace$ chmod +x "$practice_dir/day11_config.sh"
+seeway@test:~/workspace$ unset DAY11_MODE
+seeway@test:~/workspace$ unset -f day11_status 2>/dev/null
+seeway@test:~/workspace$ "$practice_dir/day11_config.sh"
+seeway@test:~/workspace$ printf 'after direct run: %s\n' "${DAY11_MODE:-<empty>}"
+after direct run: <empty>
+seeway@test:~/workspace$ type day11_status 2>&1
+bash: type: day11_status: 未找到
+seeway@test:~/workspace$ 
+seeway@test:~/workspace$ source "$practice_dir/day11_config.sh"
+seeway@test:~/workspace$ printf 'after source: %s\n' "$DAY11_MODE"
+after source: diagnostic
+seeway@test:~/workspace$ type day11_status
+day11_status 是函数
+day11_status () 
+{ 
+    echo "[DAY11] mode=$DAY11_MODE"
+}
+seeway@test:~/workspace$ day11_status
+[DAY11] mode=diagnostic
+seeway@test:~/workspace$ 
+seeway@test:~/workspace$ source "$practice_dir/missing_config.sh"
+bash: /tmp/day11-source-practice/missing_config.sh: 没有那个文件或目录
+seeway@test:~/workspace$ printf '%s\n' '[CHECK] current shell is still running'
+[CHECK] current shell is still running
+seeway@test:~/workspace$ 
+seeway@test:~/workspace$ day11_status
+[DAY11] mode=diagnostic
+seeway@test:~/workspace$ source "$practice_dir/missing_config.sh"
+bash: /tmp/day11-source-practice/missing_config.sh: 没有那个文件或目录
+seeway@test:~/workspace$ printf '%s\n' '[CHECK] current shell is still running'
+[CHECK] current shell is still running
+seeway@test:~/workspace$ pwd
+/home/l/workspace
+seeway@test:~/workspace$ ls -l "$practice_dir/day11_config.sh"
+-rwxr-xr-x 1 seeway l 100 Aug 27 10:24 /tmp/day11-source-practice/day11_config.sh
+seeway@test:~/workspace$ bash -n "$practice_dir/day11_config.sh"
+seeway@test:~/workspace$ cd /tmp
+seeway@test:/tmp$ unset ROBOT_PROJECT_ROOT ROBOT_LOG_DIR
+seeway@test:/tmp$ source "$HOME/workspace/learn/learn/robot-system-learning/linux/robot_env.sh"
+seeway@test:/tmp$ printf 'project root: %s\n' "$ROBOT_PROJECT_ROOT"
+project root: /home/l/workspace/learn/learn/robot-system-learning
+seeway@test:/tmp$ printf 'log directory: %s\n' "$ROBOT_LOG_DIR"
+log directory: /tmp/robot-system-logs
+seeway@test:/tmp$ command -v day8_diagnostic_pipeline.sh
+/home/l/workspace/learn/learn/robot-system-learning/linux/day8_diagnostic_pipeline.sh
+seeway@test:/tmp$ day11_status
+[DAY11] mode=diagnostic
+seeway@test:/tmp$ 
+seeway@test:/tmp$ unset DAY11_MODE
+seeway@test:/tmp$ unset -f day11_status
+seeway@test:/tmp$ printf 'after cleanup: %s\n' "${DAY11_MODE:-<empty>}"
+after cleanup: <empty>
+seeway@test:/tmp$ type day11_status 2>&1
+bash: type: day11_status: 未找到
+seeway@test:/tmp$ 
+1. `source` 对文件做了什么，文件内容在哪个 Shell 中执行？source 让当前shell读取并执行文件内容
+2. 为什么直接运行 `day11_config.sh` 后，当前 Shell 看不到其变量和函数？直接运行脚本会启动子 Shell，变量和函数只存在于子 Shell；子 Shell 结束后不会回写当前 Shell。unset 只是清理测试前的旧内容。
+3. 为什么使用 `source` 后，当前 Shell 可以继续使用该文件定义的变量和函数？source读取day11_config.sh并执行了这个脚本,source 在当前 Shell 中执行文件，所以变量赋值和函数定义都会留
+4. `source` 加载失败时，应按什么顺序检查？source 读取文件，不要求文件具有执行权限。应依次检查：路径是否正确、文件是否存在且可读、语法是否正确、加载后预期内容是否出现。执行权限只用于直接运行脚本。
+5. 为什么从 `/tmp` 中使用完整路径，仍然能加载项目里的 `robot_env.sh`？当然可以，因为使用的是完整路径，不受当前路径的干扰
+6. `robot_env.sh` 被 `source` 后，从文件输入到当前 Shell 变化的整体流程是什么？source 读取robot_env.sh并执行之后，export了环境变量，给当前shell的path中robot_env.sh 是把项目目录放到现有 PATH 前面，不是简单追加到末尾，后续shell执行项目内可执行文件时，都可以找到并执行
+7. 为什么不应随意 `source` 不信任或不了解的文件？不可信文件中的命令会直接在当前 Shell 执行，可能修改变量、PATH、当前目录或文件，因此不能随意 source。

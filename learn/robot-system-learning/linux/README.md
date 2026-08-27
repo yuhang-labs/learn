@@ -766,3 +766,110 @@ day2_demo_if_for.sh
 - 已理解 `PATH` 的命令查找逻辑，并能复现和恢复 `PATH` 故障。
 - 已完成 `robot_env.sh` 并验证项目环境生效。
 - Day10 所有核心学习目标已通过检查。
+
+# Day11 source 与当前 Shell 学习记录
+
+## 1. 学习目标
+
+- 理解 `source` 会在当前 Shell 中执行文件内容。
+- 区分直接运行脚本与使用 `source` 加载脚本的结果。
+- 理解变量和函数会留在哪个 Shell 中。
+- 能根据路径、文件和语法证据检查加载失败。
+- 从项目目录之外加载 `robot_env.sh` 并验证项目环境。
+
+## 2. 实际执行与结果
+
+### 临时配置文件
+
+- 在 `/tmp/day11-source-practice` 中创建了 `day11_config.sh`。
+- 文件定义环境变量 `DAY11_MODE` 和函数 `day11_status`。
+- 文件内容正确，`bash -n` 语法检查通过。
+- 该文件是 `/tmp` 中的临时练习产物，不提交到 Git。
+
+### 直接运行与 source 加载
+
+- 直接运行 `day11_config.sh` 后，当前 Shell 中 `DAY11_MODE` 仍为空，`day11_status` 函数不存在。
+- 这证明脚本内的变量和函数只留在执行脚本的子 Shell，子 Shell 结束后不会回写当前 Shell。
+- 使用 `source` 加载同一文件后，`DAY11_MODE` 为 `diagnostic`，Shell 能显示并调用 `day11_status` 函数。
+- 函数运行结果为 `[DAY11] mode=diagnostic`，证明文件内容已在当前 Shell 中执行。
+
+### 加载失败与排查
+
+- 加载不存在的 `missing_config.sh` 时，Shell 明确提示文件不存在。
+- 失败后当前 Shell 仍能显示检查文字，之前加载的 `day11_status` 也仍可使用。
+- 已使用当前目录、文件路径和语法检查定位问题。
+- 最终理解排查顺序：先看路径，再确认文件存在且可读，然后检查语法和加载结果。
+
+### 项目环境加载
+
+- 在 `/tmp` 目录中使用完整路径成功加载项目的 `robot_env.sh`。
+- `ROBOT_PROJECT_ROOT` 和 `ROBOT_LOG_DIR` 显示正确值。
+- Shell 能通过加载后的 `PATH` 找到 `day8_diagnostic_pipeline.sh`。
+- 之前加载的 `day11_status` 函数仍可使用，证明两次 `source` 都修改了同一个当前 Shell。
+
+### 清理临时内容
+
+- 清理后 `DAY11_MODE` 显示为空。
+- Shell 不再能找到 `day11_status` 函数。
+- 已理解 `source` 的改动留在当前 Shell，需要时也应在当前 Shell 中清理。
+
+## 3. 整体逻辑
+
+### 直接运行
+
+```text
+当前 Shell → 启动子 Shell → 子 Shell 执行文件 → 子 Shell 结束
+```
+
+- 子 Shell 中新建的变量和函数不会回写给当前 Shell。
+
+### source 加载
+
+```text
+当前 Shell → source 读取文件 → 文件内容在当前 Shell 执行
+```
+
+- 变量赋值、函数定义和其他 Shell 命令都可以直接改变当前 Shell。
+- `export` 让变量还可以被子进程继承，但它不是变量和函数留在当前 Shell 的原因。
+
+### robot_env.sh 加载流程
+
+1. `source` 按指定路径读取 `robot_env.sh`。
+2. 当前 Shell 执行文件中的变量赋值和 `export`。
+3. 项目目录被放到现有 `PATH` 前面，原有搜索目录继续保留。
+4. 后续命令可以立即使用项目变量，并通过 `PATH` 找到项目脚本。
+
+## 4. 遇到的问题与纠正
+
+### 引号未闭合
+
+- 现象：初次输入 `cat "$practice_dir/day11_config.sh` 时漏写结尾引号，Shell 显示 `>` 继续提示符。
+- 处理：使用 `Ctrl+C` 取消未完成命令，补齐引号后成功查看文件。
+- 理解：继续提示符表示 Shell 还在等待命令完成，不是程序卡死。
+
+### 直接运行后的变量为什么没有留下
+
+- 初始回答误认为与 `PATH` 和 `unset` 有关。
+- 纠正后确认：原因是直接运行脚本使用子 Shell，子 Shell 的改动不会回写当前 Shell；`unset` 只用于清理测试前的旧内容。
+
+### source 与 export 的作用混淆
+
+- 初始回答误认为变量和函数留在当前 Shell 是 `export` 的作用。
+- 纠正后确认：它们留在当前 Shell 是因为 `source` 在当前 Shell 执行文件；`export` 负责让变量可继续传给子进程。
+
+### source 是否需要执行权限
+
+- 初始回答误认为 `source` 失败时应检查执行权限。
+- 纠正后确认：`source` 读取文件，不要求文件具有执行权限；执行权限只是直接运行脚本时的要求。
+
+### 不信任文件的影响
+
+- 初始回答只笼统地认为可能导致系统崩溃。
+- 纠正后确认：不可信文件中的命令会直接在当前 Shell 执行，可能修改变量、`PATH`、当前目录或文件，因此不应随意 `source`。
+
+## 5. Day11 完成结论
+
+- 所有直接运行、`source` 加载、失败排查、项目环境加载和清理操作均符合预期。
+- 已能区分子 Shell 与当前 Shell 中的改动范围。
+- 已理解 `source`、`export` 和执行权限各自的作用边界。
+- Day11 所有核心学习目标已通过检查。
