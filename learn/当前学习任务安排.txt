@@ -1,223 +1,197 @@
-Day17 详细学习安排：journalctl 与服务日志收集
+Day18 详细学习安排：ip addr 与 ip link
 
 一、今日目标
 
-- 理解 systemd-journald 负责收集 journal，`journalctl` 负责查询 journal。
-- 理解服务状态与服务日志是两类不同证据，日志用于查看事件和错误过程。
-- 能使用 `journalctl -u` 按 unit 查询受控服务日志。
-- 能使用 `--since` 限定本次实验的时间范围。
-- 能使用 `-f` 观察本次练习服务新产生的日志。
-- 创建项目脚本 `service_log_collect.sh`，将指定用户服务的日志保存到明确报告文件。
-- 完成正常收集和无效时间输入两条验证路径。
+- 理解网络接口是系统中的网络收发对象，`ip link` 查看接口本身及链路状态。
+- 理解 `ip addr` 查看分配在接口上的 IPv4/IPv6 地址。
+- 能区分“接口存在”“接口处于 UP”“接口具有地址”这三类信息。
+- 能使用详细和简洁两种格式检查回环接口 `lo`。
+- 能识别接口不存在的错误，避免把它误判为接口存在但没有地址。
+- 创建项目脚本 `network_interface_check.sh`，输出指定接口的简洁链路和地址信息。
+- 完成正常接口、无效接口和缺少输入三条验证路径。
 
 说明：
 
-- Day17 严格保持固定计划的 `journalctl`、`-u / -f / --since` 和日志收集脚本主题。
-- Day16 已学习 systemd 服务状态；今天复用 `day16-practice.service` 作为安全日志源，不重复服务基础。
-- 所有启停操作仍只针对 `day16-practice.service` 用户服务。
-- 不使用 `sudo`，不启停或修改 SSH、CAN、ROS2 及其他真实服务。
-- 不把真实 SSH、远程工具或业务服务日志写入 `out.md`，避免提交地址、用户名或其他敏感信息。
-- `-f` 实验使用 `timeout` 自动结束，不留下持续运行的日志观察进程。
-- 日志报告写入 `/tmp`，只用于验证，不提交到 Git。
+- Day18 严格保持固定计划的 `ip addr / ip link` 主题。
+- Day19 才学习 `ip route / ping`，今天不提前练习路由和连通性测试。
+- 今天只执行只读查询，不使用 `sudo`，不修改、启用、停用或删除任何网络接口。
+- 统一使用回环接口 `lo` 记录输出，避免把真实 IP、MAC 和网卡名称提交到公开仓库。
+- `lo` 只用于本机内部通信，其结果不能证明外部网络可用。
 - AI 已提供完整脚本和命令，用户只需亲自在终端执行并理解整体流程。
-- 不要求背 journalctl 参数、时间格式、脚本语法、状态码或 journal 存储细节。
+- 不要求背诵 ip 参数、地址前缀长度、接口 flags 或脚本语法。
 - 不要求填写每日总结。
-- 今天只学习 Linux，不新增 C++、CAN 或 ROS2 代码。
-- 建议用时 40～50 分钟。
+- 今天只学习 Linux，不新增 C++、CAN 或 ROS2 内容。
+- 建议用时 35～45 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、理解 journald 与 journalctl
+二、理解接口、链路与地址
 
 任务 1：建立整体概念
 
 ```text
-服务和系统组件产生日志事件
+系统中的网络接口（本次只看 lo）
              ↓
-systemd-journald 收集到 journal
+ip link 查询接口是否存在及链路属性/状态
              ↓
-journalctl 按 unit、时间等条件查询
+ip addr 查询该接口上配置的 IPv4/IPv6 地址
              ↓
-终端输出或项目日志报告
+脚本汇总为简洁诊断输出
 ```
 
 重点理解：
 
-- systemd-journald 是日志收集服务，`journalctl` 是读取和筛选 journal 的查询工具。
-- `journalctl` 默认只读，不会因为查询而修改原始 journal。
-- unit 名称和时间范围是查询输入，匹配日志或错误文字是输出。
-- Day16 的 `status` 关注当前服务状态；Day17 的 journal 记录服务在一段时间内发生的事件。
-- 没有查询结果只表示当前条件下没有取得日志，不能单独证明服务不存在或一直正常。
+- `ip link` 关注接口对象、链路层属性和状态。
+- `ip addr` 关注接口上分配的网络层地址，也会同时显示所属接口信息。
+- 接口存在不等于它一定有 IP 地址。
+- 接口显示 `UP` 不等于外部网络一定可达。
+- `lo` 是回环接口，常见地址为 IPv4 `127.0.0.1` 和 IPv6 `::1`，通信不会离开本机。
+- 回环接口的简洁状态可能显示 `UNKNOWN`；这不应脱离 flags 和地址信息单独判断为故障。
 
 验证标准：
 
-- 后续能把日志产生、journald 收集、journalctl 查询和报告输出连成完整流程。
+- 后续能按“接口存在 → 链路信息 → 地址信息”的顺序解释检查结果。
 
-三、确认 journal 环境
+三、确认 ip 工具
 
-任务 2：检查 journalctl 和受控 unit
+任务 2：确认命令存在并查看版本
 
 执行：
 
 ```bash
-journalctl --version | head -n 1
-journalctl --disk-usage
-
-cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
-project_unit="$PWD/day16-practice.service"
-
-systemd-analyze --user verify "$project_unit"
-systemctl --user is-system-running
+command -v ip
+ip -Version
 ```
+
+预期：
+
+- `command -v ip` 输出 `ip` 命令路径。
+- `ip -Version` 输出 iproute2 版本。
 
 结果判断：
 
-- `journalctl --version` 显示 systemd 版本。
-- `--disk-usage` 显示 journal 当前占用空间，只记录总量，不需要清理 journal。
-- user manager 返回 `running` 后再继续实验。
-- 如果提示无法连接 user bus，保留错误并停止后续服务实验，不使用 sudo 或系统服务代替。
+- 两条命令都成功后再继续。
+- 如果找不到 `ip`，保留真实错误并停止后续实验，不自行安装软件。
 
 验证标准：
 
-- 保留版本、journal 占用和 user manager 状态。
-- `day16-practice.service` 语法检查没有错误。
+- 在 `out.md` 保留命令路径和版本输出。
 
-四、准备受控用户服务
+四、使用 ip link 检查回环接口
 
-任务 3：重新链接 Day16 项目 unit
+任务 3：查看详细链路信息
 
 执行：
 
 ```bash
-systemctl --user link "$project_unit"
-systemctl --user daemon-reload
-systemctl --user stop day16-practice.service
-
-systemctl --user show day16-practice.service \
-  -p LoadState -p ActiveState -p SubState
+ip link show dev lo
 ```
 
-预期：
+观察重点：
 
-- unit 显示 `LoadState=loaded`。
-- 初始状态为 `inactive/dead`。
-- 今天只复用这个受控 unit 产生日志，不修改 unit 文件。
+- 第一行中的接口名称 `lo` 证明查询到了目标接口。
+- flags 中常见 `LOOPBACK` 和 `UP`，分别说明它是回环接口以及管理状态已启用。
+- `mtu` 是该接口单个数据包的传输大小限制之一，本日只需知道它属于链路属性。
+- `link/loopback` 表明链路类型是回环，不是真实以太网卡。
 
 验证标准：
 
-- 保留链接结果和初始状态。
+- 保留完整输出，并指出接口名称、`LOOPBACK` 和 `UP`。
 
-五、使用 -u 与 --since 查询本次事件
-
-任务 4：生成并查询明确时间范围内的日志
+任务 4：查看简洁链路信息
 
 执行：
 
 ```bash
-start_marker="$(date '+%Y-%m-%d %H:%M:%S')"
-printf 'start marker: %s\n' "$start_marker"
-
-systemctl --user start day16-practice.service
-sleep 1
-systemctl --user stop day16-practice.service
-
-journalctl --user -u day16-practice.service \
-  --since "$start_marker" --no-pager
+ip -brief link show dev lo
 ```
-
-预期：
-
-- 输出只查询 `start_marker` 之后与 `day16-practice.service` 相关的用户日志。
-- 日志中应出现练习服务启动和停止相关事件。
-- 日志时间不早于记录的 start marker。
 
 重点理解：
 
-- `-u` 把查询范围限制到指定 unit。
-- `--since` 把查询范围限制到指定时间之后。
-- 两个条件组合后，可以减少无关历史日志。
-- 记录时间标记必须发生在实验事件之前，才能覆盖完整过程。
+- `-brief` 将结果压缩为适合快速查看和脚本报告的一行。
+- 简洁输出通常包含接口名称、状态和链路地址。
+- `lo` 可能显示 `UNKNOWN`，但详细 flags 中仍可看到 `UP`；这两项描述的角度不同。
+- 判断时应结合接口类型、flags 和地址，不能只看一个状态词。
 
 验证标准：
 
-- 保留 start marker、服务启停命令和对应日志输出。
+- 保留简洁输出，并能说明它与详细输出是同一个接口的不同展示形式。
 
-六、使用 -f 观察新增日志
+五、使用 ip addr 检查回环地址
 
-任务 5：用自动超时方式观察新事件
-
-请将下面整段命令一次执行：
-
-```bash
-follow_output='/tmp/day17-journal-follow.out'
-follow_marker="$(date '+%Y-%m-%d %H:%M:%S')"
-
-: > "$follow_output"
-
-timeout 8s journalctl --user -f -u day16-practice.service \
-  --since "$follow_marker" --no-pager > "$follow_output" 2>&1 &
-follow_pid="$!"
-
-sleep 1
-systemctl --user start day16-practice.service
-sleep 1
-systemctl --user stop day16-practice.service
-
-wait "$follow_pid" 2>/dev/null || true
-
-cat "$follow_output"
-```
-
-预期：
-
-- `-f` 在运行期间等待新的匹配日志。
-- 启动和停止练习服务后，`follow_output` 中出现对应的新事件。
-- `timeout` 在8秒后结束观察，最终没有残留 follow 进程。
-
-回归检查：
-
-```bash
-ps -p "$follow_pid" -o pid,ppid,user,stat,etime,cmd ||
-  printf '%s\n' '[EXPECTED] journal follow process has ended'
-```
-
-验证标准：
-
-- 保留实时观察取得的新日志和 follow 进程结束证据。
-- `/tmp/day17-journal-follow.out` 不提交到 Git。
-
-七、验证没有匹配日志的情况
-
-任务 6：查询明确不存在的练习 unit 日志
+任务 5：查看详细地址信息
 
 执行：
 
 ```bash
-journalctl --user -u day17-missing.service \
-  --since "$start_marker" --no-pager
+ip addr show dev lo
 ```
 
-预期：
+观察重点：
 
-- 通常显示 `-- No entries --` 或没有日志行。
+- 输出包含接口的链路信息，以及该接口上的地址信息。
+- `inet` 行表示 IPv4 地址，`inet6` 行表示 IPv6 地址。
+- `scope host` 表示该地址的作用范围在本机。
+- `/8`、`/128` 是地址前缀长度，本日只需理解它们是地址的一部分，不要求计算。
+
+验证标准：
+
+- 保留完整输出，并找到 IPv4、IPv6 和 `scope host`。
+
+任务 6：查看简洁地址信息
+
+执行：
+
+```bash
+ip -brief addr show dev lo
+```
 
 重点理解：
 
-- 没有日志只说明当前 unit 和时间条件下没有取得记录。
-- 它不能单独证明 unit 文件不存在，也不能证明某个真实服务始终健康。
-- 判断 unit 是否存在仍应查询 `LoadState`；判断当前状态仍应查询 `ActiveState`。
+- 简洁地址输出把接口名称、状态和地址集中在一行。
+- `ip -brief link` 更适合快速看链路，`ip -brief addr` 更适合快速看地址。
+- 地址输出中出现 `127.0.0.1/8` 或 `::1/128`，只证明本机回环地址已配置。
 
 验证标准：
 
-- 保留无匹配结果，并正确解释证据边界。
+- 保留简洁输出，并能区分 link 输出与 addr 输出各自增加的重点信息。
 
-八、创建日志收集脚本
+六、验证接口不存在的异常场景
 
-任务 7：为 Robot System Diagnostic Tool 创建项目脚本
+任务 7：查询明确不存在的练习接口
 
 执行：
 
 ```bash
-vim service_log_collect.sh
+ip link show dev day18-missing0
+missing_status="$?"
+printf 'missing interface status=%s\n' "$missing_status"
+```
+
+预期：
+
+- `ip` 输出找不到设备的错误。
+- `missing_status` 为非 0，表示命令没有成功找到目标接口。
+
+重点理解：
+
+- “接口不存在”应先检查输入的接口名称。
+- 它与“接口存在但没有 IPv4/IPv6 地址”是两种不同情况。
+- 不要为了消除错误而创建、启用或修改真实接口。
+
+验证标准：
+
+- 保留错误文字和非 0 状态。
+- 能说明错误来自接口名称，而不是 IP 地址内容。
+
+七、创建网络接口检查脚本
+
+任务 8：为 Robot System Diagnostic Tool 创建项目脚本
+
+执行：
+
+```bash
+cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
+vim network_interface_check.sh
 ```
 
 在 Vim 中写入下面的完整内容：
@@ -225,238 +199,227 @@ vim service_log_collect.sh
 ```bash
 #!/bin/bash
 
-unit_name="$1"
-since_time="$2"
-output_file="$3"
+interface_name="$1"
 
-if [[ -z "$unit_name" || -z "$since_time" || -z "$output_file" ]]; then
-    printf '%s\n' '[LOG COLLECTION ERROR] unit, since time and output file are required' >&2
+if [[ -z "$interface_name" ]]; then
+    printf '%s\n' '[NETWORK CHECK ERROR] interface name is required' >&2
     exit 1
 fi
 
-{
-    printf '[LOG COLLECTION] unit=%s since=%s\n' "$unit_name" "$since_time"
-    journalctl --user -u "$unit_name" --since "$since_time" --no-pager
-} > "$output_file" 2>&1
-
-collect_status="$?"
-
-if (( collect_status != 0 )); then
-    printf '[LOG COLLECTION ERROR] failed; report=%s\n' "$output_file" >&2
-    exit "$collect_status"
+if ! ip link show dev "$interface_name" >/dev/null 2>&1; then
+    printf '[NETWORK CHECK ERROR] interface not found: %s\n' "$interface_name" >&2
+    exit 1
 fi
 
-printf '[LOG COLLECTION COMPLETE] report=%s\n' "$output_file"
+printf '[NETWORK LINK] interface=%s\n' "$interface_name"
+ip -brief link show dev "$interface_name"
+
+printf '[NETWORK ADDRESS] interface=%s\n' "$interface_name"
+ip -brief addr show dev "$interface_name"
 ```
 
 保存后执行：
 
 ```bash
-bash -n service_log_collect.sh
-chmod u+x service_log_collect.sh
-ls -l service_log_collect.sh
-cat service_log_collect.sh
+bash -n network_interface_check.sh
+chmod u+x network_interface_check.sh
+ls -l network_interface_check.sh
+cat network_interface_check.sh
 ```
 
 脚本整体逻辑：
 
-1. 接收 unit 名称、起始时间和输出文件三个输入。
-2. 缺少输入时输出错误并停止。
-3. 使用 journalctl 查询指定用户 unit 和时间范围。
-4. 将查询条件、日志或 journalctl 错误保存到报告。
-5. 查询成功时输出报告路径，失败时输出明确错误。
-
-说明：
-
-- 不要求记住脚本代码和参数，只需理解输入、查询、报告和错误的整体流程。
-- 脚本提交到 Git，脚本生成的日志报告不提交。
-
-验证标准：
-
-- 脚本语法通过并具有 owner 执行权限。
-- 文件位于 `robot-system-learning/linux/service_log_collect.sh`。
-
-九、验证正常日志收集
-
-任务 8：收集 Day16 练习服务日志
-
-执行：
-
-```bash
-normal_report='/tmp/day17-service-report.log'
-
-./service_log_collect.sh \
-  day16-practice.service "$start_marker" "$normal_report"
-
-cat "$normal_report"
-```
-
-预期：
-
-- 终端显示 `[LOG COLLECTION COMPLETE]` 和报告路径。
-- 报告开头显示 unit 名称与起始时间。
-- 报告中包含本次练习服务的 journal 日志。
-
-验证标准：
-
-- 保留脚本成功输出和报告内容。
-- 报告位于 `/tmp`，不提交到 Git。
-
-十、验证无效时间输入
-
-任务 9：制造可控的 journalctl 参数错误
-
-执行：
-
-```bash
-invalid_report='/tmp/day17-invalid-report.log'
-
-./service_log_collect.sh \
-  day16-practice.service 'not-a-valid-time' "$invalid_report"
-
-cat "$invalid_report"
-```
-
-预期：
-
-- 脚本输出 `[LOG COLLECTION ERROR]`。
-- 报告保留查询条件和 journalctl 的时间解析错误。
-- 错误发生在时间输入解析阶段，不代表服务进程故障。
+1. 接收一个接口名称。
+2. 没有输入时输出错误并停止。
+3. 使用 `ip link show dev` 判断接口是否存在。
+4. 接口不存在时输出明确错误并停止。
+5. 接口存在时依次输出简洁链路信息和地址信息。
 
 重点理解：
 
-- 异常场景应保留原始错误文字，不能只写“执行失败”。
-- 修正时间输入后，应重新执行正常收集作为回归验证。
-
-回归验证：
-
-```bash
-./service_log_collect.sh \
-  day16-practice.service "$start_marker" "$normal_report"
-```
+- 脚本只查询，不修改接口。
+- 接口存在性检查放在地址查询之前，可以区分对象不存在与地址结果为空。
+- 所有接口名称都用引号保护，输入始终作为一个参数处理。
 
 验证标准：
 
-- 保留无效时间错误和修正后的成功提示。
+- `bash -n` 没有输出，表示没有发现 Shell 语法错误。
+- 权限中 owner 具有 `x`。
+- 文件内容与上面的完整脚本一致。
 
-十一、清理与 Git 状态检查
+八、验证脚本正常路径
 
-任务 10：恢复用户管理器并检查提交范围
+任务 9：检查回环接口
 
 执行：
 
 ```bash
-systemctl --user stop day16-practice.service
-systemctl --user disable day16-practice.service
-systemctl --user daemon-reload
+./network_interface_check.sh lo
+normal_status="$?"
+printf 'normal check status=%s\n' "$normal_status"
+```
 
-systemctl --user show day16-practice.service \
-  -p LoadState -p ActiveState -p SubState
+预期：
+
+- 输出 `[NETWORK LINK] interface=lo` 及 `lo` 的简洁链路信息。
+- 输出 `[NETWORK ADDRESS] interface=lo` 及回环 IPv4/IPv6 地址。
+- `normal_status=0`。
+
+验证标准：
+
+- 正常输出同时包含链路和地址两部分。
+- 状态为 0。
+
+九、验证脚本异常路径
+
+任务 10：检查不存在的接口
+
+执行：
+
+```bash
+./network_interface_check.sh day18-missing0
+invalid_status="$?"
+printf 'invalid interface status=%s\n' "$invalid_status"
+```
+
+预期：
+
+- 输出 `[NETWORK CHECK ERROR] interface not found: day18-missing0`。
+- `invalid_status=1`。
+- 不继续输出 `[NETWORK LINK]` 或 `[NETWORK ADDRESS]`。
+
+验证标准：
+
+- 错误明确指出不存在的接口名称。
+- 失败后没有产生误导性的正常报告。
+
+任务 11：验证缺少输入
+
+执行：
+
+```bash
+./network_interface_check.sh
+empty_status="$?"
+printf 'empty input status=%s\n' "$empty_status"
+```
+
+预期：
+
+- 输出 `[NETWORK CHECK ERROR] interface name is required`。
+- `empty_status=1`。
+
+验证标准：
+
+- 脚本能在调用 `ip` 前拒绝空输入。
+
+十、完成后的回归与 Git 范围检查
+
+任务 12：再次检查正常路径和项目文件状态
+
+执行：
+
+```bash
+bash -n network_interface_check.sh
+./network_interface_check.sh lo
 
 git -C "$HOME/workspace/learn/learn" status --short -- \
-  robot-system-learning/linux/service_log_collect.sh
+  robot-system-learning/linux/network_interface_check.sh
 ```
 
 预期：
 
-- 练习服务最终为 inactive，用户配置链接被移除。
-- `service_log_collect.sh` 显示为 Git 新增文件。
-- `/tmp` 中的 follow 输出和两份报告不出现在 Git 状态中。
+- 语法仍然正确，正常路径仍能输出链路和地址。
+- Git 状态只显示项目脚本为新增文件。
+- 不会生成日志、报告或编译产物。
 
 验证标准：
 
-- 服务与 follow 进程均已结束。
-- 只保留项目脚本作为 Day17 新增仓库文件。
+- 保留回归输出和目标脚本的 Git 状态。
 
-十二、日志问题的基础诊断顺序
-
-任务 11：形成 journal 查询流程
+十一、机器人系统中的位置
 
 ```text
-确认目标 unit 和管理范围（系统级或 --user）
-                     ↓
-确认本次问题发生的时间范围
-                     ↓
-使用 -u 与 --since 缩小查询范围
-                     ↓
-查看匹配日志或原始错误文字
-                     ↓
-需要观察新事件时使用限时 -f
-                     ↓
-修正输入或问题后重新查询验证
+诊断工具接收目标接口名
+          ↓
+先用 ip link 确认接口存在并读取链路状态
+          ↓
+再用 ip addr 读取接口地址
+          ↓
+汇总为只读诊断结果
+          ↓
+若接口不存在，返回明确错误并检查名称
 ```
 
 重点理解：
 
-- 先确认对象和时间，再读取日志，避免被大量无关记录干扰。
-- 日志是诊断证据，不应修改原始 journal。
-- 查询无结果、查询参数错误和服务没有运行是不同情况。
+- 网络诊断先确认对象是否存在，再查看对象具有的状态和地址。
+- 链路信息和地址信息是不同层次的证据，应分别查看。
+- 今天的检查不验证路由和目标可达性，不能从 `lo` 的正常结果推断外部网络正常。
 
 验证标准：
 
-- 能按 unit、管理范围、时间、日志结果和回归查询说明整体流程。
+- 能按输入、接口存在性、链路输出、地址输出和异常结果说明脚本流程。
 
-十三、必须回答的技术问题
+十二、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. systemd-journald 与 `journalctl` 分别做什么，它们是什么关系？
-2. `-u`、`--since` 和 `-f` 分别怎样改变 journalctl 的查询结果？
-3. 为什么本次查询用户服务日志时必须使用 `--user`？
-4. 哪些实际输出证明限时 `-f` 取得了新日志，并且观察进程最终已经结束？
-5. 为什么 `-- No entries --` 不能单独证明 unit 不存在或服务一直正常？
-6. `service_log_collect.sh` 从接收输入到生成报告的整体流程是什么？
-7. 日志收集提示时间无法解析时，应该如何定位并回归验证？
+1. `ip link` 与 `ip addr` 分别重点查看什么，它们是什么关系？
+2. 哪些输出证明 `lo` 接口存在、已启用并配置了本机回环地址？
+3. `-brief` 输出与详细输出各自适合怎样的查看方式？
+4. 为什么接口存在或显示 `UP`，都不能单独证明它具有 IP 地址或外部网络可达？
+5. 查询 `day18-missing0` 的错误和状态码说明了什么？它与接口存在但没有地址有何区别？
+6. `network_interface_check.sh` 从接收输入到输出结果的整体流程是什么？
+7. 为什么本次只记录 `lo`，并且禁止用脚本修改网络接口？
 
 说明：
 
-- 只回答日志来源、查询范围、证据边界和收集流程。
-- 不考 journalctl 参数拼写、时间格式、脚本语法、状态码或 journal 存储实现。
+- 只回答接口、链路、地址、证据边界和脚本整体流程。
+- 不考参数拼写、flags 细节、前缀计算、网络协议细节或脚本语法。
 - 不要求填写每日总结。
 
-十四、操作与问题记录要求
+十三、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day17 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day18 用户操作输出记录` 标题。请在该标题下记录：
 
-- journalctl 版本、journal 占用和 user manager 状态。
-- 受控 unit 的链接结果和初始状态。
-- `-u` 与 `--since` 查询的时间标记和真实日志。
-- 限时 `-f` 取得的新日志和 follow 进程结束证据。
-- 不存在 unit 的无日志结果。
-- `service_log_collect.sh` 内容、语法和权限。
-- 正常报告内容、无效时间错误和回归成功提示。
-- 清理后的 unit 状态和脚本 Git 状态。
+- `ip` 命令路径和版本。
+- `lo` 的详细及简洁 link 输出。
+- `lo` 的详细及简洁 addr 输出。
+- 不存在接口的错误和非 0 状态。
+- `network_interface_check.sh` 内容、语法和权限。
+- 脚本正常接口、无效接口、空输入三条验证结果。
+- 最终回归结果和目标脚本 Git 状态。
 - 对 7 个技术问题的回答。
 
-不要提前修改 Linux README。Day17 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day18 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
-十五、Git 提交要求
+十四、Git 提交要求
 
-- 开始学习前，由 AI 将 Day17 学习安排和 `out.md` 标题提交并推送。
-- Day17 完成、检查并归档后，由 AI 提交学习记录和 `service_log_collect.sh`。
+- 开始学习前，由 AI 将 Day18 学习安排和 `out.md` 标题提交并推送。
+- Day18 完成、检查并归档后，由 AI 提交学习记录和 `network_interface_check.sh`。
 - 不使用 `git add .`。
-- 不提交 `/tmp` follow 输出、日志报告、真实服务日志、C++ 编译产物或 `temp.txt`。
+- 不提交真实接口信息、日志、报告、C++ 编译产物或 `temp.txt`。
 - 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十六、Day17 简短执行计划
+十五、Day18 简短执行计划
 
-1. 确认 journal 环境 → 验证：版本、占用和 user manager 状态正常。
-2. 准备受控服务 → 验证：unit 已加载且初始 inactive。
-3. 练习 `-u/--since` → 验证：取得本次启停日志。
-4. 练习限时 `-f` → 验证：取得新日志且 follow 进程结束。
-5. 查询不存在 unit → 验证：取得无日志结果并理解边界。
-6. 创建收集脚本 → 验证：语法和权限正确。
-7. 验证正常与异常 → 验证：报告完整，错误保留，修正后成功。
-8. 清理并完成记录 → 验证：服务停止、链接清理、7题已回答。
+1. 确认 ip 工具 → 验证：命令路径和版本正常。
+2. 检查 `lo` 链路 → 验证：详细与简洁输出均找到接口。
+3. 检查 `lo` 地址 → 验证：详细与简洁输出均包含回环地址。
+4. 查询不存在接口 → 验证：错误明确且状态非 0。
+5. 创建检查脚本 → 验证：语法、权限和内容正确。
+6. 验证三条脚本路径 → 验证：正常成功，两种错误均被拒绝。
+7. 完成回归和记录 → 验证：正常功能未回退，7题已回答。
 
-十七、Day17 完成标准
+十六、Day18 完成标准
 
-- 理解 journald 收集日志、journalctl 查询日志的整体关系。
-- 能使用 unit 和时间条件缩小查询范围。
-- 已用限时 `-f` 取得受控服务的新日志，且观察进程最终结束。
-- 已理解无日志结果的证据边界。
-- `service_log_collect.sh` 存在、语法正确且具有 owner 执行权限。
-- 脚本正常收集、无效时间和修正后回归三项结果符合预期。
-- 用户管理器中的练习链接已清理，练习服务最终未运行。
-- `out.md` 包含完整、真实的操作输出和7个技术问题答案。
-- Git 提交不包含 `/tmp` 输出、日志报告、真实服务日志、编译程序或 `temp.txt`。
+- 理解 `ip link` 查看接口和链路、`ip addr` 查看接口地址的整体关系。
+- 能区分接口存在、管理状态和地址配置三类信息。
+- 已完成 `lo` 的详细与简洁只读检查。
+- 已理解 `lo` 状态文字和回环地址的证据边界。
+- 已取得不存在接口的明确错误和非 0 状态。
+- `network_interface_check.sh` 存在、语法正确且具有 owner 执行权限。
+- 脚本正常接口、无效接口和空输入三项结果符合预期。
+- 全程未修改网络配置，未记录真实接口信息。
+- `out.md` 包含完整、真实的操作输出和 7 个技术问题答案。
+- Git 提交不包含真实网络信息、日志、报告、编译程序或 `temp.txt`。

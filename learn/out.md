@@ -2607,3 +2607,5 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 4. 将查询条件、日志或 journalctl 错误保存到报告。
 5. 查询成功时输出报告路径，失败时输出明确错误。
 7. 日志收集提示时间无法解析时，应该如何定位并回归验证？先查看报告中的 Failed to parse timestamp，确认错误来自时间输入而不是服务；把无效时间改回 $start_marker 后重新执行，出现 [LOG COLLECTION COMPLETE] 即证明修正成功。
+
+# Day18 用户操作输出记录
