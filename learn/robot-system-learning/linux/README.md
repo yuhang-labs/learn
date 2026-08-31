@@ -1398,3 +1398,109 @@ day2_demo_if_for.sh
 - 已只读确认 SSH 服务状态，并纠正了 CAN 文本筛选的误匹配。
 - 练习服务链接已清理，真实系统服务未被修改。
 - Day16 所有核心学习目标已通过检查。
+
+# Day17 journalctl 与服务日志收集学习记录
+
+## 1. 学习目标
+
+- 理解 systemd-journald 收集 journal、`journalctl` 查询 journal 的关系。
+- 使用 unit 和时间条件缩小服务日志查询范围。
+- 使用限时 follow 观察受控服务新产生的日志。
+- 理解无日志结果的证据边界。
+- 创建 `service_log_collect.sh`，完成正常、异常和回归验证。
+
+## 2. 核心概念
+
+### journald 与 journalctl
+
+- systemd-journald 接收服务和系统组件产生的日志事件，并保存到 journal。
+- `journalctl` 是查询 journal 的工具，查询操作不会修改原始 journal。
+- `-u` 按 unit 筛选，`--since` 限定起始时间，`-f` 持续等待新的匹配日志。
+- 查询用户服务日志时使用 `--user`，选择当前用户管理器及用户 unit 的 journal。
+
+### 状态与日志
+
+- 服务状态回答目标当前是否加载、运行或停止。
+- journal 日志记录一段时间内发生的启动、停止和错误等事件。
+- 没有日志只表示当前筛选条件下没有取得记录，不能单独证明 unit 不存在或服务一直正常。
+- 判断 unit 是否存在应检查 `LoadState`，判断当前状态应检查 `ActiveState`。
+
+## 3. 实际执行与结果
+
+### journal 环境
+
+- journalctl 来自 systemd `249`。
+- 当时 archived 与 active journals 共占用 `2.9G`，Day17 只读查看，没有清理系统 journal。
+- 用户级 systemd manager 显示 `running`。
+- `day16-practice.service` 语法检查通过，重新链接后的初始状态为 `loaded/inactive/dead`。
+
+### 按 unit 和时间查询
+
+- 在服务启停前记录 start marker `2026-08-28 10:32:56`。
+- 只查询该时间之后的 `day16-practice.service` 用户日志。
+- 结果显示 `10:33:09` 的 Started，以及 `10:33:19` 的 Stopping 和 Stopped。
+- 日志均晚于 start marker，证明 unit 和时间条件覆盖了本次实验事件。
+
+### 限时 follow
+
+- 使用 `timeout 8s` 限制 `journalctl -f` 的观察时间，并把输出写入 `/tmp/day17-journal-follow.out`。
+- follow 期间再次启动和停止受控用户服务。
+- 输出显示 `10:35:17` 的 Started，以及 `10:35:18` 的 Stopping 和 Stopped。
+- 最终 `ps` 只显示表头并输出 `[EXPECTED] journal follow process has ended`，证明观察进程已经结束。
+
+### 无日志结果
+
+- 查询 `day17-missing.service` 在本次时间范围内的用户日志，结果为 `-- No entries --`。
+- 该结果只能证明当前 unit 与时间条件没有匹配日志，不能单独证明 unit 文件不存在。
+
+### service_log_collect.sh
+
+- 新增 `robot-system-learning/linux/service_log_collect.sh`。
+- 脚本接收 unit 名称、起始时间和输出文件三个输入。
+- 输入完整时调用 journalctl 查询用户 unit，并把查询条件、日志或错误写入指定报告。
+- 脚本通过 `bash -n` 检查，并具有 owner 执行权限。
+- 正常报告写入 `/tmp/day17-service-report.log`，包含受控服务的启动和停止日志。
+
+### 异常与回归验证
+
+- 使用 `not-a-valid-time` 作为起始时间时，脚本输出 `[LOG COLLECTION ERROR]`。
+- 错误报告保留 `Failed to parse timestamp: not-a-valid-time`，证明失败发生在时间解析阶段，而不是服务进程故障。
+- 改回 `$start_marker` 后重新执行，输出 `[LOG COLLECTION COMPLETE]`，证明修正有效。
+- follow 输出、正常报告和错误报告均位于 `/tmp`，不提交到 Git。
+
+### 最终清理
+
+- 练习服务最终停止，用户配置链接已移除。
+- 清理后 unit 为 `not-found/inactive/dead`。
+- `service_log_collect.sh` 保留在项目中，临时报告没有进入仓库状态。
+
+## 4. 遇到的问题与纠正
+
+### --user 的作用
+
+- 初始理解把 `--user` 描述为“只对当前用户进行操作”。
+- 纠正：在本次 journalctl 查询中，`--user` 用于选择当前用户管理器及用户 unit 的 journal。
+- 不加 `--user` 时查询系统级范围，可能找不到 `day16-practice.service` 的用户日志。
+
+### follow 需要日志和进程两类证据
+
+- 初始回答只指出 `/tmp/day17-journal-follow.out` 中有日志，没有说明具体事件和进程结束证据。
+- 纠正：Started、Stopping 和 Stopped 证明 follow 取得了观察期间的新日志；最终 `ps` 无进程行证明 follow 进程已经结束。
+
+### 时间解析错误的诊断顺序
+
+1. 查看报告中的 journalctl 原始错误文字。
+2. 根据 `Failed to parse timestamp` 判断失败来自时间输入。
+3. 不把参数解析错误误判为服务故障。
+4. 替换为有效的 `$start_marker` 后重新执行。
+5. 使用 `[LOG COLLECTION COMPLETE]` 和报告内容确认回归成功。
+
+## 5. Day17 完成结论
+
+- 已理解 journald 收集日志、journalctl 查询日志的整体关系。
+- 已完成 `-u`、`--since` 和限时 `-f` 实验。
+- 已能根据 unit 与时间范围取得受控服务日志。
+- 已理解无日志、参数错误和服务状态是不同问题。
+- `service_log_collect.sh` 已完成并通过正常、异常和回归验证。
+- 用户服务和 follow 进程均已清理，临时报告未进入 Git。
+- Day17 所有核心学习目标已通过检查。

@@ -50,6 +50,7 @@
     │   │       └── subdir
     │   ├── files.txt
     │   ├── process_check.sh
+    │   ├── service_log_collect.sh
     │   ├── README.md
     │   └── somefile
     └── ros2

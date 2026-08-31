@@ -2458,3 +2458,152 @@ To show all installed unit files use 'systemctl list-unit-files'.
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 
 # Day17 用户操作输出记录
+seeway@test:~$ journalctl --version | head -n 1
+systemd 249 (249.11-0ubuntu3.22)
+seeway@test:~$ journalctl --disk-usage
+Archived and active journals take up 2.9G in the file system.
+seeway@test:~$
+cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ project_unit="$PWD/day16-practice.service"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemd-analyze --user verify "$project_unit"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user is-system-running
+running
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user link "$project_unit"
+Created symlink /home/l/.config/systemd/user/day16-practice.service → /home/l/workspace/learn/learn/robot-system-learning/linux/day16-practice.service.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user daemon-reload
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user stop day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ start_marker="$(date '+%Y-%m-%d %H:%M:%S')"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'start marker: %s\n' "$start_marker"
+start marker: 2026-08-28 10:32:56
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user start day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ sleep 1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user stop day16-practice.service
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ journalctl --user -u day16-practice.service \
+  --since "$start_marker" --no-pager
+Aug 28 10:33:09 test systemd[1994]: Started Day16 safe systemd user service practice.
+Aug 28 10:33:19 test systemd[1994]: Stopping Day16 safe systemd user service practice...
+Aug 28 10:33:19 test systemd[1994]: Stopped Day16 safe systemd user service practice.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ follow_output='/tmp/day17-journal-follow.out'
+follow_marker="$(date '+%Y-%m-%d %H:%M:%S')"
+
+: > "$follow_output"
+
+timeout 8s journalctl --user -f -u day16-practice.service \
+  --since "$follow_marker" --no-pager > "$follow_output" 2>&1 &
+follow_pid="$!"
+
+sleep 1
+systemctl --user start day16-practice.service
+sleep 1
+systemctl --user stop day16-practice.service
+
+wait "$follow_pid" 2>/dev/null || true
+
+cat "$follow_output"
+[1] 252525
+Aug 28 10:35:17 test systemd[1994]: Started Day16 safe systemd user service practice.
+Aug 28 10:35:18 test systemd[1994]: Stopping Day16 safe systemd user service practice...
+Aug 28 10:35:18 test systemd[1994]: Stopped Day16 safe systemd user service practice.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ps -p "$follow_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] journal follow process has ended'
+    PID    PPID USER     STAT     ELAPSED CMD
+[EXPECTED] journal follow process has ended
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ journalctl --user -u day17-missing.service \
+  --since "$start_marker" --no-pager
+-- No entries --
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n service_log_collect.sh
+chmod u+x service_log_collect.sh
+ls -l service_log_collect.sh
+cat service_log_collect.sh
+-rwxr--r-- 1 seeway l 640 Aug 28 10:36 service_log_collect.sh
+#!/bin/bash
+
+unit_name="$1"
+since_time="$2"
+output_file="$3"
+
+if [[ -z "$unit_name" || -z "$since_time" || -z "$output_file" ]]; then
+    printf '%s\n' '[LOG COLLECTION ERROR] unit, since time and output file are required' >&2
+    exit 1
+fi
+
+{
+    printf '[LOG COLLECTION] unit=%s since=%s\n' "$unit_name" "$since_time"
+    journalctl --user -u "$unit_name" --since "$since_time" --no-pager
+} > "$output_file" 2>&1
+
+collect_status="$?"
+
+if (( collect_status != 0 )); then
+    printf '[LOG COLLECTION ERROR] failed; report=%s\n' "$output_file" >&2
+    exit "$collect_status"
+fi
+
+printf '[LOG COLLECTION COMPLETE] report=%s\n' "$output_file"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ normal_report='/tmp/day17-service-report.log'
+
+./service_log_collect.sh \
+  day16-practice.service "$start_marker" "$normal_report"
+
+cat "$normal_report"
+[LOG COLLECTION COMPLETE] report=/tmp/day17-service-report.log
+[LOG COLLECTION] unit=day16-practice.service since=2026-08-28 10:32:56
+Aug 28 10:33:09 test systemd[1994]: Started Day16 safe systemd user service practice.
+Aug 28 10:33:19 test systemd[1994]: Stopping Day16 safe systemd user service practice...
+Aug 28 10:33:19 test systemd[1994]: Stopped Day16 safe systemd user service practice.
+Aug 28 10:34:39 test systemd[1994]: Started Day16 safe systemd user service practice.
+Aug 28 10:34:47 test systemd[1994]: Stopping Day16 safe systemd user service practice...
+Aug 28 10:34:47 test systemd[1994]: Stopped Day16 safe systemd user service practice.
+Aug 28 10:35:17 test systemd[1994]: Started Day16 safe systemd user service practice.
+Aug 28 10:35:18 test systemd[1994]: Stopping Day16 safe systemd user service practice...
+Aug 28 10:35:18 test systemd[1994]: Stopped Day16 safe systemd user service practice.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ invalid_report='/tmp/day17-invalid-report.log'
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./service_log_collect.sh \
+  day16-practice.service 'not-a-valid-time' "$invalid_report"
+[LOG COLLECTION ERROR] failed; report=/tmp/day17-invalid-report.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat "$invalid_report"
+[LOG COLLECTION] unit=day16-practice.service since=not-a-valid-time
+Failed to parse timestamp: not-a-valid-time
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./service_log_collect.sh \
+  day16-practice.service "$start_marker" "$normal_report"
+[LOG COLLECTION COMPLETE] report=/tmp/day17-service-report.log
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user stop day16-practice.service
+systemctl --user disable day16-practice.service
+systemctl --user daemon-reload
+Removed /home/l/.config/systemd/user/day16-practice.service.
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ systemctl --user show day16-practice.service \
+  -p LoadState -p ActiveState -p SubState
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/service_log_collect.sh
+?? robot-system-learning/linux/service_log_collect.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+1. systemd-journald 与 `journalctl` 分别做什么，它们是什么关系？systemd-journald用来收集journal,journalctl用来查询journal
+2. `-u`、`--since` 和 `-f` 分别怎样改变 journalctl 的查询结果？`journalctl -u` 按 unit 查询受控服务日志。`--since` 限定本次实验的时间范围。`-f` 观察本次练习服务新产生的日志。
+3. 为什么本次查询用户服务日志时必须使用 `--user`？--user 不是“只对当前用户进行操作”，而是让 journalctl 查询当前用户管理器及用户 unit 的 journal；不加时查询的是系统级范围，可能找不到用户服务日志。
+4. 哪些实际输出证明限时 `-f` 取得了新日志，并且观察进程最终已经结束？follow 输出中出现 10:35:17 的 Started，以及 10:35:18 的 Stopping/Stopped，证明 -f 取得了观察期间的新日志；随后 ps 只显示表头并出现 [EXPECTED] journal follow process has ended，证明观察进程已经结束。
+5. 为什么 `-- No entries --` 不能单独证明 unit 不存在或服务一直正常？没有日志只说明当前 unit 和时间条件下没有取得记录。判断 unit 是否存在仍应查询 `LoadState`；判断当前状态仍应查询 `ActiveState`。
+6. `service_log_collect.sh` 从接收输入到生成报告的整体流程是什么？脚本整体逻辑：
+
+1. 接收 unit 名称、起始时间和输出文件三个输入。
+2. 缺少输入时输出错误并停止。
+3. 使用 journalctl 查询指定用户 unit 和时间范围。
+4. 将查询条件、日志或 journalctl 错误保存到报告。
+5. 查询成功时输出报告路径，失败时输出明确错误。
+7. 日志收集提示时间无法解析时，应该如何定位并回归验证？先查看报告中的 Failed to parse timestamp，确认错误来自时间输入而不是服务；把无效时间改回 $start_marker 后重新执行，出现 [LOG COLLECTION COMPLETE] 即证明修正成功。
