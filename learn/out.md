@@ -2865,3 +2865,5 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 4. 路由查询失败时保留原始错误并停止，不继续 ping。
 5. 路由查询成功后执行 3 次有限等待的 ping。
 6. ping 失败时输出目标和状态，成功时输出完成提示。
+
+# Day20 用户操作输出记录

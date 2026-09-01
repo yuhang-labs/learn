@@ -1,211 +1,97 @@
-Day19 详细学习安排：ip route 与 ping
+Day20 详细学习安排：ss、TCP 与 UDP
 
 一、今日目标
 
-- 理解路由是系统为目标地址选择下一步发送方向的规则。
-- 理解 `ip route get` 用于查询一个目标地址会匹配哪条路由。
-- 理解 `ping` 使用 ICMP Echo 请求与应答检查目标是否能进行 IP 层往返。
-- 能从路由结果中识别目标、接口和源地址。
-- 能从 ping 结果中识别发送、接收、丢包率和往返时间。
-- 能区分路由查询成功、ping 成功和应用服务正常三类不同证据。
-- 创建项目脚本 `route_ping_check.sh`，先查询路由，再执行有限次数的 ping。
-- 完成正常目标、无效目标和缺少输入三条验证路径。
+- 理解 socket 是应用程序与操作系统网络协议栈之间的通信端点。
+- 理解 `ss` 用于读取系统当前 socket 状态。
+- 理解 TCP 提供面向连接的字节流，UDP 以无连接数据报方式工作。
+- 能区分 TCP 监听状态 `LISTEN` 与 UDP 未连接状态 `UNCONN`。
+- 理解同一个端口号在 TCP 和 UDP 中属于不同的协议空间。
+- 创建项目脚本 `socket_listener_check.sh`，按协议和端口检查受控 socket。
+- 完成 TCP、UDP、协议不匹配、无效输入和清理后消失等验证。
 
 说明：
 
-- Day19 严格保持固定计划的 `ip route / ping` 主题。
-- Day18 已学习接口和地址；今天在此基础上继续学习目标路由选择和 IP 层往返，不重复接口基础。
-- Day20 才学习 `ss / TCP / UDP`，今天不提前检查端口或应用服务。
-- 今天只执行只读查询，不使用 `sudo`，不增加、删除或修改路由。
-- 正常实验只使用回环目标 `127.0.0.1`，不访问公网或真实局域网设备。
-- 不执行无目标限制的 `ip route` 全表输出，避免把真实默认网关、真实接口或源地址写入公开仓库。
-- 异常实验使用无效地址或保留的 `.invalid` 域名，不把真实业务主机作为故障目标。
-- 所有 ping 都限制次数和等待时间，不留下持续运行的进程。
+- Day20 严格保持固定计划的 `ss / TCP / UDP` 主题。
+- Day19 已学习路由和 IP 层往返；今天继续检查本机传输层 socket，不重复路由与 ping。
+- Day21 才学习 `/dev` 设备，今天不提前学习设备文件。
+- 今天只执行只读 socket 查询，不使用 `sudo`，不停止或修改系统中的真实网络服务。
+- 实验仅创建绑定到 `127.0.0.1` 的临时 TCP 和 UDP socket，不接受外部网络连接。
+- 统一使用练习端口 `38080` 和 `38081`，查询时精确过滤，不把系统完整监听列表写入公开仓库。
+- 不使用 `ss -p`，避免记录其他进程名称、PID 或用户信息。
+- 临时 socket 最长存在 5 分钟，并在实验结束时主动清理。
 - AI 已提供完整脚本和命令，用户只需亲自在终端执行并理解整体流程。
-- 不要求背诵路由字段、ICMP 细节、ping 参数或脚本语法。
+- 临时 Python 命令只用于创建受控 socket，不要求理解 Python 语法。
+- 不要求背诵 ss 参数、TCP 状态机、UDP 协议细节或脚本语法。
 - 不要求填写每日总结。
 - 今天只学习 Linux，不新增 C++、CAN 或 ROS2 内容。
-- 建议用时 40～50 分钟。
+- 建议用时 45～55 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、理解接口、路由与 ping 的关系
+二、理解 socket、TCP、UDP 与 ss
 
 任务 1：建立整体概念
 
 ```text
-Day18：接口存在并配置地址
-             ↓
-ip route get：为目标地址选择发送接口和源地址
-             ↓
-ping：发送有限次数的 ICMP Echo 请求
-             ↓
-收到应答后统计接收数量、丢包率和往返时间
+应用程序创建 socket 并绑定本机地址和端口
+                    ↓
+TCP socket 等待连接时显示 LISTEN
+UDP socket 等待数据报时通常显示 UNCONN
+                    ↓
+ss 从内核读取并展示当前 socket 状态
+                    ↓
+按协议和端口过滤后形成诊断证据
 ```
 
 重点理解：
 
-- 网络接口是发送和接收数据的对象，路由决定数据应从哪个接口方向发送。
-- `ip route get` 查询内核对一个具体目标的路由选择，不发送 ping 数据包。
-- `ping` 在路由选择基础上尝试 IP 层往返，并统计是否收到 ICMP Echo Reply。
-- 路由查询成功只说明系统找到了发送决策，不保证目标一定应答。
-- ping 成功说明目标对本次 ICMP 请求有应答，不保证 SSH、ROS2 或其他应用服务正常。
-- ping 失败也不能单独证明目标主机已关机，可能是名称无效、没有路由、丢包或 ICMP 被限制。
+- socket 是程序使用网络协议栈进行通信的端点，通常与协议、本地地址和端口相关。
+- TCP 在通信前建立连接，监听 socket 等待连接时显示 `LISTEN`。
+- UDP 不建立 TCP 式连接，绑定后的 socket 通常显示 `UNCONN`。
+- `ss` 只展示查询时刻的 socket 状态，不会因为查看而创建或关闭 socket。
+- TCP `38080` 与 UDP `38080` 是不同的协议端点，端口号相同也不能忽略协议。
+- socket 存在只证明某个程序绑定或监听了端口，不保证应用的完整业务功能正常。
 
 验证标准：
 
-- 后续能按“接口与地址 → 路由选择 → ping 往返 → 结果边界”的顺序解释实验。
+- 后续能按“程序创建 socket → 内核保存状态 → ss 按协议和端口查询”的顺序解释实验。
 
-三、确认 ping 工具
+三、确认实验工具
 
-任务 2：确认命令存在并查看版本
+任务 2：确认 ss 与 Python 存在
 
 执行：
 
 ```bash
-command -v ping
-ping -V
+command -v ss
+ss -V
+command -v python3
+python3 --version
 ```
 
 预期：
 
-- `command -v ping` 输出 ping 命令路径。
-- `ping -V` 输出 iputils 或 ping 版本。
+- 输出 `ss` 和 `python3` 的命令路径。
+- 输出 ss/iproute2 与 Python 版本。
 
 结果判断：
 
-- 两条命令都成功后再继续。
-- Day18 已确认 `ip` 命令存在，今天不重复其版本检查。
-- 如果找不到 ping，保留真实错误并停止后续实验，不自行安装软件。
+- 四条命令成功后再继续。
+- 如果缺少任一工具，保留真实错误并停止实验，不自行安装软件。
 
 验证标准：
 
-- 在 `out.md` 保留 ping 路径和版本输出。
+- 在 `out.md` 保留命令路径和版本输出。
 
-四、查询回环目标的路由
+四、创建 socket 检查脚本
 
-任务 3：使用 ip route get 查询单个安全目标
-
-执行：
-
-```bash
-ip route get 127.0.0.1
-```
-
-预期：
-
-- 输出包含目标 `127.0.0.1`。
-- 输出包含接口 `dev lo`。
-- 输出中的源地址应为回环地址 `src 127.0.0.1`。
-- 常见结果会包含 `local`，表示目标属于本机。
-
-重点理解：
-
-- `get` 是询问“如果发送到这个目标，内核会怎样选择”，不是修改路由。
-- `dev lo` 表示该目标通过回环接口处理。
-- `src 127.0.0.1` 表示系统为这次路由选择的源地址。
-- 本次只查询单个回环目标，不记录完整路由表。
-
-验证标准：
-
-- 保留完整输出，并指出目标、`dev lo` 和 `src 127.0.0.1`。
-
-五、使用 ping 验证本机往返
-
-任务 4：向回环地址发送有限次数的请求
-
-执行：
-
-```bash
-ping -c 3 -W 1 127.0.0.1
-ping_status="$?"
-printf 'loopback ping status=%s\n' "$ping_status"
-```
-
-预期：
-
-- 输出 3 条来自 `127.0.0.1` 的应答。
-- 统计中 transmitted 与 received 都为 3，packet loss 为 `0%`。
-- 输出往返时间统计。
-- `ping_status=0`。
-
-重点理解：
-
-- `-c 3` 让 ping 在发送 3 次后自动结束。
-- `-W 1` 限制单次等待应答的时间。
-- `icmp_seq` 表示请求序号，`time` 表示该次往返耗时。
-- 汇总中的 transmitted、received 和 packet loss 比单独一行应答更适合判断整体结果。
-- 回环 ping 成功只验证本机 IP 栈的这条路径，不证明外部网络可达。
-
-验证标准：
-
-- 保留三次应答、汇总统计和状态 `0`。
-
-六、验证无效路由目标
-
-任务 5：查询无法解析为 IPv4 地址的输入
-
-执行：
-
-```bash
-ip route get 999.999.999.999
-invalid_route_status="$?"
-printf 'invalid route status=%s\n' "$invalid_route_status"
-```
-
-预期：
-
-- `ip route get` 输出地址格式或前缀无效的错误。
-- `invalid_route_status` 为非 0。
-
-重点理解：
-
-- 该错误发生在目标输入解析阶段，还没有得到有效的路由选择结果。
-- 第一检查项是目标地址是否正确，不应直接判断网络接口或目标主机故障。
-- 不要为了消除错误而修改系统路由。
-
-验证标准：
-
-- 保留真实错误和非 0 状态。
-- 能说明错误来自无效目标输入。
-
-七、验证 ping 的无效名称场景
-
-任务 6：ping 保留的无效域名
-
-执行：
-
-```bash
-ping -c 1 -W 1 day19.invalid
-invalid_ping_status="$?"
-printf 'invalid ping status=%s\n' "$invalid_ping_status"
-```
-
-预期：
-
-- ping 提示名称或地址无法解析，具体文字以系统真实输出为准。
-- `invalid_ping_status` 为非 0。
-- 命令及时结束，不会持续运行。
-
-重点理解：
-
-- `.invalid` 是保留的无效顶级域名，本次不把真实主机作为故障目标。
-- 名称解析失败发生在发送 ICMP 请求之前，不能据此判断某个真实主机是否在线。
-- ping 的错误文字与状态码要结合起来判断失败阶段。
-
-验证标准：
-
-- 保留错误和非 0 状态。
-- 能说明这是无效名称，不是已证明的主机离线。
-
-八、创建路由与 ping 检查脚本
-
-任务 7：为 Robot System Diagnostic Tool 创建项目脚本
+任务 3：为 Robot System Diagnostic Tool 创建项目脚本
 
 执行：
 
 ```bash
 cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
-vim route_ping_check.sh
+vim socket_listener_check.sh
 ```
 
 在 Vim 中写入下面的完整内容：
@@ -213,61 +99,76 @@ vim route_ping_check.sh
 ```bash
 #!/bin/bash
 
-target="$1"
+protocol="$1"
+port="$2"
 
-if [[ -z "$target" ]]; then
-    printf '%s\n' '[ROUTE PING ERROR] target IPv4 address is required' >&2
+if [[ -z "$protocol" || -z "$port" ]]; then
+    printf '%s\n' '[SOCKET CHECK ERROR] protocol and port are required' >&2
     exit 1
 fi
 
-printf '[ROUTE CHECK] target=%s\n' "$target"
-route_output="$(ip route get "$target" 2>&1)"
-route_status="$?"
-
-if (( route_status != 0 )); then
-    printf '%s\n' "$route_output" >&2
-    printf '[ROUTE PING ERROR] route lookup failed; target=%s\n' "$target" >&2
-    exit "$route_status"
+if [[ ! "$port" =~ ^[0-9]+$ ]] || (( port < 1 || port > 65535 )); then
+    printf '[SOCKET CHECK ERROR] invalid port: %s\n' "$port" >&2
+    exit 1
 fi
 
-printf '%s\n' "$route_output"
-printf '[PING CHECK] target=%s\n' "$target"
-ping -c 3 -W 1 "$target"
-ping_status="$?"
+case "$protocol" in
+    tcp)
+        socket_output="$(ss -H -lnt "sport = :$port" 2>&1)"
+        ss_status="$?"
+        ;;
+    udp)
+        socket_output="$(ss -H -lnu "sport = :$port" 2>&1)"
+        ss_status="$?"
+        ;;
+    *)
+        printf '[SOCKET CHECK ERROR] unsupported protocol: %s\n' "$protocol" >&2
+        exit 1
+        ;;
+esac
 
-if (( ping_status != 0 )); then
-    printf '[ROUTE PING ERROR] ping failed; target=%s status=%s\n' \
-        "$target" "$ping_status" >&2
-    exit "$ping_status"
+if (( ss_status != 0 )); then
+    printf '%s\n' "$socket_output" >&2
+    printf '[SOCKET CHECK ERROR] ss query failed; protocol=%s port=%s\n' \
+        "$protocol" "$port" >&2
+    exit "$ss_status"
 fi
 
-printf '[ROUTE PING COMPLETE] target=%s\n' "$target"
+if [[ -z "$socket_output" ]]; then
+    printf '[SOCKET CHECK ERROR] no matching socket; protocol=%s port=%s\n' \
+        "$protocol" "$port" >&2
+    exit 1
+fi
+
+printf '[SOCKET FOUND] protocol=%s port=%s\n' "$protocol" "$port"
+printf '%s\n' "$socket_output"
 ```
 
 保存后执行：
 
 ```bash
-bash -n route_ping_check.sh
-chmod u+x route_ping_check.sh
-ls -l route_ping_check.sh
-cat route_ping_check.sh
+bash -n socket_listener_check.sh
+chmod u+x socket_listener_check.sh
+ls -l socket_listener_check.sh
+cat socket_listener_check.sh
 ```
 
 脚本整体逻辑：
 
-1. 接收一个目标 IPv4 地址。
-2. 没有输入时输出错误并停止。
-3. 使用 `ip route get` 查询该目标的路由选择。
-4. 路由查询失败时保留原始错误并停止，不继续 ping。
-5. 路由查询成功后执行 3 次有限等待的 ping。
-6. ping 失败时输出目标和状态，成功时输出完成提示。
+1. 接收协议和端口两个输入。
+2. 缺少输入或端口范围无效时输出错误并停止。
+3. 根据 `tcp` 或 `udp` 选择对应的 ss 查询。
+4. 不支持的协议会被拒绝。
+5. ss 查询失败时保留原始错误。
+6. 查询成功但没有匹配 socket 时输出 no matching socket。
+7. 找到匹配项时输出协议、端口和经过过滤的 socket 状态。
 
 重点理解：
 
-- 脚本先查路由，再做往返验证，顺序对应网络诊断层次。
-- 脚本只读取路由和发送有限测试请求，不修改网络配置。
-- 原始路由错误被保留，便于区分输入错误与 ping 失败。
-- 本日只理解脚本整体流程，不要求掌握命令替换或状态码语法。
+- 脚本只读取 socket 状态，不创建、关闭或修改任何 socket。
+- 端口先限制为 `1～65535` 的数字，避免把无效内容交给 ss 过滤器。
+- TCP 和 UDP 使用不同查询，避免只看端口号造成误判。
+- 本日只理解整体分支和输出，不要求掌握正则、case 或命令替换语法。
 
 验证标准：
 
@@ -275,184 +176,371 @@ cat route_ping_check.sh
 - 权限中 owner 具有 `x`。
 - 文件内容与上面的完整脚本一致。
 
-九、验证脚本正常路径
+五、确认练习端口尚未被占用
 
-任务 8：检查回环目标
+任务 4：只检查两个精确端口
 
 执行：
 
 ```bash
-./route_ping_check.sh 127.0.0.1
-normal_status="$?"
-printf 'normal route ping status=%s\n' "$normal_status"
+tcp_port=38080
+udp_port=38081
+
+ss -H -lnt "sport = :$tcp_port"
+ss -H -lnu "sport = :$udp_port"
 ```
 
 预期：
 
-- `[ROUTE CHECK]` 后出现包含 `dev lo` 和 `src 127.0.0.1` 的路由结果。
-- `[PING CHECK]` 后出现 3 次回环应答和 `0% packet loss`。
-- 最后输出 `[ROUTE PING COMPLETE] target=127.0.0.1`。
-- `normal_status=0`。
+- 两条命令都没有输出，说明当前没有匹配的 TCP 监听 socket 和 UDP socket。
+
+结果判断：
+
+- 没有输出后再继续创建临时 socket。
+- 如果任一命令已有输出，保留结果并停止本次实验，不关闭现有 socket，也不改用真实服务代替。
+
+重点理解：
+
+- `-H` 隐藏表头，`-l` 只看监听或未连接 socket，`-n` 使用数字形式。
+- `-t` 选择 TCP，`-u` 选择 UDP。
+- `sport` 过滤本地源端口，本日不要求记住过滤语法。
 
 验证标准：
 
-- 正常输出按路由、ping、完成提示的顺序出现。
-- 状态为 `0`。
+- 保留两个端口创建前的空结果。
 
-十、验证脚本异常路径
+六、创建受控 TCP 与 UDP socket
 
-任务 9：检查无效目标
+任务 5：启动最长 5 分钟的本机临时进程
 
-执行：
+请将下面整段命令一次执行：
 
 ```bash
-./route_ping_check.sh 999.999.999.999
-invalid_status="$?"
-printf 'invalid target status=%s\n' "$invalid_status"
+python3 -c '
+import socket
+import time
+
+tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+tcp_socket.bind(("127.0.0.1", 38080))
+tcp_socket.listen()
+
+udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udp_socket.bind(("127.0.0.1", 38081))
+
+time.sleep(300)
+' &
+listener_pid="$!"
+
+sleep 1
+ps -p "$listener_pid" -o pid,ppid,user,stat,etime,cmd
 ```
 
 预期：
 
-- 输出 `[ROUTE CHECK] target=999.999.999.999`。
-- 保留 `ip route get` 的原始错误。
-- 输出 `[ROUTE PING ERROR] route lookup failed`。
-- `invalid_status` 为非 0。
-- 路由查询失败后不出现 `[PING CHECK]`。
+- Shell 显示后台任务 PID。
+- `ps` 找到相同 PID 对应的临时 Python 进程。
+- 进程只绑定 `127.0.0.1:38080` 的 TCP socket 和 `127.0.0.1:38081` 的 UDP socket。
+
+结果判断：
+
+- `ps` 找到进程后立即继续后面的检查。
+- 如果 Python 报地址已被使用或 `ps` 找不到进程，保留错误并停止，不启动其他端口或修改系统服务。
 
 验证标准：
 
-- 能根据输出顺序判断失败发生在路由查询阶段。
-- 失败后没有继续执行 ping。
+- 保留 PID 和进程存在证据。
 
-任务 10：验证缺少输入
+七、使用 ss 区分 TCP 与 UDP
+
+任务 6：检查受控 TCP 监听 socket
 
 执行：
 
 ```bash
-./route_ping_check.sh
+ss -H -lnt "sport = :$tcp_port"
+```
+
+预期：
+
+- 输出包含状态 `LISTEN`。
+- 本地地址为 `127.0.0.1:38080`。
+- 结果只包含受控 TCP 端口，不包含其他系统 socket。
+
+验证标准：
+
+- 保留完整的一行 TCP 输出，并指出 `LISTEN`、本地地址和端口。
+
+任务 7：检查受控 UDP socket
+
+执行：
+
+```bash
+ss -H -lnu "sport = :$udp_port"
+```
+
+预期：
+
+- 输出包含状态 `UNCONN`。
+- 本地地址为 `127.0.0.1:38081`。
+- 结果只包含受控 UDP 端口。
+
+重点理解：
+
+- UDP 没有 TCP 式监听连接状态，因此常见显示是 `UNCONN` 而不是 `LISTEN`。
+
+验证标准：
+
+- 保留完整的一行 UDP 输出，并指出 `UNCONN`、本地地址和端口。
+
+任务 8：交叉使用错误协议查询
+
+执行：
+
+```bash
+ss -H -lnu "sport = :$tcp_port"
+ss -H -lnt "sport = :$udp_port"
+```
+
+预期：
+
+- 两条命令都没有输出。
+
+重点理解：
+
+- TCP 端口 `38080` 不会出现在 UDP 查询中。
+- UDP 端口 `38081` 不会出现在 TCP 查询中。
+- 诊断端口时必须同时确认协议，不能只看端口数字。
+
+验证标准：
+
+- 保留交叉查询的空结果，并能说明它没有否定另一种协议中的 socket。
+
+八、验证脚本正常路径
+
+任务 9：分别检查 TCP 和 UDP
+
+执行：
+
+```bash
+./socket_listener_check.sh tcp "$tcp_port"
+tcp_status="$?"
+printf 'tcp socket status=%s\n' "$tcp_status"
+
+./socket_listener_check.sh udp "$udp_port"
+udp_status="$?"
+printf 'udp socket status=%s\n' "$udp_status"
+```
+
+预期：
+
+- TCP 检查输出 `[SOCKET FOUND] protocol=tcp port=38080` 和 `LISTEN` 行。
+- UDP 检查输出 `[SOCKET FOUND] protocol=udp port=38081` 和 `UNCONN` 行。
+- `tcp_status=0`，`udp_status=0`。
+
+验证标准：
+
+- 两种协议都找到对应 socket，且状态均为 `0`。
+
+九、验证脚本异常输入
+
+任务 10：检查协议不匹配、无效协议、无效端口和空输入
+
+依次执行：
+
+```bash
+./socket_listener_check.sh udp "$tcp_port"
+mismatch_status="$?"
+printf 'protocol mismatch status=%s\n' "$mismatch_status"
+
+./socket_listener_check.sh icmp "$tcp_port"
+protocol_status="$?"
+printf 'invalid protocol status=%s\n' "$protocol_status"
+
+./socket_listener_check.sh tcp not-a-port
+port_status="$?"
+printf 'invalid port status=%s\n' "$port_status"
+
+./socket_listener_check.sh
 empty_status="$?"
 printf 'empty input status=%s\n' "$empty_status"
 ```
 
 预期：
 
-- 输出 `[ROUTE PING ERROR] target IPv4 address is required`。
-- `empty_status=1`。
-- 不出现 `[ROUTE CHECK]` 或 `[PING CHECK]`。
+- 协议不匹配时输出 no matching socket，状态为 `1`。
+- `icmp` 被识别为不支持的协议，状态为 `1`。
+- 非数字端口被识别为 invalid port，状态为 `1`。
+- 空输入被识别为缺少 protocol and port，状态为 `1`。
 
 验证标准：
 
-- 脚本在路由查询前拒绝空输入。
+- 四项异常均返回明确错误和非 0 状态。
+- 任一异常都没有修改或关闭受控 socket。
 
-十一、完成后的回归与 Git 范围检查
+十、正常路径回归与临时进程清理
 
-任务 11：再次检查正常路径和项目文件状态
+任务 11：先回归，再关闭受控 socket
 
 执行：
 
 ```bash
-bash -n route_ping_check.sh
-./route_ping_check.sh 127.0.0.1
+bash -n socket_listener_check.sh
+./socket_listener_check.sh tcp "$tcp_port"
+./socket_listener_check.sh udp "$udp_port"
 
-git -C "$HOME/workspace/learn/learn" status --short -- \
-  robot-system-learning/linux/route_ping_check.sh
+kill "$listener_pid"
+wait "$listener_pid" 2>/dev/null || true
+
+ps -p "$listener_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] temporary socket process has ended'
 ```
 
 预期：
 
-- 语法仍然正确，正常路径仍按顺序输出路由和 ping 结果。
-- Git 状态只显示项目脚本为新增文件。
-- 不会生成日志、报告、路由配置或编译产物。
+- 清理前 TCP 和 UDP 正常路径仍然成功。
+- 清理后 `ps` 只显示表头，并输出 temporary socket process has ended。
+- 只终止本次保存 PID 的临时 Python 进程，不使用 pkill，也不影响其他进程。
 
 验证标准：
 
-- 保留回归输出和目标脚本 Git 状态。
+- 保留正常回归结果和临时进程结束证据。
+
+任务 12：确认清理后 socket 已消失
+
+执行：
+
+```bash
+./socket_listener_check.sh tcp "$tcp_port"
+tcp_after_status="$?"
+printf 'tcp after cleanup status=%s\n' "$tcp_after_status"
+
+./socket_listener_check.sh udp "$udp_port"
+udp_after_status="$?"
+printf 'udp after cleanup status=%s\n' "$udp_after_status"
+```
+
+预期：
+
+- 两项均输出 no matching socket。
+- `tcp_after_status=1`，`udp_after_status=1`。
+
+重点理解：
+
+- 清理前找到 socket、清理后找不到 socket，共同证明 ss 结果随受控进程状态变化。
+- 清理后没有匹配只说明这两个协议和端口当前没有 socket，不代表系统中没有其他网络服务。
+
+验证标准：
+
+- 保留两个清理后错误和状态 `1`。
+
+十一、Git 范围检查
+
+任务 13：确认项目只新增目标脚本
+
+执行：
+
+```bash
+git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/socket_listener_check.sh
+```
+
+预期：
+
+- Git 状态只显示 `socket_listener_check.sh` 为新增文件。
+- 临时 Python 进程、socket 和终端输出不会形成仓库文件。
+
+验证标准：
+
+- 保留目标脚本的 Git 状态。
 
 十二、机器人系统中的位置
 
 ```text
-诊断工具接收目标 IPv4 地址
+应用进程创建 TCP 或 UDP socket
               ↓
-ip route get 查询内核发送决策
+内核记录协议、本地地址、端口和状态
               ↓
-路由成功后执行有限次数 ping
+ss 按协议和端口读取当前状态
               ↓
-根据应答、丢包统计和状态判断本次 IP 往返
+诊断工具判断匹配 socket 是否存在
               ↓
-失败时根据原始错误定位输入、路由或 ping 阶段
+结合进程和应用层证据继续定位问题
 ```
 
 重点理解：
 
-- Day18 先确认本机接口和地址，Day19 再确认到目标的路由选择和 IP 层往返。
-- 诊断时应根据失败阶段继续检查，不能看到 ping 失败就直接修改接口或路由。
-- 今天的结果不包含端口和应用服务证据，这些属于后续内容。
+- Day19 的 ping 只证明 IP 层 ICMP 往返；Day20 的 ss 进一步确认本机是否存在指定协议和端口的 socket。
+- socket 存在仍不能证明应用完整功能正常，只是比 ping 多了一层本机传输层证据。
+- 没有匹配输出时，先核对协议、端口和目标进程状态，不应直接修改系统网络服务。
 
 验证标准：
 
-- 能按输入、路由选择、ping 往返、统计结果和错误阶段说明脚本流程。
+- 能按应用进程、socket、协议和端口、ss 输出及证据边界说明整体流程。
 
 十三、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. `ip route get` 与 `ping` 分别检查什么，它们是什么关系？
-2. 路由输出中的哪些内容证明 `127.0.0.1` 通过 `lo` 处理，并选择了哪个源地址？
-3. ping 输出中的哪些内容证明 3 次请求都收到应答且没有丢包？
-4. 为什么路由查询成功不保证 ping 成功，ping 成功也不保证应用服务正常？
-5. 为什么 ping 失败不能单独证明目标主机已经关机？
-6. 无效地址的路由错误与 `.invalid` 名称的 ping 错误分别发生在哪个阶段？
-7. `route_ping_check.sh` 从接收输入到完成或报错的整体流程是什么？
+1. socket 与 `ss` 分别是什么，它们是什么关系？
+2. TCP 与 UDP 的整体通信方式有什么不同？
+3. 哪些输出分别证明受控 TCP 和 UDP socket 存在？
+4. 为什么查询端口时必须同时确认 TCP 或 UDP，不能只看端口数字？
+5. 清理前后哪些证据共同证明 socket 状态随临时进程变化？
+6. 为什么 ping 成功、socket 存在都不能单独证明应用完整功能正常？
+7. `socket_listener_check.sh` 从接收输入到找到 socket 或报错的整体流程是什么？
 
 说明：
 
-- 只回答路由选择、IP 层往返、证据边界和脚本整体流程。
-- 不考路由表字段细节、ICMP 协议细节、ping 参数、时间单位或脚本语法。
+- 只回答 socket、TCP/UDP 区别、ss 结果、证据边界和脚本整体流程。
+- 不考 ss 参数拼写、TCP 状态机、UDP 报文格式、端口分配规则、Python 或脚本语法。
 - 不要求填写每日总结。
 
 十四、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day19 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day20 用户操作输出记录` 标题。请在该标题下记录：
 
-- ping 命令路径和版本。
-- `ip route get 127.0.0.1` 的真实输出和字段理解。
-- 回环 ping 的 3 次应答、汇总统计和状态。
-- 无效路由目标的错误和非 0 状态。
-- `.invalid` 名称的 ping 错误和非 0 状态。
-- `route_ping_check.sh` 内容、语法和权限。
-- 脚本正常目标、无效目标、空输入三条验证结果。
-- 最终回归结果和目标脚本 Git 状态。
+- ss、Python 的命令路径和版本。
+- `socket_listener_check.sh` 内容、语法和权限。
+- 两个端口创建前的精确过滤结果。
+- 临时 Python 进程 PID 和存在证据。
+- TCP `LISTEN`、UDP `UNCONN` 和交叉协议空结果。
+- 脚本 TCP、UDP 两条正常结果。
+- 协议不匹配、无效协议、无效端口和空输入结果。
+- 正常回归、临时进程清理和清理后 socket 消失的结果。
+- 目标脚本 Git 状态。
 - 对 7 个技术问题的回答。
 
-不要提前修改 Linux README。Day19 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day20 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
 十五、Git 提交要求
 
-- 开始学习前，由 AI 将 Day19 学习安排和 `out.md` 标题提交并推送。
-- Day19 完成、检查并归档后，由 AI 提交学习记录和 `route_ping_check.sh`。
+- 开始学习前，由 AI 将 Day20 学习安排和 `out.md` 标题提交并推送。
+- Day20 完成、检查并归档后，由 AI 提交学习记录和 `socket_listener_check.sh`。
 - 不使用 `git add .`。
-- 不提交完整真实路由表、真实网关、真实网络目标、日志、报告、C++ 编译产物或 `temp.txt`。
+- 不提交完整 socket 列表、真实服务信息、临时进程输出文件、日志、报告、C++ 编译产物或 `temp.txt`。
 - 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十六、Day19 简短执行计划
+十六、Day20 简短执行计划
 
-1. 确认 ping 工具 → 验证：命令路径和版本正常。
-2. 查询回环路由 → 验证：目标通过 `lo`，源地址为回环地址。
-3. ping 回环目标 → 验证：3 次应答、0% 丢包、状态为 0。
-4. 验证两种无效输入 → 验证：错误阶段明确，状态非 0。
-5. 创建检查脚本 → 验证：语法、权限和内容正确。
-6. 验证三条脚本路径 → 验证：正常成功，两种错误均被拒绝。
-7. 完成回归和记录 → 验证：正常功能未回退，7 题已回答。
+1. 确认实验工具 → 验证：ss 与 Python 路径和版本正常。
+2. 创建检查脚本 → 验证：语法、权限和内容正确。
+3. 确认练习端口空闲 → 验证：两个精确过滤均无结果。
+4. 启动受控 socket → 验证：临时 Python 进程存在。
+5. 检查 TCP 与 UDP → 验证：分别取得 LISTEN 和 UNCONN。
+6. 验证脚本正常与异常 → 验证：匹配成功，错误输入被拒绝。
+7. 回归并清理 → 验证：正常结果未回退，临时进程和 socket 均消失。
+8. 完成记录 → 验证：Git 范围正确，7 题已回答。
 
-十七、Day19 完成标准
+十七、Day20 完成标准
 
-- 理解接口与地址、路由选择和 ping 往返之间的顺序关系。
-- 能从 `ip route get` 输出中识别回环目标、接口和源地址。
-- 已完成 3 次回环 ping，并取得 0% 丢包和状态 0。
-- 已理解路由成功、ping 成功和应用服务正常是不同证据。
-- 已完成无效路由地址和无效 ping 名称的异常验证。
-- `route_ping_check.sh` 存在、语法正确且具有 owner 执行权限。
-- 脚本正常目标、无效目标和空输入三项结果符合预期。
-- 全程未修改网络配置，未记录真实路由表、网关或网络目标。
+- 理解 socket、ss、TCP 和 UDP 的整体关系。
+- 能区分 TCP `LISTEN` 与 UDP `UNCONN`。
+- 已理解相同端口号在 TCP 和 UDP 中属于不同协议空间。
+- 已用精确过滤取得两个受控 socket 的状态，未记录完整真实 socket 列表。
+- `socket_listener_check.sh` 存在、语法正确且具有 owner 执行权限。
+- 脚本 TCP、UDP、协议不匹配、无效协议、无效端口和空输入结果符合预期。
+- 正常回归通过，临时 Python 进程已结束，两个 socket 清理后均消失。
+- 全程未修改或停止真实网络服务。
 - `out.md` 包含完整、真实的操作输出和 7 个技术问题答案。
-- Git 提交不包含真实网络信息、日志、报告、编译程序或 `temp.txt`。
+- Git 提交不包含真实服务信息、日志、报告、编译程序或 `temp.txt`。
