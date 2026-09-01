@@ -2731,3 +2731,137 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 7. 为什么本次只记录 `lo`，并且禁止用脚本修改网络接口？使用 lo 可避免公开真实 IP、MAC 和网卡名称；修改网络接口可能中断网络或远程连接，也会破坏原始诊断状态。
 
 # Day19 用户操作输出记录
+seeway@test:~/workspace/learn$ command -V ping
+ping 是 /usr/bin/ping
+seeway@test:~/workspace/learn$ ping -V
+ping from iputils 20211215
+seeway@test:~/workspace/learn$ ip route get 127.0.0.1
+local 127.0.0.1 dev lo src 127.0.0.1 uid 1000
+    cache <local>
+seeway@test:~/workspace/learn$ ping -c 3 -W 1 127.0.0.1
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.024 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.050 ms
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.043 ms
+
+--- 127.0.0.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2032ms
+rtt min/avg/max/mdev = 0.024/0.039/0.050/0.011 ms
+seeway@test:~/workspace/learn$ ping_status="$?"
+seeway@test:~/workspace/learn$ printf 'loopback ping status=%s\n' "$ping_status"
+loopback ping status=0
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn$ ip route get 999.999.999.999
+Error: any valid prefix is expected rather than "999.999.999.999".
+seeway@test:~/workspace/learn$ invalid_route_status="$?"
+printf 'invalid route status=%s\n' "$invalid_route_status"
+invalid route status=1
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn$ ping -c 1 -W 1 day19.invalid
+ping: day19.invalid: 名称或服务未知
+seeway@test:~/workspace/learn$ invalid_ping_status="$?"
+printf 'invalid ping status=%s\n' "$invalid_ping_status"
+invalid ping status=2
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ chmod u+x route_ping_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ls -l route_ping_check.sh
+-rwxr--r-- 1 seeway l 769 Sep  1 15:02 route_ping_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ cat route_ping_check.sh
+#!/bin/bash
+
+target="$1"
+
+if [[ -z "$target" ]]; then
+    printf '%s\n' '[ROUTE PING ERROR] target IPv4 address is required' >&2
+    exit 1
+fi
+
+printf '[ROUTE CHECK] target=%s\n' "$target"
+route_output="$(ip route get "$target" 2>&1)"
+route_status="$?"
+
+if (( route_status != 0 )); then
+    printf '%s\n' "$route_output" >&2
+    printf '[ROUTE PING ERROR] route lookup failed; target=%s\n' "$target" >&2
+    exit "$route_status"
+fi
+
+printf '%s\n' "$route_output"
+printf '[PING CHECK] target=%s\n' "$target"
+ping -c 3 -W 1 "$target"
+ping_status="$?"
+
+if (( ping_status != 0 )); then
+    printf '[ROUTE PING ERROR] ping failed; target=%s status=%s\n' \
+        "$target" "$ping_status" >&2
+    exit "$ping_status"
+fi
+
+printf '[ROUTE PING COMPLETE] target=%s\n' "$target"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./route_ping_check.sh 127.0.0.1
+[ROUTE CHECK] target=127.0.0.1
+local 127.0.0.1 dev lo src 127.0.0.1 uid 1000
+    cache <local>
+[PING CHECK] target=127.0.0.1
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.096 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.056 ms
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.037 ms
+
+--- 127.0.0.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2037ms
+rtt min/avg/max/mdev = 0.037/0.063/0.096/0.024 ms
+[ROUTE PING COMPLETE] target=127.0.0.1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ normal_status="$?"
+printf 'normal route ping status=%s\n' "$normal_status"
+normal route ping status=0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./route_ping_check.sh 999
+[ROUTE CHECK] target=999
+Error: any valid prefix is expected rather than "999".
+[ROUTE PING ERROR] route lookup failed; target=999
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ invalid_status="$?"
+printf 'invalid target status=%s\n' "$invalid_status"
+invalid target status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./route_ping_check.sh
+[ROUTE PING ERROR] target IPv4 address is required
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ empty_status="$?"
+printf 'empty input status=%s\n' "$empty_status"
+empty input status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n route_ping_check.sh
+./route_ping_check.sh 127.0.0.1
+[ROUTE CHECK] target=127.0.0.1
+local 127.0.0.1 dev lo src 127.0.0.1 uid 1000
+    cache <local>
+[PING CHECK] target=127.0.0.1
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.078 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.032 ms
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.019 ms
+
+--- 127.0.0.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2061ms
+rtt min/avg/max/mdev = 0.019/0.043/0.078/0.025 ms
+[ROUTE PING COMPLETE] target=127.0.0.1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/route_ping_check.sh
+?? robot-system-learning/linux/route_ping_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+1. `ip route get` 与 `ping` 分别检查什么，它们是什么关系?ip route get查询内核对具体目标地址的路由选择，ping`ping` 在路由选择基础上尝试 IP 层往返，并统计是否收到 ICMP Echo Reply。
+2. 路由输出中的哪些内容证明 `127.0.0.1` 通过 `lo` 处理，并选择了哪个源地址？输出的dev lo 证明通过lo处理，并选择了src的127.0.0.1s
+3. ping 输出中的哪些内容证明 3 次请求都收到应答且没有丢包？3 packets transmitted, 3 received, 0% packet loss, time 2061ms这个证明了
+4. 为什么路由查询成功不保证 ping 成功，ping 成功也不保证应用服务正常？路由查询成功只说明系统找到了发送决策，不保证目标回应；ping 成功只证明目标回应了 ICMP，不证明应用服务已经启动或可用。
+5. 为什么 ping 失败不能单独证明目标主机已经关机？有可能是路由不通
+6. 无效地址的路由错误与 `.invalid` 名称的 ping 错误分别发生在哪个阶段？999.999.999.999 在地址输入解析阶段失败，尚未完成路由选择；day19.invalid 在名称解析阶段失败，尚未发送 ping 请求
+7. `route_ping_check.sh` 从接收输入到完成或报错的整体流程是什么？
+脚本整体逻辑：
+
+1. 接收一个目标 IPv4 地址。
+2. 没有输入时输出错误并停止。
+3. 使用 `ip route get` 查询该目标的路由选择。
+4. 路由查询失败时保留原始错误并停止，不继续 ping。
+5. 路由查询成功后执行 3 次有限等待的 ping。
+6. ping 失败时输出目标和状态，成功时输出完成提示。
