@@ -49,6 +49,7 @@
     │   │       ├── a.txt
     │   │       └── subdir
     │   ├── files.txt
+    │   ├── network_interface_check.sh
     │   ├── process_check.sh
     │   ├── service_log_collect.sh
     │   ├── README.md

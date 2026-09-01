@@ -2609,3 +2609,123 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 7. 日志收集提示时间无法解析时，应该如何定位并回归验证？先查看报告中的 Failed to parse timestamp，确认错误来自时间输入而不是服务；把无效时间改回 $start_marker 后重新执行，出现 [LOG COLLECTION COMPLETE] 即证明修正成功。
 
 # Day18 用户操作输出记录
+seeway@test:~/workspace/learn/learn$ command -v ip
+/usr/sbin/ip
+seeway@test:~/workspace/learn/learn$ ip
+Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
+       ip [ -force ] -batch filename
+where  OBJECT := { address | addrlabel | fou | help | ila | ioam | l2tp | link |
+                   macsec | maddress | monitor | mptcp | mroute | mrule |
+                   neighbor | neighbour | netconf | netns | nexthop | ntable |
+                   ntbl | route | rule | sr | tap | tcpmetrics |
+                   token | tunnel | tuntap | vrf | xfrm }
+       OPTIONS := { -V[ersion] | -s[tatistics] | -d[etails] | -r[esolve] |
+                    -h[uman-readable] | -iec | -j[son] | -p[retty] |
+                    -f[amily] { inet | inet6 | mpls | bridge | link } |
+                    -4 | -6 | -M | -B | -0 |
+                    -l[oops] { maximum-addr-flush-attempts } | -br[ief] |
+                    -o[neline] | -t[imestamp] | -ts[hort] | -b[atch] [filename] |
+                    -rc[vbuf] [size] | -n[etns] name | -N[umeric] | -a[ll] |
+                    -c[olor]}
+seeway@test:~/workspace/learn/learn$ ip -Version
+ip utility, iproute2-5.15.0, libbpf 0.5.0
+seeway@test:~/workspace/learn/learn$
+seeway@test:~/workspace/learn/learn$ ip link show dev lo
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+seeway@test:~/workspace/learn/learn$
+接口名字lo,LOOPBACK回环接口，UP启用状态，mtu是属性
+seeway@test:~/workspace/learn/learn$ ip -brief link show dev lo
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+seeway@test:~/workspace/learn/learn$
+seeway@test:~/workspace/learn/learn$ ip addr show dev lo
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+seeway@test:~/workspace/learn/learn$
+保留完整输出，并找到 IPv4、IPv6 和 `scope host`。
+inet是IPV4信息，后面紧跟scope host
+inet6是IPV6信息，后面紧跟scope host
+seeway@test:~/workspace/learn/learn$ ip -brief addr show dev lo
+lo               UNKNOWN        127.0.0.1/8 ::1/128
+seeway@test:~/workspace/learn/learn$
+seeway@test:~/workspace/learn/learn$ ip link show dev day18-missing0
+Device "day18-missing0" does not exist.
+seeway@test:~/workspace/learn/learn$ missing_status="$?"
+seeway@test:~/workspace/learn/learn$ printf 'missing interface status=%s\n' "$missing_status"
+missing interface status=1
+seeway@test:~/workspace/learn/learn$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n network_interface_check.sh
+chmod u+x network_interface_check.sh
+ls -l network_interface_check.sh
+cat network_interface_check.sh
+-rwxr--r-- 1 seeway l 520 Aug 31 15:33 network_interface_check.sh
+#!/bin/bash
+
+interface_name="$1"
+
+if [[ -z "$interface_name" ]]; then
+    printf '%s\n' '[NETWORK CHECK ERROR] interface name is required' >&2
+    exit 1
+fi
+
+if ! ip link show dev "$interface_name" >/dev/null 2>&1; then
+    printf '[NETWORK CHECK ERROR] interface not found: %s\n' "$interface_name" >&2
+    exit 1
+fi
+
+printf '[NETWORK LINK] interface=%s\n' "$interface_name"
+ip -brief link show dev "$interface_name"
+
+printf '[NETWORK ADDRESS] interface=%s\n' "$interface_name"
+ip -brief addr show dev "$interface_name"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./network_interface_check.sh lo
+[NETWORK LINK] interface=lo
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+[NETWORK ADDRESS] interface=lo
+lo               UNKNOWN        127.0.0.1/8 ::1/128
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ normal_status="$?"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'normal check status=%s\n' "$normal_status"
+normal check status=0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./network_interface_check.sh day18-missing0
+[NETWORK CHECK ERROR] interface not found: day18-missing0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ invalid_status="$?"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'invalid interface status=%s\n' "$invalid_status"
+invalid interface status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./network_interface_check.sh
+[NETWORK CHECK ERROR] interface name is required
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ empty_status="$?"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ printf 'empty input status=%s\n' "$empty_status"
+empty input status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n network_interface_check.sh
+./network_interface_check.sh lo
+[NETWORK LINK] interface=lo
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+[NETWORK ADDRESS] interface=lo
+lo               UNKNOWN        127.0.0.1/8 ::1/128
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/network_interface_check.sh
+?? robot-system-learning/linux/network_interface_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+1. `ip link` 与 `ip addr` 分别重点查看什么，它们是什么关系？ip link查看链路相关信息，ip addr查看地址相关信息，地址配置依附于网络接口，应先用 ip link 确认接口存在，再用 ip addr 查看其地址。
+2. 哪些输出证明 `lo` 接口存在、已启用并配置了本机回环地址？1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00LOOPBACK 证明接口类型，不是地址证据。地址证据是 inet 127.0.0.1/8 scope host lo 和 inet6 ::1/128 scope host。
+3. `-brief` 输出与详细输出各自适合怎样的查看方式？brief 适合快速扫描；详细输出适合检查 flags、MTU、scope、地址有效期等具体字段。
+4. 为什么接口存在或显示 `UP`，都不能单独证明它具有 IP 地址或外部网络可达？接口存在、显示 UP、配置了地址、外部网络可达是四类不同证据，不能互相替代。
+5. 查询 `day18-missing0` 的错误和状态码说明了什么？它与接口存在但没有地址有何区别？接口不存在时 link 查询失败；接口存在但无地址时 link 查询成功，而 addr 输出没有 inet/inet6 行。
+脚本整体逻辑：
+
+1. 接收一个接口名称。
+2. 没有输入时输出错误并停止。
+3. 使用 `ip link show dev` 判断接口是否存在。
+4. 接口不存在时输出明确错误并停止。
+5. 接口存在时依次输出简洁链路信息和地址信息。
+
+7. 为什么本次只记录 `lo`，并且禁止用脚本修改网络接口？使用 lo 可避免公开真实 IP、MAC 和网卡名称；修改网络接口可能中断网络或远程连接，也会破坏原始诊断状态。
