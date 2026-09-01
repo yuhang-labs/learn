@@ -1,197 +1,211 @@
-Day18 详细学习安排：ip addr 与 ip link
+Day19 详细学习安排：ip route 与 ping
 
 一、今日目标
 
-- 理解网络接口是系统中的网络收发对象，`ip link` 查看接口本身及链路状态。
-- 理解 `ip addr` 查看分配在接口上的 IPv4/IPv6 地址。
-- 能区分“接口存在”“接口处于 UP”“接口具有地址”这三类信息。
-- 能使用详细和简洁两种格式检查回环接口 `lo`。
-- 能识别接口不存在的错误，避免把它误判为接口存在但没有地址。
-- 创建项目脚本 `network_interface_check.sh`，输出指定接口的简洁链路和地址信息。
-- 完成正常接口、无效接口和缺少输入三条验证路径。
+- 理解路由是系统为目标地址选择下一步发送方向的规则。
+- 理解 `ip route get` 用于查询一个目标地址会匹配哪条路由。
+- 理解 `ping` 使用 ICMP Echo 请求与应答检查目标是否能进行 IP 层往返。
+- 能从路由结果中识别目标、接口和源地址。
+- 能从 ping 结果中识别发送、接收、丢包率和往返时间。
+- 能区分路由查询成功、ping 成功和应用服务正常三类不同证据。
+- 创建项目脚本 `route_ping_check.sh`，先查询路由，再执行有限次数的 ping。
+- 完成正常目标、无效目标和缺少输入三条验证路径。
 
 说明：
 
-- Day18 严格保持固定计划的 `ip addr / ip link` 主题。
-- Day19 才学习 `ip route / ping`，今天不提前练习路由和连通性测试。
-- 今天只执行只读查询，不使用 `sudo`，不修改、启用、停用或删除任何网络接口。
-- 统一使用回环接口 `lo` 记录输出，避免把真实 IP、MAC 和网卡名称提交到公开仓库。
-- `lo` 只用于本机内部通信，其结果不能证明外部网络可用。
+- Day19 严格保持固定计划的 `ip route / ping` 主题。
+- Day18 已学习接口和地址；今天在此基础上继续学习目标路由选择和 IP 层往返，不重复接口基础。
+- Day20 才学习 `ss / TCP / UDP`，今天不提前检查端口或应用服务。
+- 今天只执行只读查询，不使用 `sudo`，不增加、删除或修改路由。
+- 正常实验只使用回环目标 `127.0.0.1`，不访问公网或真实局域网设备。
+- 不执行无目标限制的 `ip route` 全表输出，避免把真实默认网关、真实接口或源地址写入公开仓库。
+- 异常实验使用无效地址或保留的 `.invalid` 域名，不把真实业务主机作为故障目标。
+- 所有 ping 都限制次数和等待时间，不留下持续运行的进程。
 - AI 已提供完整脚本和命令，用户只需亲自在终端执行并理解整体流程。
-- 不要求背诵 ip 参数、地址前缀长度、接口 flags 或脚本语法。
+- 不要求背诵路由字段、ICMP 细节、ping 参数或脚本语法。
 - 不要求填写每日总结。
 - 今天只学习 Linux，不新增 C++、CAN 或 ROS2 内容。
-- 建议用时 35～45 分钟。
+- 建议用时 40～50 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、理解接口、链路与地址
+二、理解接口、路由与 ping 的关系
 
 任务 1：建立整体概念
 
 ```text
-系统中的网络接口（本次只看 lo）
+Day18：接口存在并配置地址
              ↓
-ip link 查询接口是否存在及链路属性/状态
+ip route get：为目标地址选择发送接口和源地址
              ↓
-ip addr 查询该接口上配置的 IPv4/IPv6 地址
+ping：发送有限次数的 ICMP Echo 请求
              ↓
-脚本汇总为简洁诊断输出
+收到应答后统计接收数量、丢包率和往返时间
 ```
 
 重点理解：
 
-- `ip link` 关注接口对象、链路层属性和状态。
-- `ip addr` 关注接口上分配的网络层地址，也会同时显示所属接口信息。
-- 接口存在不等于它一定有 IP 地址。
-- 接口显示 `UP` 不等于外部网络一定可达。
-- `lo` 是回环接口，常见地址为 IPv4 `127.0.0.1` 和 IPv6 `::1`，通信不会离开本机。
-- 回环接口的简洁状态可能显示 `UNKNOWN`；这不应脱离 flags 和地址信息单独判断为故障。
+- 网络接口是发送和接收数据的对象，路由决定数据应从哪个接口方向发送。
+- `ip route get` 查询内核对一个具体目标的路由选择，不发送 ping 数据包。
+- `ping` 在路由选择基础上尝试 IP 层往返，并统计是否收到 ICMP Echo Reply。
+- 路由查询成功只说明系统找到了发送决策，不保证目标一定应答。
+- ping 成功说明目标对本次 ICMP 请求有应答，不保证 SSH、ROS2 或其他应用服务正常。
+- ping 失败也不能单独证明目标主机已关机，可能是名称无效、没有路由、丢包或 ICMP 被限制。
 
 验证标准：
 
-- 后续能按“接口存在 → 链路信息 → 地址信息”的顺序解释检查结果。
+- 后续能按“接口与地址 → 路由选择 → ping 往返 → 结果边界”的顺序解释实验。
 
-三、确认 ip 工具
+三、确认 ping 工具
 
 任务 2：确认命令存在并查看版本
 
 执行：
 
 ```bash
-command -v ip
-ip -Version
+command -v ping
+ping -V
 ```
 
 预期：
 
-- `command -v ip` 输出 `ip` 命令路径。
-- `ip -Version` 输出 iproute2 版本。
+- `command -v ping` 输出 ping 命令路径。
+- `ping -V` 输出 iputils 或 ping 版本。
 
 结果判断：
 
 - 两条命令都成功后再继续。
-- 如果找不到 `ip`，保留真实错误并停止后续实验，不自行安装软件。
+- Day18 已确认 `ip` 命令存在，今天不重复其版本检查。
+- 如果找不到 ping，保留真实错误并停止后续实验，不自行安装软件。
 
 验证标准：
 
-- 在 `out.md` 保留命令路径和版本输出。
+- 在 `out.md` 保留 ping 路径和版本输出。
 
-四、使用 ip link 检查回环接口
+四、查询回环目标的路由
 
-任务 3：查看详细链路信息
+任务 3：使用 ip route get 查询单个安全目标
 
 执行：
 
 ```bash
-ip link show dev lo
-```
-
-观察重点：
-
-- 第一行中的接口名称 `lo` 证明查询到了目标接口。
-- flags 中常见 `LOOPBACK` 和 `UP`，分别说明它是回环接口以及管理状态已启用。
-- `mtu` 是该接口单个数据包的传输大小限制之一，本日只需知道它属于链路属性。
-- `link/loopback` 表明链路类型是回环，不是真实以太网卡。
-
-验证标准：
-
-- 保留完整输出，并指出接口名称、`LOOPBACK` 和 `UP`。
-
-任务 4：查看简洁链路信息
-
-执行：
-
-```bash
-ip -brief link show dev lo
-```
-
-重点理解：
-
-- `-brief` 将结果压缩为适合快速查看和脚本报告的一行。
-- 简洁输出通常包含接口名称、状态和链路地址。
-- `lo` 可能显示 `UNKNOWN`，但详细 flags 中仍可看到 `UP`；这两项描述的角度不同。
-- 判断时应结合接口类型、flags 和地址，不能只看一个状态词。
-
-验证标准：
-
-- 保留简洁输出，并能说明它与详细输出是同一个接口的不同展示形式。
-
-五、使用 ip addr 检查回环地址
-
-任务 5：查看详细地址信息
-
-执行：
-
-```bash
-ip addr show dev lo
-```
-
-观察重点：
-
-- 输出包含接口的链路信息，以及该接口上的地址信息。
-- `inet` 行表示 IPv4 地址，`inet6` 行表示 IPv6 地址。
-- `scope host` 表示该地址的作用范围在本机。
-- `/8`、`/128` 是地址前缀长度，本日只需理解它们是地址的一部分，不要求计算。
-
-验证标准：
-
-- 保留完整输出，并找到 IPv4、IPv6 和 `scope host`。
-
-任务 6：查看简洁地址信息
-
-执行：
-
-```bash
-ip -brief addr show dev lo
-```
-
-重点理解：
-
-- 简洁地址输出把接口名称、状态和地址集中在一行。
-- `ip -brief link` 更适合快速看链路，`ip -brief addr` 更适合快速看地址。
-- 地址输出中出现 `127.0.0.1/8` 或 `::1/128`，只证明本机回环地址已配置。
-
-验证标准：
-
-- 保留简洁输出，并能区分 link 输出与 addr 输出各自增加的重点信息。
-
-六、验证接口不存在的异常场景
-
-任务 7：查询明确不存在的练习接口
-
-执行：
-
-```bash
-ip link show dev day18-missing0
-missing_status="$?"
-printf 'missing interface status=%s\n' "$missing_status"
+ip route get 127.0.0.1
 ```
 
 预期：
 
-- `ip` 输出找不到设备的错误。
-- `missing_status` 为非 0，表示命令没有成功找到目标接口。
+- 输出包含目标 `127.0.0.1`。
+- 输出包含接口 `dev lo`。
+- 输出中的源地址应为回环地址 `src 127.0.0.1`。
+- 常见结果会包含 `local`，表示目标属于本机。
 
 重点理解：
 
-- “接口不存在”应先检查输入的接口名称。
-- 它与“接口存在但没有 IPv4/IPv6 地址”是两种不同情况。
-- 不要为了消除错误而创建、启用或修改真实接口。
+- `get` 是询问“如果发送到这个目标，内核会怎样选择”，不是修改路由。
+- `dev lo` 表示该目标通过回环接口处理。
+- `src 127.0.0.1` 表示系统为这次路由选择的源地址。
+- 本次只查询单个回环目标，不记录完整路由表。
 
 验证标准：
 
-- 保留错误文字和非 0 状态。
-- 能说明错误来自接口名称，而不是 IP 地址内容。
+- 保留完整输出，并指出目标、`dev lo` 和 `src 127.0.0.1`。
 
-七、创建网络接口检查脚本
+五、使用 ping 验证本机往返
 
-任务 8：为 Robot System Diagnostic Tool 创建项目脚本
+任务 4：向回环地址发送有限次数的请求
+
+执行：
+
+```bash
+ping -c 3 -W 1 127.0.0.1
+ping_status="$?"
+printf 'loopback ping status=%s\n' "$ping_status"
+```
+
+预期：
+
+- 输出 3 条来自 `127.0.0.1` 的应答。
+- 统计中 transmitted 与 received 都为 3，packet loss 为 `0%`。
+- 输出往返时间统计。
+- `ping_status=0`。
+
+重点理解：
+
+- `-c 3` 让 ping 在发送 3 次后自动结束。
+- `-W 1` 限制单次等待应答的时间。
+- `icmp_seq` 表示请求序号，`time` 表示该次往返耗时。
+- 汇总中的 transmitted、received 和 packet loss 比单独一行应答更适合判断整体结果。
+- 回环 ping 成功只验证本机 IP 栈的这条路径，不证明外部网络可达。
+
+验证标准：
+
+- 保留三次应答、汇总统计和状态 `0`。
+
+六、验证无效路由目标
+
+任务 5：查询无法解析为 IPv4 地址的输入
+
+执行：
+
+```bash
+ip route get 999.999.999.999
+invalid_route_status="$?"
+printf 'invalid route status=%s\n' "$invalid_route_status"
+```
+
+预期：
+
+- `ip route get` 输出地址格式或前缀无效的错误。
+- `invalid_route_status` 为非 0。
+
+重点理解：
+
+- 该错误发生在目标输入解析阶段，还没有得到有效的路由选择结果。
+- 第一检查项是目标地址是否正确，不应直接判断网络接口或目标主机故障。
+- 不要为了消除错误而修改系统路由。
+
+验证标准：
+
+- 保留真实错误和非 0 状态。
+- 能说明错误来自无效目标输入。
+
+七、验证 ping 的无效名称场景
+
+任务 6：ping 保留的无效域名
+
+执行：
+
+```bash
+ping -c 1 -W 1 day19.invalid
+invalid_ping_status="$?"
+printf 'invalid ping status=%s\n' "$invalid_ping_status"
+```
+
+预期：
+
+- ping 提示名称或地址无法解析，具体文字以系统真实输出为准。
+- `invalid_ping_status` 为非 0。
+- 命令及时结束，不会持续运行。
+
+重点理解：
+
+- `.invalid` 是保留的无效顶级域名，本次不把真实主机作为故障目标。
+- 名称解析失败发生在发送 ICMP 请求之前，不能据此判断某个真实主机是否在线。
+- ping 的错误文字与状态码要结合起来判断失败阶段。
+
+验证标准：
+
+- 保留错误和非 0 状态。
+- 能说明这是无效名称，不是已证明的主机离线。
+
+八、创建路由与 ping 检查脚本
+
+任务 7：为 Robot System Diagnostic Tool 创建项目脚本
 
 执行：
 
 ```bash
 cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
-vim network_interface_check.sh
+vim route_ping_check.sh
 ```
 
 在 Vim 中写入下面的完整内容：
@@ -199,47 +213,61 @@ vim network_interface_check.sh
 ```bash
 #!/bin/bash
 
-interface_name="$1"
+target="$1"
 
-if [[ -z "$interface_name" ]]; then
-    printf '%s\n' '[NETWORK CHECK ERROR] interface name is required' >&2
+if [[ -z "$target" ]]; then
+    printf '%s\n' '[ROUTE PING ERROR] target IPv4 address is required' >&2
     exit 1
 fi
 
-if ! ip link show dev "$interface_name" >/dev/null 2>&1; then
-    printf '[NETWORK CHECK ERROR] interface not found: %s\n' "$interface_name" >&2
-    exit 1
+printf '[ROUTE CHECK] target=%s\n' "$target"
+route_output="$(ip route get "$target" 2>&1)"
+route_status="$?"
+
+if (( route_status != 0 )); then
+    printf '%s\n' "$route_output" >&2
+    printf '[ROUTE PING ERROR] route lookup failed; target=%s\n' "$target" >&2
+    exit "$route_status"
 fi
 
-printf '[NETWORK LINK] interface=%s\n' "$interface_name"
-ip -brief link show dev "$interface_name"
+printf '%s\n' "$route_output"
+printf '[PING CHECK] target=%s\n' "$target"
+ping -c 3 -W 1 "$target"
+ping_status="$?"
 
-printf '[NETWORK ADDRESS] interface=%s\n' "$interface_name"
-ip -brief addr show dev "$interface_name"
+if (( ping_status != 0 )); then
+    printf '[ROUTE PING ERROR] ping failed; target=%s status=%s\n' \
+        "$target" "$ping_status" >&2
+    exit "$ping_status"
+fi
+
+printf '[ROUTE PING COMPLETE] target=%s\n' "$target"
 ```
 
 保存后执行：
 
 ```bash
-bash -n network_interface_check.sh
-chmod u+x network_interface_check.sh
-ls -l network_interface_check.sh
-cat network_interface_check.sh
+bash -n route_ping_check.sh
+chmod u+x route_ping_check.sh
+ls -l route_ping_check.sh
+cat route_ping_check.sh
 ```
 
 脚本整体逻辑：
 
-1. 接收一个接口名称。
+1. 接收一个目标 IPv4 地址。
 2. 没有输入时输出错误并停止。
-3. 使用 `ip link show dev` 判断接口是否存在。
-4. 接口不存在时输出明确错误并停止。
-5. 接口存在时依次输出简洁链路信息和地址信息。
+3. 使用 `ip route get` 查询该目标的路由选择。
+4. 路由查询失败时保留原始错误并停止，不继续 ping。
+5. 路由查询成功后执行 3 次有限等待的 ping。
+6. ping 失败时输出目标和状态，成功时输出完成提示。
 
 重点理解：
 
-- 脚本只查询，不修改接口。
-- 接口存在性检查放在地址查询之前，可以区分对象不存在与地址结果为空。
-- 所有接口名称都用引号保护，输入始终作为一个参数处理。
+- 脚本先查路由，再做往返验证，顺序对应网络诊断层次。
+- 脚本只读取路由和发送有限测试请求，不修改网络配置。
+- 原始路由错误被保留，便于区分输入错误与 ping 失败。
+- 本日只理解脚本整体流程，不要求掌握命令替换或状态码语法。
 
 验证标准：
 
@@ -247,179 +275,184 @@ cat network_interface_check.sh
 - 权限中 owner 具有 `x`。
 - 文件内容与上面的完整脚本一致。
 
-八、验证脚本正常路径
+九、验证脚本正常路径
 
-任务 9：检查回环接口
+任务 8：检查回环目标
 
 执行：
 
 ```bash
-./network_interface_check.sh lo
+./route_ping_check.sh 127.0.0.1
 normal_status="$?"
-printf 'normal check status=%s\n' "$normal_status"
+printf 'normal route ping status=%s\n' "$normal_status"
 ```
 
 预期：
 
-- 输出 `[NETWORK LINK] interface=lo` 及 `lo` 的简洁链路信息。
-- 输出 `[NETWORK ADDRESS] interface=lo` 及回环 IPv4/IPv6 地址。
+- `[ROUTE CHECK]` 后出现包含 `dev lo` 和 `src 127.0.0.1` 的路由结果。
+- `[PING CHECK]` 后出现 3 次回环应答和 `0% packet loss`。
+- 最后输出 `[ROUTE PING COMPLETE] target=127.0.0.1`。
 - `normal_status=0`。
 
 验证标准：
 
-- 正常输出同时包含链路和地址两部分。
-- 状态为 0。
+- 正常输出按路由、ping、完成提示的顺序出现。
+- 状态为 `0`。
 
-九、验证脚本异常路径
+十、验证脚本异常路径
 
-任务 10：检查不存在的接口
+任务 9：检查无效目标
 
 执行：
 
 ```bash
-./network_interface_check.sh day18-missing0
+./route_ping_check.sh 999.999.999.999
 invalid_status="$?"
-printf 'invalid interface status=%s\n' "$invalid_status"
+printf 'invalid target status=%s\n' "$invalid_status"
 ```
 
 预期：
 
-- 输出 `[NETWORK CHECK ERROR] interface not found: day18-missing0`。
-- `invalid_status=1`。
-- 不继续输出 `[NETWORK LINK]` 或 `[NETWORK ADDRESS]`。
+- 输出 `[ROUTE CHECK] target=999.999.999.999`。
+- 保留 `ip route get` 的原始错误。
+- 输出 `[ROUTE PING ERROR] route lookup failed`。
+- `invalid_status` 为非 0。
+- 路由查询失败后不出现 `[PING CHECK]`。
 
 验证标准：
 
-- 错误明确指出不存在的接口名称。
-- 失败后没有产生误导性的正常报告。
+- 能根据输出顺序判断失败发生在路由查询阶段。
+- 失败后没有继续执行 ping。
 
-任务 11：验证缺少输入
+任务 10：验证缺少输入
 
 执行：
 
 ```bash
-./network_interface_check.sh
+./route_ping_check.sh
 empty_status="$?"
 printf 'empty input status=%s\n' "$empty_status"
 ```
 
 预期：
 
-- 输出 `[NETWORK CHECK ERROR] interface name is required`。
+- 输出 `[ROUTE PING ERROR] target IPv4 address is required`。
 - `empty_status=1`。
+- 不出现 `[ROUTE CHECK]` 或 `[PING CHECK]`。
 
 验证标准：
 
-- 脚本能在调用 `ip` 前拒绝空输入。
+- 脚本在路由查询前拒绝空输入。
 
-十、完成后的回归与 Git 范围检查
+十一、完成后的回归与 Git 范围检查
 
-任务 12：再次检查正常路径和项目文件状态
+任务 11：再次检查正常路径和项目文件状态
 
 执行：
 
 ```bash
-bash -n network_interface_check.sh
-./network_interface_check.sh lo
+bash -n route_ping_check.sh
+./route_ping_check.sh 127.0.0.1
 
 git -C "$HOME/workspace/learn/learn" status --short -- \
-  robot-system-learning/linux/network_interface_check.sh
+  robot-system-learning/linux/route_ping_check.sh
 ```
 
 预期：
 
-- 语法仍然正确，正常路径仍能输出链路和地址。
+- 语法仍然正确，正常路径仍按顺序输出路由和 ping 结果。
 - Git 状态只显示项目脚本为新增文件。
-- 不会生成日志、报告或编译产物。
+- 不会生成日志、报告、路由配置或编译产物。
 
 验证标准：
 
-- 保留回归输出和目标脚本的 Git 状态。
+- 保留回归输出和目标脚本 Git 状态。
 
-十一、机器人系统中的位置
+十二、机器人系统中的位置
 
 ```text
-诊断工具接收目标接口名
-          ↓
-先用 ip link 确认接口存在并读取链路状态
-          ↓
-再用 ip addr 读取接口地址
-          ↓
-汇总为只读诊断结果
-          ↓
-若接口不存在，返回明确错误并检查名称
+诊断工具接收目标 IPv4 地址
+              ↓
+ip route get 查询内核发送决策
+              ↓
+路由成功后执行有限次数 ping
+              ↓
+根据应答、丢包统计和状态判断本次 IP 往返
+              ↓
+失败时根据原始错误定位输入、路由或 ping 阶段
 ```
 
 重点理解：
 
-- 网络诊断先确认对象是否存在，再查看对象具有的状态和地址。
-- 链路信息和地址信息是不同层次的证据，应分别查看。
-- 今天的检查不验证路由和目标可达性，不能从 `lo` 的正常结果推断外部网络正常。
+- Day18 先确认本机接口和地址，Day19 再确认到目标的路由选择和 IP 层往返。
+- 诊断时应根据失败阶段继续检查，不能看到 ping 失败就直接修改接口或路由。
+- 今天的结果不包含端口和应用服务证据，这些属于后续内容。
 
 验证标准：
 
-- 能按输入、接口存在性、链路输出、地址输出和异常结果说明脚本流程。
+- 能按输入、路由选择、ping 往返、统计结果和错误阶段说明脚本流程。
 
-十二、必须回答的技术问题
+十三、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. `ip link` 与 `ip addr` 分别重点查看什么，它们是什么关系？
-2. 哪些输出证明 `lo` 接口存在、已启用并配置了本机回环地址？
-3. `-brief` 输出与详细输出各自适合怎样的查看方式？
-4. 为什么接口存在或显示 `UP`，都不能单独证明它具有 IP 地址或外部网络可达？
-5. 查询 `day18-missing0` 的错误和状态码说明了什么？它与接口存在但没有地址有何区别？
-6. `network_interface_check.sh` 从接收输入到输出结果的整体流程是什么？
-7. 为什么本次只记录 `lo`，并且禁止用脚本修改网络接口？
+1. `ip route get` 与 `ping` 分别检查什么，它们是什么关系？
+2. 路由输出中的哪些内容证明 `127.0.0.1` 通过 `lo` 处理，并选择了哪个源地址？
+3. ping 输出中的哪些内容证明 3 次请求都收到应答且没有丢包？
+4. 为什么路由查询成功不保证 ping 成功，ping 成功也不保证应用服务正常？
+5. 为什么 ping 失败不能单独证明目标主机已经关机？
+6. 无效地址的路由错误与 `.invalid` 名称的 ping 错误分别发生在哪个阶段？
+7. `route_ping_check.sh` 从接收输入到完成或报错的整体流程是什么？
 
 说明：
 
-- 只回答接口、链路、地址、证据边界和脚本整体流程。
-- 不考参数拼写、flags 细节、前缀计算、网络协议细节或脚本语法。
+- 只回答路由选择、IP 层往返、证据边界和脚本整体流程。
+- 不考路由表字段细节、ICMP 协议细节、ping 参数、时间单位或脚本语法。
 - 不要求填写每日总结。
 
-十三、操作与问题记录要求
+十四、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day18 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day19 用户操作输出记录` 标题。请在该标题下记录：
 
-- `ip` 命令路径和版本。
-- `lo` 的详细及简洁 link 输出。
-- `lo` 的详细及简洁 addr 输出。
-- 不存在接口的错误和非 0 状态。
-- `network_interface_check.sh` 内容、语法和权限。
-- 脚本正常接口、无效接口、空输入三条验证结果。
+- ping 命令路径和版本。
+- `ip route get 127.0.0.1` 的真实输出和字段理解。
+- 回环 ping 的 3 次应答、汇总统计和状态。
+- 无效路由目标的错误和非 0 状态。
+- `.invalid` 名称的 ping 错误和非 0 状态。
+- `route_ping_check.sh` 内容、语法和权限。
+- 脚本正常目标、无效目标、空输入三条验证结果。
 - 最终回归结果和目标脚本 Git 状态。
 - 对 7 个技术问题的回答。
 
-不要提前修改 Linux README。Day18 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day19 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
-十四、Git 提交要求
+十五、Git 提交要求
 
-- 开始学习前，由 AI 将 Day18 学习安排和 `out.md` 标题提交并推送。
-- Day18 完成、检查并归档后，由 AI 提交学习记录和 `network_interface_check.sh`。
+- 开始学习前，由 AI 将 Day19 学习安排和 `out.md` 标题提交并推送。
+- Day19 完成、检查并归档后，由 AI 提交学习记录和 `route_ping_check.sh`。
 - 不使用 `git add .`。
-- 不提交真实接口信息、日志、报告、C++ 编译产物或 `temp.txt`。
+- 不提交完整真实路由表、真实网关、真实网络目标、日志、报告、C++ 编译产物或 `temp.txt`。
 - 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十五、Day18 简短执行计划
+十六、Day19 简短执行计划
 
-1. 确认 ip 工具 → 验证：命令路径和版本正常。
-2. 检查 `lo` 链路 → 验证：详细与简洁输出均找到接口。
-3. 检查 `lo` 地址 → 验证：详细与简洁输出均包含回环地址。
-4. 查询不存在接口 → 验证：错误明确且状态非 0。
+1. 确认 ping 工具 → 验证：命令路径和版本正常。
+2. 查询回环路由 → 验证：目标通过 `lo`，源地址为回环地址。
+3. ping 回环目标 → 验证：3 次应答、0% 丢包、状态为 0。
+4. 验证两种无效输入 → 验证：错误阶段明确，状态非 0。
 5. 创建检查脚本 → 验证：语法、权限和内容正确。
 6. 验证三条脚本路径 → 验证：正常成功，两种错误均被拒绝。
-7. 完成回归和记录 → 验证：正常功能未回退，7题已回答。
+7. 完成回归和记录 → 验证：正常功能未回退，7 题已回答。
 
-十六、Day18 完成标准
+十七、Day19 完成标准
 
-- 理解 `ip link` 查看接口和链路、`ip addr` 查看接口地址的整体关系。
-- 能区分接口存在、管理状态和地址配置三类信息。
-- 已完成 `lo` 的详细与简洁只读检查。
-- 已理解 `lo` 状态文字和回环地址的证据边界。
-- 已取得不存在接口的明确错误和非 0 状态。
-- `network_interface_check.sh` 存在、语法正确且具有 owner 执行权限。
-- 脚本正常接口、无效接口和空输入三项结果符合预期。
-- 全程未修改网络配置，未记录真实接口信息。
+- 理解接口与地址、路由选择和 ping 往返之间的顺序关系。
+- 能从 `ip route get` 输出中识别回环目标、接口和源地址。
+- 已完成 3 次回环 ping，并取得 0% 丢包和状态 0。
+- 已理解路由成功、ping 成功和应用服务正常是不同证据。
+- 已完成无效路由地址和无效 ping 名称的异常验证。
+- `route_ping_check.sh` 存在、语法正确且具有 owner 执行权限。
+- 脚本正常目标、无效目标和空输入三项结果符合预期。
+- 全程未修改网络配置，未记录真实路由表、网关或网络目标。
 - `out.md` 包含完整、真实的操作输出和 7 个技术问题答案。
 - Git 提交不包含真实网络信息、日志、报告、编译程序或 `temp.txt`。

@@ -2729,3 +2729,5 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 5. 接口存在时依次输出简洁链路信息和地址信息。
 
 7. 为什么本次只记录 `lo`，并且禁止用脚本修改网络接口？使用 lo 可避免公开真实 IP、MAC 和网卡名称；修改网络接口可能中断网络或远程连接，也会破坏原始诊断状态。
+
+# Day19 用户操作输出记录
