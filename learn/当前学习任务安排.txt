@@ -1,97 +1,210 @@
-Day20 详细学习安排：ss、TCP 与 UDP
+Day21 详细学习安排：/dev 设备节点
 
 一、今日目标
 
-- 理解 socket 是应用程序与操作系统网络协议栈之间的通信端点。
-- 理解 `ss` 用于读取系统当前 socket 状态。
-- 理解 TCP 提供面向连接的字节流，UDP 以无连接数据报方式工作。
-- 能区分 TCP 监听状态 `LISTEN` 与 UDP 未连接状态 `UNCONN`。
-- 理解同一个端口号在 TCP 和 UDP 中属于不同的协议空间。
-- 创建项目脚本 `socket_listener_check.sh`，按协议和端口检查受控 socket。
-- 完成 TCP、UDP、协议不匹配、无效输入和清理后消失等验证。
+- 理解 `/dev` 是 Linux 向用户空间提供设备访问入口的目录。
+- 理解设备节点看起来像文件，但读写行为由内核和对应设备决定。
+- 能区分字符设备、块设备和普通文件的整体差别。
+- 能使用 `ls`、`stat` 和 `file` 只读检查安全设备节点。
+- 理解 `/dev/null`、`/dev/zero` 和 `/dev/full` 的不同读写行为。
+- 能区分设备节点不存在、权限不足和设备自身操作失败。
+- 创建项目脚本 `device_node_check.sh`，检查指定 `/dev` 路径的类型与当前访问权限。
+- 完成正常节点、不存在节点、非设备对象和无效输入验证。
 
 说明：
 
-- Day20 严格保持固定计划的 `ss / TCP / UDP` 主题。
-- Day19 已学习路由和 IP 层往返；今天继续检查本机传输层 socket，不重复路由与 ping。
-- Day21 才学习 `/dev` 设备，今天不提前学习设备文件。
-- 今天只执行只读 socket 查询，不使用 `sudo`，不停止或修改系统中的真实网络服务。
-- 实验仅创建绑定到 `127.0.0.1` 的临时 TCP 和 UDP socket，不接受外部网络连接。
-- 统一使用练习端口 `38080` 和 `38081`，查询时精确过滤，不把系统完整监听列表写入公开仓库。
-- 不使用 `ss -p`，避免记录其他进程名称、PID 或用户信息。
-- 临时 socket 最长存在 5 分钟，并在实验结束时主动清理。
+- Day21 严格保持固定计划的 `/dev` 设备主题。
+- Day22 才学习 `USB / lsusb`，今天不提前枚举 USB 设备。
+- 今天只使用标准伪设备 `/dev/null`、`/dev/zero`、`/dev/full` 和不存在的练习路径。
+- 不枚举、不读取、不写入磁盘、串口、摄像头、CAN、USB 或其他真实硬件设备节点。
+- 不使用 `sudo`，不执行 `mknod`，不修改 `/dev` 中任何对象的权限、所有者或内容。
+- `/dev/zero` 必须使用 `head -c 8` 限制读取量，禁止直接使用无限制的 `cat /dev/zero`。
+- 项目脚本只查看节点类型与访问权限，不实际读写设备。
 - AI 已提供完整脚本和命令，用户只需亲自在终端执行并理解整体流程。
-- 临时 Python 命令只用于创建受控 socket，不要求理解 Python 语法。
-- 不要求背诵 ss 参数、TCP 状态机、UDP 协议细节或脚本语法。
+- 不要求背诵主次设备号、内核驱动细节、权限位或脚本语法。
 - 不要求填写每日总结。
 - 今天只学习 Linux，不新增 C++、CAN 或 ROS2 内容。
-- 建议用时 45～55 分钟。
+- 建议用时 40～50 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、理解 socket、TCP、UDP 与 ss
+二、理解应用、设备节点与内核设备的关系
 
 任务 1：建立整体概念
 
 ```text
-应用程序创建 socket 并绑定本机地址和端口
-                    ↓
-TCP socket 等待连接时显示 LISTEN
-UDP socket 等待数据报时通常显示 UNCONN
-                    ↓
-ss 从内核读取并展示当前 socket 状态
-                    ↓
-按协议和端口过滤后形成诊断证据
+应用程序打开 /dev 下的设备节点
+                ↓
+内核根据设备节点找到对应的设备接口
+                ↓
+读写请求由设备本身的规则处理
+                ↓
+成功结果或具体错误返回给应用程序
 ```
 
 重点理解：
 
-- socket 是程序使用网络协议栈进行通信的端点，通常与协议、本地地址和端口相关。
-- TCP 在通信前建立连接，监听 socket 等待连接时显示 `LISTEN`。
-- UDP 不建立 TCP 式连接，绑定后的 socket 通常显示 `UNCONN`。
-- `ss` 只展示查询时刻的 socket 状态，不会因为查看而创建或关闭 socket。
-- TCP `38080` 与 UDP `38080` 是不同的协议端点，端口号相同也不能忽略协议。
-- socket 存在只证明某个程序绑定或监听了端口，不保证应用的完整业务功能正常。
+- `/dev` 下的设备节点是应用访问设备的文件系统入口，不是设备硬件本身。
+- 设备节点也不是驱动程序；驱动和内核负责处理应用对节点的操作。
+- 字符设备按字符或字节流方式提供数据，例如今天使用的三个标准伪设备。
+- 块设备按数据块访问，常用于存储设备；今天只理解概念，不查看或操作真实块设备。
+- `ls -l` 第一列开头的 `c` 表示字符设备，`b` 表示块设备，`-` 表示普通文件。
+- 权限决定当前用户能否尝试读写，但操作最终结果还取决于设备自身行为。
 
 验证标准：
 
-- 后续能按“程序创建 socket → 内核保存状态 → ss 按协议和端口查询”的顺序解释实验。
+- 后续能按“应用 → 设备节点 → 内核设备接口 → 操作结果”的顺序解释实验。
 
-三、确认实验工具
+三、检查安全设备节点的类型
 
-任务 2：确认 ss 与 Python 存在
+任务 2：查看三个标准伪设备
 
 执行：
 
 ```bash
-command -v ss
-ss -V
-command -v python3
-python3 --version
+ls -l -- /dev/null /dev/zero /dev/full
+
+stat -c '%n type=%F permissions=%A' \
+  /dev/null /dev/zero /dev/full
+
+file -- /dev/null /dev/zero /dev/full
 ```
 
 预期：
 
-- 输出 `ss` 和 `python3` 的命令路径。
-- 输出 ss/iproute2 与 Python 版本。
+- `ls -l` 的类型字符均为 `c`。
+- `stat` 将三个对象识别为字符特殊文件。
+- `file` 将三个对象识别为 character special。
+- 输出会显示权限以及主、次设备号，但本日不要求记忆数字。
 
-结果判断：
+重点理解：
 
-- 四条命令成功后再继续。
-- 如果缺少任一工具，保留真实错误并停止实验，不自行安装软件。
+- 三种工具从不同角度证明这些路径不是普通文件，而是字符设备节点。
+- 节点类型与节点具体行为是两回事，后续需要通过受限实验分别验证。
 
 验证标准：
 
-- 在 `out.md` 保留命令路径和版本输出。
+- 保留三组完整输出，并能指出字符设备类型证据。
 
-四、创建 socket 检查脚本
+四、验证 /dev/null 的行为
 
-任务 3：为 Robot System Diagnostic Tool 创建项目脚本
+任务 3：安全写入并读取 `/dev/null`
+
+执行：
+
+```bash
+printf '%s\n' 'day21 discarded data' > /dev/null
+null_write_status="$?"
+printf 'null write status=%s\n' "$null_write_status"
+
+wc -c < /dev/null
+```
+
+预期：
+
+- 写入没有错误，`null_write_status=0`。
+- 从 `/dev/null` 读取时立即结束，`wc -c` 输出 `0`。
+
+重点理解：
+
+- `/dev/null` 会丢弃写入的数据。
+- 从 `/dev/null` 读取不会返回原先写入的内容，而是立即得到文件结束。
+- 设备节点的行为不同于保存内容的普通文件。
+
+验证标准：
+
+- 保留写入状态和读取字节数 `0`。
+
+五、验证 /dev/zero 的有限读取
+
+任务 4：只读取 8 个字节
+
+执行：
+
+```bash
+head -c 8 /dev/zero | od -An -t u1
+zero_status="$?"
+printf 'zero read status=%s\n' "$zero_status"
+```
+
+预期：
+
+- `od` 显示 8 个数值为 `0` 的字节。
+- `zero_status=0`。
+
+重点理解：
+
+- `/dev/zero` 可以持续产生零字节，本身没有普通文件式结尾。
+- `head -c 8` 是读取上限，防止命令无限输出。
+- 今天只理解受限读取的整体行为，不要求记忆 `od` 参数。
+
+验证标准：
+
+- 输出恰好表示 8 个零字节，命令正常结束。
+
+六、验证 /dev/full 的设备错误
+
+任务 5：写入始终报告空间不足的伪设备
+
+执行：
+
+```bash
+printf '%s\n' 'day21 expected failure' > /dev/full
+full_status="$?"
+printf 'full write status=%s\n' "$full_status"
+```
+
+预期：
+
+- 写入提示 `No space left on device` 或对应本地化错误。
+- `full_status` 为非 0。
+
+重点理解：
+
+- `/dev/full` 专门用于模拟写入空间不足。
+- 即使权限显示可写，也只代表允许发起写入，不保证设备接受数据。
+- 该错误是设备行为，不是普通磁盘真的被今天的练习写满。
+
+验证标准：
+
+- 保留设备错误和非 0 状态。
+- 能区分权限允许与操作成功。
+
+七、验证设备节点不存在
+
+任务 6：查询明确不存在的练习路径
+
+执行：
+
+```bash
+ls -l -- /dev/day21-missing
+missing_status="$?"
+printf 'missing device status=%s\n' "$missing_status"
+```
+
+预期：
+
+- `ls` 提示路径不存在。
+- `missing_status` 为非 0。
+
+重点理解：
+
+- 节点不存在时，第一步检查设备路径和名称是否正确。
+- 不存在与存在但权限不足是不同情况。
+- 不要为了消除错误而使用 `mknod` 创建虚假设备节点。
+
+验证标准：
+
+- 保留不存在错误和非 0 状态。
+
+八、创建设备节点检查脚本
+
+任务 7：为 Robot System Diagnostic Tool 创建项目脚本
 
 执行：
 
 ```bash
 cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
-vim socket_listener_check.sh
+vim device_node_check.sh
 ```
 
 在 Vim 中写入下面的完整内容：
@@ -99,76 +212,73 @@ vim socket_listener_check.sh
 ```bash
 #!/bin/bash
 
-protocol="$1"
-port="$2"
+device_path="$1"
 
-if [[ -z "$protocol" || -z "$port" ]]; then
-    printf '%s\n' '[SOCKET CHECK ERROR] protocol and port are required' >&2
+if [[ -z "$device_path" ]]; then
+    printf '%s\n' '[DEVICE CHECK ERROR] device path is required' >&2
     exit 1
 fi
 
-if [[ ! "$port" =~ ^[0-9]+$ ]] || (( port < 1 || port > 65535 )); then
-    printf '[SOCKET CHECK ERROR] invalid port: %s\n' "$port" >&2
-    exit 1
-fi
-
-case "$protocol" in
-    tcp)
-        socket_output="$(ss -H -lnt "sport = :$port" 2>&1)"
-        ss_status="$?"
-        ;;
-    udp)
-        socket_output="$(ss -H -lnu "sport = :$port" 2>&1)"
-        ss_status="$?"
+case "$device_path" in
+    /dev/*)
         ;;
     *)
-        printf '[SOCKET CHECK ERROR] unsupported protocol: %s\n' "$protocol" >&2
+        printf '[DEVICE CHECK ERROR] path must be under /dev: %s\n' \
+            "$device_path" >&2
         exit 1
         ;;
 esac
 
-if (( ss_status != 0 )); then
-    printf '%s\n' "$socket_output" >&2
-    printf '[SOCKET CHECK ERROR] ss query failed; protocol=%s port=%s\n' \
-        "$protocol" "$port" >&2
-    exit "$ss_status"
-fi
-
-if [[ -z "$socket_output" ]]; then
-    printf '[SOCKET CHECK ERROR] no matching socket; protocol=%s port=%s\n' \
-        "$protocol" "$port" >&2
+if [[ ! -e "$device_path" ]]; then
+    printf '[DEVICE CHECK ERROR] device node not found: %s\n' \
+        "$device_path" >&2
     exit 1
 fi
 
-printf '[SOCKET FOUND] protocol=%s port=%s\n' "$protocol" "$port"
-printf '%s\n' "$socket_output"
+if [[ -c "$device_path" ]]; then
+    device_type='character'
+elif [[ -b "$device_path" ]]; then
+    device_type='block'
+else
+    printf '[DEVICE CHECK ERROR] path is not a device node: %s\n' \
+        "$device_path" >&2
+    exit 1
+fi
+
+readable='no'
+writable='no'
+[[ -r "$device_path" ]] && readable='yes'
+[[ -w "$device_path" ]] && writable='yes'
+
+printf '[DEVICE FOUND] path=%s type=%s readable=%s writable=%s\n' \
+    "$device_path" "$device_type" "$readable" "$writable"
+ls -l -- "$device_path"
 ```
 
 保存后执行：
 
 ```bash
-bash -n socket_listener_check.sh
-chmod u+x socket_listener_check.sh
-ls -l socket_listener_check.sh
-cat socket_listener_check.sh
+bash -n device_node_check.sh
+chmod u+x device_node_check.sh
+ls -l device_node_check.sh
+cat device_node_check.sh
 ```
 
 脚本整体逻辑：
 
-1. 接收协议和端口两个输入。
-2. 缺少输入或端口范围无效时输出错误并停止。
-3. 根据 `tcp` 或 `udp` 选择对应的 ss 查询。
-4. 不支持的协议会被拒绝。
-5. ss 查询失败时保留原始错误。
-6. 查询成功但没有匹配 socket 时输出 no matching socket。
-7. 找到匹配项时输出协议、端口和经过过滤的 socket 状态。
+1. 接收一个设备路径。
+2. 缺少路径或路径不在 `/dev/` 下时输出错误并停止。
+3. 路径不存在时输出 device node not found。
+4. 只接受字符设备或块设备，拒绝目录和普通文件。
+5. 读取当前用户是否具有读写权限。
+6. 输出路径、设备类型、访问权限和 `ls -l` 结果。
 
 重点理解：
 
-- 脚本只读取 socket 状态，不创建、关闭或修改任何 socket。
-- 端口先限制为 `1～65535` 的数字，避免把无效内容交给 ss 过滤器。
-- TCP 和 UDP 使用不同查询，避免只看端口号造成误判。
-- 本日只理解整体分支和输出，不要求掌握正则、case 或命令替换语法。
+- 脚本只查看元数据，不实际读写设备。
+- 找到节点后仍需区分节点类型和当前用户权限。
+- readable/writable 只描述权限检查结果，不保证每次设备操作都会成功。
+- 本日只理解整体检查顺序，不要求掌握 case 或文件测试语法。
 
 验证标准：
 
@@ -176,371 +286,185 @@ cat socket_listener_check.sh
 - 权限中 owner 具有 `x`。
 - 文件内容与上面的完整脚本一致。
 
-五、确认练习端口尚未被占用
+九、验证脚本正常路径
 
-任务 4：只检查两个精确端口
+任务 8：检查 `/dev/null` 和 `/dev/full`
 
 执行：
 
 ```bash
-tcp_port=38080
-udp_port=38081
+./device_node_check.sh /dev/null
+null_status="$?"
+printf 'null device check status=%s\n' "$null_status"
 
-ss -H -lnt "sport = :$tcp_port"
-ss -H -lnu "sport = :$udp_port"
+./device_node_check.sh /dev/full
+full_check_status="$?"
+printf 'full device check status=%s\n' "$full_check_status"
 ```
 
 预期：
 
-- 两条命令都没有输出，说明当前没有匹配的 TCP 监听 socket 和 UDP socket。
-
-结果判断：
-
-- 没有输出后再继续创建临时 socket。
-- 如果任一命令已有输出，保留结果并停止本次实验，不关闭现有 socket，也不改用真实服务代替。
+- 两项都输出 `[DEVICE FOUND]`，类型为 `character`。
+- 当前常见环境中 readable 与 writable 均为 `yes`。
+- 两项状态均为 `0`。
 
 重点理解：
 
-- `-H` 隐藏表头，`-l` 只看监听或未连接 socket，`-n` 使用数字形式。
-- `-t` 选择 TCP，`-u` 选择 UDP。
-- `sport` 过滤本地源端口，本日不要求记住过滤语法。
+- `/dev/full` 权限检查可以通过，但前面的真实写入仍会失败。
+- 元数据检查与设备操作验证回答的是不同问题。
 
 验证标准：
 
-- 保留两个端口创建前的空结果。
+- 保留两项正常输出和状态 `0`。
 
-六、创建受控 TCP 与 UDP socket
+十、验证脚本异常路径
 
-任务 5：启动最长 5 分钟的本机临时进程
-
-请将下面整段命令一次执行：
-
-```bash
-python3 -c '
-import socket
-import time
-
-tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-tcp_socket.bind(("127.0.0.1", 38080))
-tcp_socket.listen()
-
-udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-udp_socket.bind(("127.0.0.1", 38081))
-
-time.sleep(300)
-' &
-listener_pid="$!"
-
-sleep 1
-ps -p "$listener_pid" -o pid,ppid,user,stat,etime,cmd
-```
-
-预期：
-
-- Shell 显示后台任务 PID。
-- `ps` 找到相同 PID 对应的临时 Python 进程。
-- 进程只绑定 `127.0.0.1:38080` 的 TCP socket 和 `127.0.0.1:38081` 的 UDP socket。
-
-结果判断：
-
-- `ps` 找到进程后立即继续后面的检查。
-- 如果 Python 报地址已被使用或 `ps` 找不到进程，保留错误并停止，不启动其他端口或修改系统服务。
-
-验证标准：
-
-- 保留 PID 和进程存在证据。
-
-七、使用 ss 区分 TCP 与 UDP
-
-任务 6：检查受控 TCP 监听 socket
-
-执行：
-
-```bash
-ss -H -lnt "sport = :$tcp_port"
-```
-
-预期：
-
-- 输出包含状态 `LISTEN`。
-- 本地地址为 `127.0.0.1:38080`。
-- 结果只包含受控 TCP 端口，不包含其他系统 socket。
-
-验证标准：
-
-- 保留完整的一行 TCP 输出，并指出 `LISTEN`、本地地址和端口。
-
-任务 7：检查受控 UDP socket
-
-执行：
-
-```bash
-ss -H -lnu "sport = :$udp_port"
-```
-
-预期：
-
-- 输出包含状态 `UNCONN`。
-- 本地地址为 `127.0.0.1:38081`。
-- 结果只包含受控 UDP 端口。
-
-重点理解：
-
-- UDP 没有 TCP 式监听连接状态，因此常见显示是 `UNCONN` 而不是 `LISTEN`。
-
-验证标准：
-
-- 保留完整的一行 UDP 输出，并指出 `UNCONN`、本地地址和端口。
-
-任务 8：交叉使用错误协议查询
-
-执行：
-
-```bash
-ss -H -lnu "sport = :$tcp_port"
-ss -H -lnt "sport = :$udp_port"
-```
-
-预期：
-
-- 两条命令都没有输出。
-
-重点理解：
-
-- TCP 端口 `38080` 不会出现在 UDP 查询中。
-- UDP 端口 `38081` 不会出现在 TCP 查询中。
-- 诊断端口时必须同时确认协议，不能只看端口数字。
-
-验证标准：
-
-- 保留交叉查询的空结果，并能说明它没有否定另一种协议中的 socket。
-
-八、验证脚本正常路径
-
-任务 9：分别检查 TCP 和 UDP
-
-执行：
-
-```bash
-./socket_listener_check.sh tcp "$tcp_port"
-tcp_status="$?"
-printf 'tcp socket status=%s\n' "$tcp_status"
-
-./socket_listener_check.sh udp "$udp_port"
-udp_status="$?"
-printf 'udp socket status=%s\n' "$udp_status"
-```
-
-预期：
-
-- TCP 检查输出 `[SOCKET FOUND] protocol=tcp port=38080` 和 `LISTEN` 行。
-- UDP 检查输出 `[SOCKET FOUND] protocol=udp port=38081` 和 `UNCONN` 行。
-- `tcp_status=0`，`udp_status=0`。
-
-验证标准：
-
-- 两种协议都找到对应 socket，且状态均为 `0`。
-
-九、验证脚本异常输入
-
-任务 10：检查协议不匹配、无效协议、无效端口和空输入
+任务 9：检查不存在节点、非设备对象、范围外路径和空输入
 
 依次执行：
 
 ```bash
-./socket_listener_check.sh udp "$tcp_port"
-mismatch_status="$?"
-printf 'protocol mismatch status=%s\n' "$mismatch_status"
+./device_node_check.sh /dev/day21-missing
+missing_check_status="$?"
+printf 'missing node check status=%s\n' "$missing_check_status"
 
-./socket_listener_check.sh icmp "$tcp_port"
-protocol_status="$?"
-printf 'invalid protocol status=%s\n' "$protocol_status"
+./device_node_check.sh /dev/shm
+non_device_status="$?"
+printf 'non-device path status=%s\n' "$non_device_status"
 
-./socket_listener_check.sh tcp not-a-port
-port_status="$?"
-printf 'invalid port status=%s\n' "$port_status"
+./device_node_check.sh /tmp/day21-file
+outside_status="$?"
+printf 'outside path status=%s\n' "$outside_status"
 
-./socket_listener_check.sh
+./device_node_check.sh
 empty_status="$?"
 printf 'empty input status=%s\n' "$empty_status"
 ```
 
 预期：
 
-- 协议不匹配时输出 no matching socket，状态为 `1`。
-- `icmp` 被识别为不支持的协议，状态为 `1`。
-- 非数字端口被识别为 invalid port，状态为 `1`。
-- 空输入被识别为缺少 protocol and port，状态为 `1`。
+- 不存在节点输出 device node not found，状态为 `1`。
+- `/dev/shm` 存在但不是字符或块设备，输出 path is not a device node，状态为 `1`。
+- `/tmp/day21-file` 不在允许范围，输出 path must be under /dev，状态为 `1`。
+- 空输入输出 device path is required，状态为 `1`。
 
 验证标准：
 
-- 四项异常均返回明确错误和非 0 状态。
-- 任一异常都没有修改或关闭受控 socket。
+- 四项异常都返回明确错误和非 0 状态。
+- 脚本没有创建、删除或修改任何文件和设备节点。
 
-十、正常路径回归与临时进程清理
+十一、完成后的回归与 Git 范围检查
 
-任务 11：先回归，再关闭受控 socket
+任务 10：再次检查安全节点和项目状态
 
 执行：
 
 ```bash
-bash -n socket_listener_check.sh
-./socket_listener_check.sh tcp "$tcp_port"
-./socket_listener_check.sh udp "$udp_port"
+bash -n device_node_check.sh
+./device_node_check.sh /dev/zero
 
-kill "$listener_pid"
-wait "$listener_pid" 2>/dev/null || true
+head -c 8 /dev/zero | od -An -t u1
 
-ps -p "$listener_pid" -o pid,ppid,user,stat,etime,cmd ||
-  printf '%s\n' '[EXPECTED] temporary socket process has ended'
-```
-
-预期：
-
-- 清理前 TCP 和 UDP 正常路径仍然成功。
-- 清理后 `ps` 只显示表头，并输出 temporary socket process has ended。
-- 只终止本次保存 PID 的临时 Python 进程，不使用 pkill，也不影响其他进程。
-
-验证标准：
-
-- 保留正常回归结果和临时进程结束证据。
-
-任务 12：确认清理后 socket 已消失
-
-执行：
-
-```bash
-./socket_listener_check.sh tcp "$tcp_port"
-tcp_after_status="$?"
-printf 'tcp after cleanup status=%s\n' "$tcp_after_status"
-
-./socket_listener_check.sh udp "$udp_port"
-udp_after_status="$?"
-printf 'udp after cleanup status=%s\n' "$udp_after_status"
-```
-
-预期：
-
-- 两项均输出 no matching socket。
-- `tcp_after_status=1`，`udp_after_status=1`。
-
-重点理解：
-
-- 清理前找到 socket、清理后找不到 socket，共同证明 ss 结果随受控进程状态变化。
-- 清理后没有匹配只说明这两个协议和端口当前没有 socket，不代表系统中没有其他网络服务。
-
-验证标准：
-
-- 保留两个清理后错误和状态 `1`。
-
-十一、Git 范围检查
-
-任务 13：确认项目只新增目标脚本
-
-执行：
-
-```bash
 git -C "$HOME/workspace/learn/learn" status --short -- \
-  robot-system-learning/linux/socket_listener_check.sh
+  robot-system-learning/linux/device_node_check.sh
 ```
 
 预期：
 
-- Git 状态只显示 `socket_listener_check.sh` 为新增文件。
-- 临时 Python 进程、socket 和终端输出不会形成仓库文件。
+- 语法仍然正确，`/dev/zero` 被识别为可访问的字符设备。
+- 有限读取仍然得到 8 个零字节。
+- Git 状态只显示 `device_node_check.sh` 为新增文件。
+- 不会生成设备数据、日志、报告或编译产物。
 
 验证标准：
 
-- 保留目标脚本的 Git 状态。
+- 保留回归输出和目标脚本 Git 状态。
 
 十二、机器人系统中的位置
 
 ```text
-应用进程创建 TCP 或 UDP socket
-              ↓
-内核记录协议、本地地址、端口和状态
-              ↓
-ss 按协议和端口读取当前状态
-              ↓
-诊断工具判断匹配 socket 是否存在
-              ↓
-结合进程和应用层证据继续定位问题
+机器人应用需要访问设备
+          ↓
+先确认 /dev 设备节点存在
+          ↓
+检查节点类型和当前用户权限
+          ↓
+再进行受控的设备功能操作
+          ↓
+根据不存在、权限或设备错误继续定位
 ```
 
 重点理解：
 
-- Day19 的 ping 只证明 IP 层 ICMP 往返；Day20 的 ss 进一步确认本机是否存在指定协议和端口的 socket。
-- socket 存在仍不能证明应用完整功能正常，只是比 ping 多了一层本机传输层证据。
-- 没有匹配输出时，先核对协议、端口和目标进程状态，不应直接修改系统网络服务。
+- 设备诊断先确认入口是否存在，再看节点类型和权限，最后才验证设备实际行为。
+- 节点存在不代表权限足够，权限足够也不代表设备操作一定成功。
+- 今天只检查标准伪设备；真实机器人硬件必须使用对应的安全流程，不能随意读写。
 
 验证标准：
 
-- 能按应用进程、socket、协议和端口、ss 输出及证据边界说明整体流程。
+- 能按节点存在性、节点类型、权限和设备行为说明整体检查顺序。
 
 十三、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. socket 与 `ss` 分别是什么，它们是什么关系？
-2. TCP 与 UDP 的整体通信方式有什么不同？
-3. 哪些输出分别证明受控 TCP 和 UDP socket 存在？
-4. 为什么查询端口时必须同时确认 TCP 或 UDP，不能只看端口数字？
-5. 清理前后哪些证据共同证明 socket 状态随临时进程变化？
-6. 为什么 ping 成功、socket 存在都不能单独证明应用完整功能正常？
-7. `socket_listener_check.sh` 从接收输入到找到 socket 或报错的整体流程是什么？
+1. `/dev` 设备节点是什么？应用、设备节点与内核设备接口是什么关系？
+2. 字符设备、块设备和普通文件的整体区别是什么？
+3. 哪些输出证明 `/dev/null`、`/dev/zero` 和 `/dev/full` 是字符设备？
+4. `/dev/null`、`/dev/zero` 和 `/dev/full` 的实验行为分别是什么？
+5. 为什么 `/dev/full` 显示可写，却仍然写入失败？
+6. 设备节点不存在、权限不足和设备操作失败有什么区别？
+7. `device_node_check.sh` 从接收输入到找到设备或报错的整体流程是什么？
 
 说明：
 
-- 只回答 socket、TCP/UDP 区别、ss 结果、证据边界和脚本整体流程。
-- 不考 ss 参数拼写、TCP 状态机、UDP 报文格式、端口分配规则、Python 或脚本语法。
+- 只回答设备节点、类型、权限、设备行为和脚本整体流程。
+- 不考主次设备号、驱动实现、文件测试参数、伪设备内核实现或脚本语法。
 - 不要求填写每日总结。
 
 十四、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day20 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day21 用户操作输出记录` 标题。请在该标题下记录：
 
-- ss、Python 的命令路径和版本。
-- `socket_listener_check.sh` 内容、语法和权限。
-- 两个端口创建前的精确过滤结果。
-- 临时 Python 进程 PID 和存在证据。
-- TCP `LISTEN`、UDP `UNCONN` 和交叉协议空结果。
-- 脚本 TCP、UDP 两条正常结果。
-- 协议不匹配、无效协议、无效端口和空输入结果。
-- 正常回归、临时进程清理和清理后 socket 消失的结果。
-- 目标脚本 Git 状态。
+- 三个标准伪设备的 `ls`、`stat` 和 `file` 输出。
+- `/dev/null` 写入与读取结果。
+- `/dev/zero` 的 8 字节有限读取结果。
+- `/dev/full` 的写入错误和非 0 状态。
+- 不存在设备节点的错误和状态。
+- `device_node_check.sh` 内容、语法和权限。
+- 两项脚本正常结果和四项异常结果。
+- `/dev/zero` 回归与目标脚本 Git 状态。
 - 对 7 个技术问题的回答。
 
-不要提前修改 Linux README。Day20 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day21 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
 十五、Git 提交要求
 
-- 开始学习前，由 AI 将 Day20 学习安排和 `out.md` 标题提交并推送。
-- Day20 完成、检查并归档后，由 AI 提交学习记录和 `socket_listener_check.sh`。
+- 开始学习前，由 AI 将 Day21 学习安排和 `out.md` 标题提交并推送。
+- Day21 完成、检查并归档后，由 AI 提交学习记录和 `device_node_check.sh`。
 - 不使用 `git add .`。
-- 不提交完整 socket 列表、真实服务信息、临时进程输出文件、日志、报告、C++ 编译产物或 `temp.txt`。
+- 不提交设备数据、完整 `/dev` 列表、真实硬件信息、日志、报告、C++ 编译产物或 `temp.txt`。
 - 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十六、Day20 简短执行计划
+十六、Day21 简短执行计划
 
-1. 确认实验工具 → 验证：ss 与 Python 路径和版本正常。
-2. 创建检查脚本 → 验证：语法、权限和内容正确。
-3. 确认练习端口空闲 → 验证：两个精确过滤均无结果。
-4. 启动受控 socket → 验证：临时 Python 进程存在。
-5. 检查 TCP 与 UDP → 验证：分别取得 LISTEN 和 UNCONN。
-6. 验证脚本正常与异常 → 验证：匹配成功，错误输入被拒绝。
-7. 回归并清理 → 验证：正常结果未回退，临时进程和 socket 均消失。
-8. 完成记录 → 验证：Git 范围正确，7 题已回答。
+1. 理解设备节点关系 → 验证：能说明应用通过节点访问内核设备接口。
+2. 检查安全伪设备 → 验证：三种工具均识别为字符设备。
+3. 验证三种设备行为 → 验证：丢弃、产生零和写入失败符合预期。
+4. 查询不存在节点 → 验证：取得明确错误和非 0 状态。
+5. 创建检查脚本 → 验证：语法、权限和内容正确。
+6. 验证脚本正常与异常 → 验证：安全节点成功，错误输入被拒绝。
+7. 完成回归和记录 → 验证：有限读取未回退，7 题已回答。
 
-十七、Day20 完成标准
+十七、Day21 完成标准
 
-- 理解 socket、ss、TCP 和 UDP 的整体关系。
-- 能区分 TCP `LISTEN` 与 UDP `UNCONN`。
-- 已理解相同端口号在 TCP 和 UDP 中属于不同协议空间。
-- 已用精确过滤取得两个受控 socket 的状态，未记录完整真实 socket 列表。
-- `socket_listener_check.sh` 存在、语法正确且具有 owner 执行权限。
-- 脚本 TCP、UDP、协议不匹配、无效协议、无效端口和空输入结果符合预期。
-- 正常回归通过，临时 Python 进程已结束，两个 socket 清理后均消失。
-- 全程未修改或停止真实网络服务。
+- 理解 `/dev` 设备节点是应用访问内核设备接口的入口。
+- 能区分字符设备、块设备和普通文件的整体概念。
+- 已用三种工具确认标准伪设备的节点类型。
+- 已验证 `/dev/null`、`/dev/zero` 和 `/dev/full` 的不同安全行为。
+- 已理解节点存在、访问权限和设备操作结果是不同证据。
+- `device_node_check.sh` 存在、语法正确且具有 owner 执行权限。
+- 脚本两项正常、四项异常和回归结果符合预期。
+- 全程未枚举或读写真实硬件设备节点。
 - `out.md` 包含完整、真实的操作输出和 7 个技术问题答案。
-- Git 提交不包含真实服务信息、日志、报告、编译程序或 `temp.txt`。
+- Git 提交不包含设备数据、真实硬件信息、日志、报告、编译程序或 `temp.txt`。
