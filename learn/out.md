@@ -2867,3 +2867,172 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 6. ping 失败时输出目标和状态，成功时输出完成提示。
 
 # Day20 用户操作输出记录
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ command -v ss
+ss -V
+command -v python3
+python3 --version
+/usr/bin/ss
+ss utility, iproute2-5.15.0
+/usr/bin/python3
+Python 3.10.12
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ vim socket_listener_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n socket_listener_check.sh
+chmod u+x socket_listener_check.sh
+ls -l socket_listener_check.sh
+cat socket_listener_check.sh
+-rwxr--r-- 1 seeway l 1129 Sep  1 16:09 socket_listener_check.sh
+#!/bin/bash
+
+protocol="$1"
+port="$2"
+
+if [[ -z "$protocol" || -z "$port" ]]; then
+    printf '%s\n' '[SOCKET CHECK ERROR] protocol and port are required' >&2
+    exit 1
+fi
+
+if [[ ! "$port" =~ ^[0-9]+$ ]] || (( port < 1 || port > 65535 )); then
+    printf '[SOCKET CHECK ERROR] invalid port: %s\n' "$port" >&2
+    exit 1
+fi
+
+case "$protocol" in
+    tcp)
+        socket_output="$(ss -H -lnt "sport = :$port" 2>&1)"
+        ss_status="$?"
+        ;;
+    udp)
+        socket_output="$(ss -H -lnu "sport = :$port" 2>&1)"
+        ss_status="$?"
+        ;;
+    *)
+        printf '[SOCKET CHECK ERROR] unsupported protocol: %s\n' "$protocol" >&2
+        exit 1
+        ;;
+esac
+
+if (( ss_status != 0 )); then
+    printf '%s\n' "$socket_output" >&2
+    printf '[SOCKET CHECK ERROR] ss query failed; protocol=%s port=%s\n' \
+        "$protocol" "$port" >&2
+    exit "$ss_status"
+fi
+
+if [[ -z "$socket_output" ]]; then
+    printf '[SOCKET CHECK ERROR] no matching socket; protocol=%s port=%s\n' \
+        "$protocol" "$port" >&2
+    exit 1
+fi
+
+printf '[SOCKET FOUND] protocol=%s port=%s\n' "$protocol" "$port"
+printf '%s\n' "$socket_output"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ tcp_port=38080
+udp_port=38081
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ss -H -lnt "sport = :$tcp_port"
+ss -H -lnu "sport = :$udp_port"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ python3 -c '
+import socket
+import time
+
+tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+tcp_socket.bind(("127.0.0.1", 38080))
+tcp_socket.listen()
+
+udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udp_socket.bind(("127.0.0.1", 38081))
+
+time.sleep(300)
+' &
+listener_pid="$!"
+
+sleep 1
+ps -p "$listener_pid" -o pid,ppid,user,stat,etime,cmd
+[1] 965112
+    PID    PPID USER     STAT     ELAPSED CMD
+ 965112  952494 seeway   S          00:01 python3 -c  import socket import time  tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) tc
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ss -H -lnt "sport = :$tcp_port"
+LISTEN                0                     128                                  127.0.0.1:38080                                 0.0.0.0:*
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ss -H -lnu "sport = :$udp_port"
+UNCONN                0                     0                                    127.0.0.1:38081                                 0.0.0.0:*
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ss -H -lnu "sport = :$tcp_port"
+ss -H -lnt "sport = :$udp_port"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./socket_listener_check.sh tcp "$tcp_port"
+tcp_status="$?"
+printf 'tcp socket status=%s\n' "$tcp_status"
+[SOCKET FOUND] protocol=tcp port=38080
+LISTEN 0      128    127.0.0.1:38080 0.0.0.0:*
+tcp socket status=0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./socket_listener_check.sh udp "$udp_port"
+udp_status="$?"
+printf 'udp socket status=%s\n' "$udp_status"
+[SOCKET FOUND] protocol=udp port=38081
+UNCONN 0      0      127.0.0.1:38081 0.0.0.0:*
+udp socket status=0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./socket_listener_check.sh udp "$tcp_port"
+mismatch_status="$?"
+printf 'protocol mismatch status=%s\n' "$mismatch_status"
+[SOCKET CHECK ERROR] no matching socket; protocol=udp port=38080
+protocol mismatch status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./socket_listener_check.sh icmp "$tcp_port"
+protocol_status="$?"
+printf 'invalid protocol status=%s\n' "$protocol_status"
+[SOCKET CHECK ERROR] unsupported protocol: icmp
+invalid protocol status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./socket_listener_check.sh tcp not-a-port
+port_status="$?"
+printf 'invalid port status=%s\n' "$port_status"
+[SOCKET CHECK ERROR] invalid port: not-a-port
+invalid port status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./socket_listener_check.sh
+empty_status="$?"
+printf 'empty input status=%s\n' "$empty_status"
+[SOCKET CHECK ERROR] protocol and port are required
+empty input status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n socket_listener_check.sh
+./socket_listener_check.sh tcp "$tcp_port"
+./socket_listener_check.sh udp "$udp_port"
+[SOCKET FOUND] protocol=tcp port=38080
+LISTEN 0      128    127.0.0.1:38080 0.0.0.0:*
+[SOCKET FOUND] protocol=udp port=38081
+UNCONN 0      0      127.0.0.1:38081 0.0.0.0:*
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ kill "$listener_pid"
+wait "$listener_pid" 2>/dev/null || true
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ps -p "$listener_pid" -o pid,ppid,user,stat,etime,cmd ||
+  printf '%s\n' '[EXPECTED] temporary socket process has ended'
+    PID    PPID USER     STAT     ELAPSED CMD
+[EXPECTED] temporary socket process has ended
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./socket_listener_check.sh tcp "$tcp_port"
+tcp_after_status="$?"
+printf 'tcp after cleanup status=%s\n' "$tcp_after_status"
+[SOCKET CHECK ERROR] no matching socket; protocol=tcp port=38080
+tcp after cleanup status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./socket_listener_check.sh udp "$udp_port"
+udp_after_status="$?"
+printf 'udp after cleanup status=%s\n' "$udp_after_status"
+[SOCKET CHECK ERROR] no matching socket; protocol=udp port=38081
+udp after cleanup status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/socket_listener_check.sh
+?? robot-system-learning/linux/socket_listener_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+1. socket 与 `ss` 分别是什么，它们是什么关系？socket 是应用程序使用网络协议栈通信的端点，包含协议、本地地址、端口和状态等信息。ss 从内核读取并显示当前存在的 socket 状态。
+2. TCP 与 UDP 的整体通信方式有什么不同？TCP 通信前需要建立连接，按顺序传输字节流，监听 socket 通常显示 LISTEN。UDP 不建立 TCP 式连接，直接收发数据报，绑定后的 socket 通常显示 UNCONN。
+3. 哪些输出分别证明受控 TCP 和 UDP socket 存在？TCP 查询显示：
+LISTEN ... 127.0.0.1:38080
+UDP 查询显示：
+UNCONN ... 127.0.0.1:38081
+脚本同时输出对应的 [SOCKET FOUND]，状态码均为 0。
+4. 为什么查询端口时必须同时确认 TCP 或 UDP，不能只看端口数字？TCP 和 UDP 使用不同的协议空间。同一个端口号可以分别被 TCP 和 UDP 使用，因此只看到端口数字无法确定具体 socket，必须同时确认协议。
+5. 清理前后哪些证据共同证明 socket 状态随临时进程变化？临时进程运行时，ps 能找到该进程，ss 和检查脚本能找到 TCP 与 UDP socket。终止进程后，ps 找不到进程，两个端口都显示 no matching socket 并返回状态 1。
+6. 为什么 ping 成功、socket 存在都不能单独证明应用完整功能正常？ping 成功只证明 ICMP 可以往返；socket 存在只证明程序绑定或监听了端口。应用仍可能无法正确接收请求、处理数据或返回业务结果。
+7. `socket_listener_check.sh` 从接收输入到找到 socket 或报错的整体流程是什么？脚本先接收协议和端口，检查输入是否完整、端口是否有效；然后根据 TCP 或 UDP 执行对应的 ss 查询。不支持的协议、查询失败或没有匹配 socket 时输出错误；找到匹配 socket 时输出协议、端口和 socket 状态。
