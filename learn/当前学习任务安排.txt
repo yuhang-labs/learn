@@ -1,210 +1,241 @@
-Day21 详细学习安排：/dev 设备节点
+Day22 详细学习安排：USB 识别与 lsusb
 
 一、今日目标
 
-- 理解 `/dev` 是 Linux 向用户空间提供设备访问入口的目录。
-- 理解设备节点看起来像文件，但读写行为由内核和对应设备决定。
-- 能区分字符设备、块设备和普通文件的整体差别。
-- 能使用 `ls`、`stat` 和 `file` 只读检查安全设备节点。
-- 理解 `/dev/null`、`/dev/zero` 和 `/dev/full` 的不同读写行为。
-- 能区分设备节点不存在、权限不足和设备自身操作失败。
-- 创建项目脚本 `device_node_check.sh`，检查指定 `/dev` 路径的类型与当前访问权限。
-- 完成正常节点、不存在节点、非设备对象和无效输入验证。
+- 理解 USB 枚举过程，能读懂 `lsusb` 的身份字段和 `lsusb -t` 的连接层级信息。
+- 理解“已被 USB 枚举”不等于驱动、权限和应用功能都正常。
+- 创建 `usb_device_check.sh` 按 `VID:PID` 检查设备，并区分输入错误、没有匹配和枚举环境失败。
 
 说明：
 
-- Day21 严格保持固定计划的 `/dev` 设备主题。
-- Day22 才学习 `USB / lsusb`，今天不提前枚举 USB 设备。
-- 今天只使用标准伪设备 `/dev/null`、`/dev/zero`、`/dev/full` 和不存在的练习路径。
-- 不枚举、不读取、不写入磁盘、串口、摄像头、CAN、USB 或其他真实硬件设备节点。
-- 不使用 `sudo`，不执行 `mknod`，不修改 `/dev` 中任何对象的权限、所有者或内容。
-- `/dev/zero` 必须使用 `head -c 8` 限制读取量，禁止直接使用无限制的 `cat /dev/zero`。
-- 项目脚本只查看节点类型与访问权限，不实际读写设备。
-- AI 已提供完整脚本和命令，用户只需亲自在终端执行并理解整体流程。
-- 不要求背诵主次设备号、内核驱动细节、权限位或脚本语法。
+- Day21 已完成 `/dev` 设备节点学习；今天转入 USB 识别，不重复设备节点读写。
+- Day23 才学习 `dmesg` 与设备事件，今天不读取内核日志。
+- 今天只做只读查询，不插拔设备，不使用 `sudo`，不修改 USB 权限、驱动或系统配置。
+- 不使用 `lsusb -v`，不访问 `/dev/bus/usb`，不记录 USB 序列号。
+- 如果 `lsusb` 因当前环境权限或 libusb 初始化问题失败，保留真实错误，使用本文教学样例学习；禁止把样例写成实机结果。
+- 如果系统没有 `lsusb`，记录 command not found 后停止 USB 实机命令，不自行安装软件。
+- AI 提供完整命令和脚本；你需要亲自执行、观察结果，并理解整体诊断顺序。
+- 不要求背诵 USB 协议、设备类别编号、速率标准或脚本语法。
 - 不要求填写每日总结。
 - 今天只学习 Linux，不新增 C++、CAN 或 ROS2 内容。
-- 建议用时 40～50 分钟。
+- 建议用时 45～60 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、理解应用、设备节点与内核设备的关系
+二、理解 USB 枚举与应用使用的关系
 
 任务 1：建立整体概念
 
 ```text
-应用程序打开 /dev 下的设备节点
-                ↓
-内核根据设备节点找到对应的设备接口
-                ↓
-读写请求由设备本身的规则处理
-                ↓
-成功结果或具体错误返回给应用程序
+USB 设备连接到主机控制器
+            ↓
+内核枚举设备并读取基本描述信息
+            ↓
+分配当前总线号和设备号，取得 VID:PID
+            ↓
+lsusb 展示当前枚举结果
+            ↓
+驱动、权限和应用功能还需要分别确认
 ```
 
 重点理解：
 
-- `/dev` 下的设备节点是应用访问设备的文件系统入口，不是设备硬件本身。
-- 设备节点也不是驱动程序；驱动和内核负责处理应用对节点的操作。
-- 字符设备按字符或字节流方式提供数据，例如今天使用的三个标准伪设备。
-- 块设备按数据块访问，常用于存储设备；今天只理解概念，不查看或操作真实块设备。
-- `ls -l` 第一列开头的 `c` 表示字符设备，`b` 表示块设备，`-` 表示普通文件。
-- 权限决定当前用户能否尝试读写，但操作最终结果还取决于设备自身行为。
+- “枚举”表示主机已经发现 USB 设备并取得基本身份信息。
+- `VID` 是厂商 ID，`PID` 是产品 ID，组合写成四位十六进制数，例如 `1234:5678`。
+- Bus 和 Device 是本次连接中由系统分配的位置编号，设备重新连接后可能变化。
+- 相同型号的多个设备通常具有相同 `VID:PID`，因此 `VID:PID` 不是每台物理设备唯一的序列号。
+- `lsusb` 找到设备，只能证明枚举层面可见；它不能单独证明驱动正确、当前用户有访问权限或应用可以正常通信。
 
 验证标准：
 
-- 后续能按“应用 → 设备节点 → 内核设备接口 → 操作结果”的顺序解释实验。
+- 能按“连接 → 内核枚举 → `lsusb` 展示 → 继续确认驱动、权限和功能”的顺序解释。
 
-三、检查安全设备节点的类型
+三、确认工具并执行第一次枚举
 
-任务 2：查看三个标准伪设备
+任务 2：检查 `lsusb` 并保留真实结果
 
 执行：
 
 ```bash
-ls -l -- /dev/null /dev/zero /dev/full
+command -v lsusb
+tool_status="$?"
+printf 'lsusb tool status=%s\n' "$tool_status"
 
-stat -c '%n type=%F permissions=%A' \
-  /dev/null /dev/zero /dev/full
+lsusb --version
 
-file -- /dev/null /dev/zero /dev/full
+lsusb
+enumerate_status="$?"
+printf 'lsusb enumerate status=%s\n' "$enumerate_status"
 ```
 
-预期：
+结果判断：
 
-- `ls -l` 的类型字符均为 `c`。
-- `stat` 将三个对象识别为字符特殊文件。
-- `file` 将三个对象识别为 character special。
-- 输出会显示权限以及主、次设备号，但本日不要求记忆数字。
+- `command -v` 输出路径且 `tool_status=0`，表示命令已安装。
+- `lsusb` 输出若干 `Bus ... Device ... ID ...` 行且状态为 `0`，进入“实际枚举路径”。
+- 如果 `lsusb` 返回 `unable to initialize libusb`、权限错误或其他非 0 状态，进入“受限环境路径”。
+- 如果 `tool_status` 非 0，不继续执行后面的实机 USB 查询，也不自行安装软件；保留错误并说明需要教师处理环境。
 
 重点理解：
 
-- 三种工具从不同角度证明这些路径不是普通文件，而是字符设备节点。
-- 节点类型与节点具体行为是两回事，后续需要通过受限实验分别验证。
+- 命令存在只证明工具已安装，不代表当前运行环境允许它访问 USB 枚举信息。
+- 枚举失败是环境证据，不能据此断言电脑没有 USB 设备。
 
 验证标准：
 
-- 保留三组完整输出，并能指出字符设备类型证据。
+- 保留工具路径、版本、`lsusb` 原始输出或原始错误，以及对应状态。
 
-四、验证 /dev/null 的行为
+四、读取 lsusb 列表字段
 
-任务 3：安全写入并读取 `/dev/null`
+任务 3：实际枚举成功时，选择一行识别字段
+
+`lsusb` 的常见行格式：
+
+```text
+Bus 001 Device 004: ID 1234:5678 Vendor Product
+```
+
+字段含义：
+
+- `Bus 001`：当前 USB 总线号。
+- `Device 004`：设备在该总线上的当前设备号。
+- `ID 1234:5678`：`VID:PID`，用于识别厂商和产品型号。
+- 最后的文字：usbutils 数据库提供的厂商或产品描述；可能完整、简略或缺失。
+
+如果任务 2 枚举成功，从你自己的输出中选择一行，并记录：
+
+```text
+选择的完整行：
+Bus：
+Device：
+VID:PID：
+描述：
+```
+
+不要记录 `lsusb -v` 输出，不要寻找或记录序列号。
+
+验证标准：
+
+- 能从一行真实输出中准确指出四类信息。
+- 不把 Bus/Device 编号误认为稳定设备身份。
+
+五、查看 USB 连接层级
+
+任务 4：实际枚举成功时查看树形结果
 
 执行：
 
 ```bash
-printf '%s\n' 'day21 discarded data' > /dev/null
-null_write_status="$?"
-printf 'null write status=%s\n' "$null_write_status"
-
-wc -c < /dev/null
+lsusb -t
+tree_status="$?"
+printf 'lsusb tree status=%s\n' "$tree_status"
 ```
 
-预期：
+常见字段：
 
-- 写入没有错误，`null_write_status=0`。
-- 从 `/dev/null` 读取时立即结束，`wc -c` 输出 `0`。
+- `Bus`、`Port`、`Dev`：当前连接层级和位置。
+- `Class`：设备或接口类别，例如 Hub、Human Interface Device。
+- `Driver`：当前绑定的内核驱动；显示为空或 `(none)` 时，需要后续继续定位。
+- `12M`、`480M`、`5000M` 等：该连接显示的速率。
 
 重点理解：
 
-- `/dev/null` 会丢弃写入的数据。
-- 从 `/dev/null` 读取不会返回原先写入的内容，而是立即得到文件结束。
-- 设备节点的行为不同于保存内容的普通文件。
+- `lsusb` 默认输出偏向“有哪些设备和它们的 ID”。
+- `lsusb -t` 偏向“设备接在哪一层、属于什么类别、绑定什么驱动、显示什么速率”。
+- 树中出现驱动仍不等于应用功能一定正常。
 
 验证标准：
 
-- 保留写入状态和读取字节数 `0`。
+- 保留完整树形输出，并从中选择一项指出其 Class、Driver 和速率。
 
-五、验证 /dev/zero 的有限读取
+六、受限环境替代材料
 
-任务 4：只读取 8 个字节
+任务 5：仅当真实枚举失败时使用教学样例
 
-执行：
+下面内容是教学样例，不是你的电脑实际输出：
+
+```text
+[教学样例：lsusb]
+Bus 001 Device 004: ID 1234:5678 Example Corp. Input Device
+
+[教学样例：lsusb -t]
+/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/8p, 480M
+    |__ Port 003: Dev 004, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+```
+
+根据样例写出：
+
+```text
+样例 Bus：
+样例 Device：
+样例 VID:PID：
+样例设备类别：
+样例驱动：
+样例速率：
+```
+
+记录要求：
+
+- 先粘贴你自己的 `lsusb` 错误和非 0 状态。
+- 再写“以下结论来自教学样例，不是实机枚举结果”。
+- 不得把 `1234:5678` 或 Example Corp. 写成你的真实设备。
+
+验证标准：
+
+- 能正确读取样例字段，同时明确实机枚举仍受环境限制。
+
+七、按 VID:PID 过滤真实设备
+
+任务 6：仅在实际枚举成功时执行
+
+把下面的 `1234:5678` 替换为任务 3 中真实设备的 `VID:PID`，不要照抄示例值：
 
 ```bash
-head -c 8 /dev/zero | od -An -t u1
-zero_status="$?"
-printf 'zero read status=%s\n' "$zero_status"
+usb_id='1234:5678'
+lsusb -d "$usb_id"
+filter_status="$?"
+printf 'selected USB filter status=%s\n' "$filter_status"
 ```
 
-预期：
-
-- `od` 显示 8 个数值为 `0` 的字节。
-- `zero_status=0`。
-
-重点理解：
-
-- `/dev/zero` 可以持续产生零字节，本身没有普通文件式结尾。
-- `head -c 8` 是读取上限，防止命令无限输出。
-- 今天只理解受限读取的整体行为，不要求记忆 `od` 参数。
-
-验证标准：
-
-- 输出恰好表示 8 个零字节，命令正常结束。
-
-六、验证 /dev/full 的设备错误
-
-任务 5：写入始终报告空间不足的伪设备
-
-执行：
+然后验证一个格式正确但预期没有匹配的 ID：
 
 ```bash
-printf '%s\n' 'day21 expected failure' > /dev/full
-full_status="$?"
-printf 'full write status=%s\n' "$full_status"
+lsusb -d 0000:0000
+no_match_status="$?"
+printf 'USB no-match status=%s\n' "$no_match_status"
 ```
 
-预期：
-
-- 写入提示 `No space left on device` 或对应本地化错误。
-- `full_status` 为非 0。
-
-重点理解：
-
-- `/dev/full` 专门用于模拟写入空间不足。
-- 即使权限显示可写，也只代表允许发起写入，不保证设备接受数据。
-- 该错误是设备行为，不是普通磁盘真的被今天的练习写满。
-
-验证标准：
-
-- 保留设备错误和非 0 状态。
-- 能区分权限允许与操作成功。
-
-七、验证设备节点不存在
-
-任务 6：查询明确不存在的练习路径
-
-执行：
+最后验证格式错误：
 
 ```bash
-ls -l -- /dev/day21-missing
-missing_status="$?"
-printf 'missing device status=%s\n' "$missing_status"
+lsusb -d not-an-id
+invalid_id_status="$?"
+printf 'invalid USB ID status=%s\n' "$invalid_id_status"
 ```
 
 预期：
 
-- `ls` 提示路径不存在。
-- `missing_status` 为非 0。
+- 真实 `VID:PID` 过滤后只显示对应型号的已枚举设备，状态为 `0`。
+- `0000:0000` 通常没有匹配输出，状态为非 0；如果你的环境意外出现匹配，保留真实结果并说明。
+- `not-an-id` 会被识别为输入格式错误，显示帮助或错误，状态为非 0。
 
 重点理解：
 
-- 节点不存在时，第一步检查设备路径和名称是否正确。
-- 不存在与存在但权限不足是不同情况。
-- 不要为了消除错误而使用 `mknod` 创建虚假设备节点。
+- “没有匹配设备”表示当前枚举列表中找不到该 `VID:PID`。
+- “格式错误”表示命令无法把输入解析为合法 `VID:PID`。
+- 两者都可能返回非 0，但失败阶段不同。
 
 验证标准：
 
-- 保留不存在错误和非 0 状态。
+- 保留真实匹配、没有匹配和格式错误三项结果及状态。
 
-八、创建设备节点检查脚本
+八、创建 USB 枚举检查脚本
 
-任务 7：为 Robot System Diagnostic Tool 创建项目脚本
+任务 7：创建 `usb_device_check.sh`
 
 执行：
 
 ```bash
 cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
-vim device_node_check.sh
+vim usb_device_check.sh
 ```
 
 在 Vim 中写入下面的完整内容：
@@ -212,259 +243,192 @@ vim device_node_check.sh
 ```bash
 #!/bin/bash
 
-device_path="$1"
+usb_id="$1"
 
-if [[ -z "$device_path" ]]; then
-    printf '%s\n' '[DEVICE CHECK ERROR] device path is required' >&2
+if [[ -z "$usb_id" ]]; then
+    printf '%s\n' '[USB CHECK ERROR] VID:PID is required' >&2
     exit 1
 fi
 
-case "$device_path" in
-    /dev/*)
-        ;;
-    *)
-        printf '[DEVICE CHECK ERROR] path must be under /dev: %s\n' \
-            "$device_path" >&2
-        exit 1
-        ;;
-esac
-
-if [[ ! -e "$device_path" ]]; then
-    printf '[DEVICE CHECK ERROR] device node not found: %s\n' \
-        "$device_path" >&2
+if [[ ! "$usb_id" =~ ^[[:xdigit:]]{4}:[[:xdigit:]]{4}$ ]]; then
+    printf '[USB CHECK ERROR] invalid VID:PID: %s\n' "$usb_id" >&2
     exit 1
 fi
 
-if [[ -c "$device_path" ]]; then
-    device_type='character'
-elif [[ -b "$device_path" ]]; then
-    device_type='block'
-else
-    printf '[DEVICE CHECK ERROR] path is not a device node: %s\n' \
-        "$device_path" >&2
+usb_output="$(lsusb 2>&1)"
+enumerate_status="$?"
+
+if [[ "$enumerate_status" -ne 0 ]]; then
+    printf '%s\n' '[USB CHECK ERROR] USB enumeration failed' >&2
+    printf '%s\n' "$usb_output" >&2
+    exit 2
+fi
+
+match_output="$(printf '%s\n' "$usb_output" | grep -i -F "ID $usb_id ")"
+
+if [[ -z "$match_output" ]]; then
+    printf '[USB CHECK ERROR] no enumerated device matched: %s\n' \
+        "$usb_id" >&2
     exit 1
 fi
 
-readable='no'
-writable='no'
-[[ -r "$device_path" ]] && readable='yes'
-[[ -w "$device_path" ]] && writable='yes'
-
-printf '[DEVICE FOUND] path=%s type=%s readable=%s writable=%s\n' \
-    "$device_path" "$device_type" "$readable" "$writable"
-ls -l -- "$device_path"
+printf '[USB FOUND] VID:PID=%s\n' "$usb_id"
+printf '%s\n' "$match_output"
 ```
 
 保存后执行：
 
 ```bash
-bash -n device_node_check.sh
-chmod u+x device_node_check.sh
-ls -l device_node_check.sh
-cat device_node_check.sh
+bash -n usb_device_check.sh
+chmod u+x usb_device_check.sh
+ls -l usb_device_check.sh
+cat usb_device_check.sh
 ```
 
 脚本整体逻辑：
 
-1. 接收一个设备路径。
-2. 缺少路径或路径不在 `/dev/` 下时输出错误并停止。
-3. 路径不存在时输出 device node not found。
-4. 只接受字符设备或块设备，拒绝目录和普通文件。
-5. 读取当前用户是否具有读写权限。
-6. 输出路径、设备类型、访问权限和 `ls -l` 结果。
-
-重点理解：
-
-- 脚本只查看元数据，不实际读写设备。
-- 找到节点后仍需区分节点类型和当前用户权限。
-- readable/writable 只描述权限检查结果，不保证每次设备操作都会成功。
-- 本日只理解整体检查顺序，不要求掌握 case 或文件测试语法。
+1. 检查是否提供 `VID:PID`。
+2. 检查输入是否为 `四位十六进制:四位十六进制`。
+3. 执行一次 `lsusb`，枚举环境失败时保留原始错误并返回状态 `2`。
+4. 枚举成功后，按 `VID:PID` 查找匹配行。
+5. 找到时输出 `[USB FOUND]`；没有匹配时返回状态 `1`。
 
 验证标准：
 
-- `bash -n` 没有输出，表示没有发现 Shell 语法错误。
-- 权限中 owner 具有 `x`。
-- 文件内容与上面的完整脚本一致。
+- `bash -n` 没有输出。
+- owner 具有执行权限。
+- 脚本内容与上面的完整版本一致。
 
-九、验证脚本正常路径
+九、验证脚本结果分支
 
-任务 8：检查 `/dev/null` 和 `/dev/full`
+任务 8：执行与你当前环境相符的验证
 
-执行：
+所有环境都先验证无效输入：
 
 ```bash
-./device_node_check.sh /dev/null
-null_status="$?"
-printf 'null device check status=%s\n' "$null_status"
+./usb_device_check.sh not-an-id
+invalid_script_status="$?"
+printf 'invalid script input status=%s\n' "$invalid_script_status"
 
-./device_node_check.sh /dev/full
-full_check_status="$?"
-printf 'full device check status=%s\n' "$full_check_status"
+./usb_device_check.sh
+empty_script_status="$?"
+printf 'empty script input status=%s\n' "$empty_script_status"
+```
+
+如果任务 2 的实际枚举成功，再执行：
+
+```bash
+./usb_device_check.sh "$usb_id"
+found_status="$?"
+printf 'USB found status=%s\n' "$found_status"
+
+./usb_device_check.sh 0000:0000
+missing_status="$?"
+printf 'USB missing status=%s\n' "$missing_status"
 ```
 
 预期：
 
-- 两项都输出 `[DEVICE FOUND]`，类型为 `character`。
-- 当前常见环境中 readable 与 writable 均为 `yes`。
-- 两项状态均为 `0`。
+- 真实 `VID:PID` 输出 `[USB FOUND]`，状态为 `0`。
+- 没有匹配的合法 ID 输出 no enumerated device matched，状态为 `1`。
+- 格式错误和空输入均在执行 `lsusb` 前被拒绝，状态为 `1`。
 
-重点理解：
-
-- `/dev/full` 权限检查可以通过，但前面的真实写入仍会失败。
-- 元数据检查与设备操作验证回答的是不同问题。
-
-验证标准：
-
-- 保留两项正常输出和状态 `0`。
-
-十、验证脚本异常路径
-
-任务 9：检查不存在节点、非设备对象、范围外路径和空输入
-
-依次执行：
+如果任务 2 的实际枚举失败，则执行：
 
 ```bash
-./device_node_check.sh /dev/day21-missing
-missing_check_status="$?"
-printf 'missing node check status=%s\n' "$missing_check_status"
-
-./device_node_check.sh /dev/shm
-non_device_status="$?"
-printf 'non-device path status=%s\n' "$non_device_status"
-
-./device_node_check.sh /tmp/day21-file
-outside_status="$?"
-printf 'outside path status=%s\n' "$outside_status"
-
-./device_node_check.sh
-empty_status="$?"
-printf 'empty input status=%s\n' "$empty_status"
+./usb_device_check.sh 0000:0000
+environment_status="$?"
+printf 'USB environment status=%s\n' "$environment_status"
 ```
 
 预期：
 
-- 不存在节点输出 device node not found，状态为 `1`。
-- `/dev/shm` 存在但不是字符或块设备，输出 path is not a device node，状态为 `1`。
-- `/tmp/day21-file` 不在允许范围，输出 path must be under /dev，状态为 `1`。
-- 空输入输出 device path is required，状态为 `1`。
+- 脚本输出 USB enumeration failed 和原始 `lsusb` 错误，状态为 `2`。
+- 这证明脚本没有把“环境无法枚举”误报成“设备没有匹配”。
 
 验证标准：
 
-- 四项异常都返回明确错误和非 0 状态。
-- 脚本没有创建、删除或修改任何文件和设备节点。
+- 无效输入分支正确。
+- 枚举成功环境完成“找到”和“未找到”分支；受限环境完成“枚举失败”分支。
 
-十一、完成后的回归与 Git 范围检查
+十、回归与 Git 范围检查
 
-任务 10：再次检查安全节点和项目状态
+任务 9：确认脚本未被后续测试改坏
 
 执行：
 
 ```bash
-bash -n device_node_check.sh
-./device_node_check.sh /dev/zero
-
-head -c 8 /dev/zero | od -An -t u1
+bash -n usb_device_check.sh
 
 git -C "$HOME/workspace/learn/learn" status --short -- \
-  robot-system-learning/linux/device_node_check.sh
+  robot-system-learning/linux/usb_device_check.sh
 ```
 
 预期：
 
-- 语法仍然正确，`/dev/zero` 被识别为可访问的字符设备。
-- 有限读取仍然得到 8 个零字节。
-- Git 状态只显示 `device_node_check.sh` 为新增文件。
-- 不会生成设备数据、日志、报告或编译产物。
+- Shell 语法检查仍然通过。
+- Git 状态只显示 `usb_device_check.sh` 为新增文件。
+- 今天的操作不会生成 USB 数据文件、日志、报告或编译产物。
 
 验证标准：
 
-- 保留回归输出和目标脚本 Git 状态。
+- 保留语法回归和目标脚本 Git 状态。
 
-十二、机器人系统中的位置
-
-```text
-机器人应用需要访问设备
-          ↓
-先确认 /dev 设备节点存在
-          ↓
-检查节点类型和当前用户权限
-          ↓
-再进行受控的设备功能操作
-          ↓
-根据不存在、权限或设备错误继续定位
-```
-
-重点理解：
-
-- 设备诊断先确认入口是否存在，再看节点类型和权限，最后才验证设备实际行为。
-- 节点存在不代表权限足够，权限足够也不代表设备操作一定成功。
-- 今天只检查标准伪设备；真实机器人硬件必须使用对应的安全流程，不能随意读写。
-
-验证标准：
-
-- 能按节点存在性、节点类型、权限和设备行为说明整体检查顺序。
-
-十三、必须回答的技术问题
+十一、必须回答的技术问题
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. `/dev` 设备节点是什么？应用、设备节点与内核设备接口是什么关系？
-2. 字符设备、块设备和普通文件的整体区别是什么？
-3. 哪些输出证明 `/dev/null`、`/dev/zero` 和 `/dev/full` 是字符设备？
-4. `/dev/null`、`/dev/zero` 和 `/dev/full` 的实验行为分别是什么？
-5. 为什么 `/dev/full` 显示可写，却仍然写入失败？
-6. 设备节点不存在、权限不足和设备操作失败有什么区别？
-7. `device_node_check.sh` 从接收输入到找到设备或报错的整体流程是什么？
+1. USB 枚举是什么？`lsusb` 在这个流程中提供什么证据？
+2. `lsusb` 一行中的 Bus、Device、`VID:PID` 和描述分别表示什么？哪些值可能随重新连接变化？
+3. `lsusb` 与 `lsusb -t` 展示信息的重点有什么不同？
+4. 为什么 `lsusb` 能找到设备，仍不能证明应用一定能使用它？
+5. `usb_device_check.sh` 如何区分输入错误、没有匹配设备和 USB 枚举环境失败？
 
 说明：
 
-- 只回答设备节点、类型、权限、设备行为和脚本整体流程。
-- 不考主次设备号、驱动实现、文件测试参数、伪设备内核实现或脚本语法。
+- 不考 USB 协议细节、类别编号、速率标准、正则表达式或脚本参数拼写。
+- 不要求说明日志用于什么场景。
 - 不要求填写每日总结。
 
-十四、操作与问题记录要求
+十二、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day21 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day22 用户操作输出记录` 标题。请在该标题下记录：
 
-- 三个标准伪设备的 `ls`、`stat` 和 `file` 输出。
-- `/dev/null` 写入与读取结果。
-- `/dev/zero` 的 8 字节有限读取结果。
-- `/dev/full` 的写入错误和非 0 状态。
-- 不存在设备节点的错误和状态。
-- `device_node_check.sh` 内容、语法和权限。
-- 两项脚本正常结果和四项异常结果。
-- `/dev/zero` 回归与目标脚本 Git 状态。
-- 对 7 个技术问题的回答。
+- `lsusb` 路径、版本、首次枚举输出或原始错误，以及状态。
+- 枚举成功时：选中设备的四类字段、`lsusb -t` 输出、真实 ID 过滤、无匹配和格式错误结果。
+- 枚举失败时：明确标注的教学样例字段答案，不冒充实机结果。
+- `usb_device_check.sh` 内容、语法和权限。
+- 与当前环境相符的脚本正常、异常或环境失败结果。
+- 最终语法回归和目标脚本 Git 状态。
+- 对 5 个技术问题的回答。
 
-不要提前修改 Linux README。Day21 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day22 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
-十五、Git 提交要求
+十三、Git 提交要求
 
-- 开始学习前，由 AI 将 Day21 学习安排和 `out.md` 标题提交并推送。
-- Day21 完成、检查并归档后，由 AI 提交学习记录和 `device_node_check.sh`。
+- 开始学习前，由 AI 将 Day22 学习安排和 `out.md` 标题提交并推送。
+- Day22 完成、检查并归档后，由 AI 提交学习记录和 `usb_device_check.sh`。
 - 不使用 `git add .`。
-- 不提交设备数据、完整 `/dev` 列表、真实硬件信息、日志、报告、C++ 编译产物或 `temp.txt`。
+- 不提交 USB 序列号、`lsusb -v` 输出、日志、报告、C++ 编译产物或 `temp.txt`。
 - 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十六、Day21 简短执行计划
+十四、Day22 简短执行计划
 
-1. 理解设备节点关系 → 验证：能说明应用通过节点访问内核设备接口。
-2. 检查安全伪设备 → 验证：三种工具均识别为字符设备。
-3. 验证三种设备行为 → 验证：丢弃、产生零和写入失败符合预期。
-4. 查询不存在节点 → 验证：取得明确错误和非 0 状态。
-5. 创建检查脚本 → 验证：语法、权限和内容正确。
-6. 验证脚本正常与异常 → 验证：安全节点成功，错误输入被拒绝。
-7. 完成回归和记录 → 验证：有限读取未回退，7 题已回答。
+1. 理解枚举流程 → 验证：能说明 `lsusb` 证据的范围。
+2. 执行只读识别 → 验证：取得真实枚举结果，或如实记录环境错误并使用教学样例。
+3. 读取列表与树形字段 → 验证：能区分身份信息和连接层级信息。
+4. 创建检查脚本 → 验证：输入、枚举和匹配三阶段清楚。
+5. 验证结果分支 → 验证：不会混淆无匹配、格式错误和环境失败。
+6. 完成记录 → 验证：目标脚本范围正确，5 题已回答。
 
-十七、Day21 完成标准
+十五、Day22 完成标准
 
-- 理解 `/dev` 设备节点是应用访问内核设备接口的入口。
-- 能区分字符设备、块设备和普通文件的整体概念。
-- 已用三种工具确认标准伪设备的节点类型。
-- 已验证 `/dev/null`、`/dev/zero` 和 `/dev/full` 的不同安全行为。
-- 已理解节点存在、访问权限和设备操作结果是不同证据。
-- `device_node_check.sh` 存在、语法正确且具有 owner 执行权限。
-- 脚本两项正常、四项异常和回归结果符合预期。
-- 全程未枚举或读写真实硬件设备节点。
-- `out.md` 包含完整、真实的操作输出和 7 个技术问题答案。
-- Git 提交不包含设备数据、真实硬件信息、日志、报告、编译程序或 `temp.txt`。
+- 理解 USB 枚举和 `lsusb` 的整体关系。
+- 能读懂 `lsusb` 的 Bus、Device、`VID:PID` 和描述。
+- 能读懂 `lsusb -t` 的层级、Class、Driver 和速率。
+- 已理解设备被枚举不等于驱动、权限和应用功能正常。
+- `usb_device_check.sh` 存在、语法正确且具有 owner 执行权限。
+- 枚举成功时完成找到、未找到和无效输入验证；枚举受限时如实保留错误并完成教学样例和环境失败验证。
+- 全程只读查询，未插拔设备，未修改 USB 权限、驱动或系统配置。
+- `out.md` 包含真实操作输出和 5 个技术问题答案。
+- Git 提交不包含 USB 序列号、详细描述符、日志、报告、编译程序或 `temp.txt`。

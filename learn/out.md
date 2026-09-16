@@ -3203,3 +3203,5 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 → 判断字符设备或块设备
 → 检查当前读写权限
 → 输出节点信息
+
+# Day22 用户操作输出记录
