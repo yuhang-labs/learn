@@ -3038,3 +3038,153 @@ UNCONN ... 127.0.0.1:38081
 7. `socket_listener_check.sh` 从接收输入到找到 socket 或报错的整体流程是什么？脚本先接收协议和端口，检查输入是否完整、端口是否有效；然后根据 TCP 或 UDP 执行对应的 ss 查询。不支持的协议、查询失败或没有匹配 socket 时输出错误；找到匹配 socket 时输出协议、端口和 socket 状态。
 
 # Day21 用户操作输出记录
+seeway@test:~/workspace/learn$ ls -l -- /dev/null /dev/zero /dev/full
+crw-rw-rw- 1 root root 1, 7 Sep 16 09:18 /dev/full
+crw-rw-rw- 1 root root 1, 3 Sep 16 09:18 /dev/null
+crw-rw-rw- 1 root root 1, 5 Sep 16 09:18 /dev/zero
+seeway@test:~/workspace/learn$ stat -c '%n type=%F permissions=%A' \
+  /dev/null /dev/zero /dev/full
+/dev/null type=字符特殊文件 permissions=crw-rw-rw-
+/dev/zero type=字符特殊文件 permissions=crw-rw-rw-
+/dev/full type=字符特殊文件 permissions=crw-rw-rw-
+seeway@test:~/workspace/learn$
+file -- /dev/null /dev/zero /dev/full
+/dev/null: character special (1/3)
+/dev/zero: character special (1/5)
+/dev/full: character special (1/7)
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn$ printf '%s\n' 'day21 discarded data' > /dev/null
+seeway@test:~/workspace/learn$ null_write_status="$?"
+seeway@test:~/workspace/learn$ printf 'null write status=%s\n' "$null_write_status"
+null write status=0
+seeway@test:~/workspace/learn$ wc -c < /dev/null
+0
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn$ head -c 8 /dev/zero | od -An -t u1
+   0   0   0   0   0   0   0   0
+seeway@test:~/workspace/learn$ zero_status="$?"
+seeway@test:~/workspace/learn$ printf 'zero read status=%s\n' "$zero_status"
+zero read status=0
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn$ printf '%s\n' 'day21 expected failure' > /dev/full
+bash: printf: 写入错误：设备上没有空间
+seeway@test:~/workspace/learn$ full_status="$?"
+seeway@test:~/workspace/learn$ printf 'full write status=%s\n' "$full_status"
+full write status=1
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn$ ls -l -- /dev/day21-missing
+ls: 无法访问 '/dev/day21-missing': 没有那个文件或目录
+seeway@test:~/workspace/learn$ missing_status="$?"
+seeway@test:~/workspace/learn$ printf 'missing device status=%s\n' "$missing_status"
+missing device status=2
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn$ cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ vim device_node_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n device_node_check.sh
+chmod u+x device_node_check.sh
+ls -l device_node_check.sh
+cat device_node_check.sh
+-rwxr--r-- 1 seeway l 973 Sep 16 09:39 device_node_check.sh
+#!/bin/bash
+
+device_path="$1"
+
+if [[ -z "$device_path" ]]; then
+    printf '%s\n' '[DEVICE CHECK ERROR] device path is required' >&2
+    exit 1
+fi
+
+case "$device_path" in
+    /dev/*)
+        ;;
+    *)
+        printf '[DEVICE CHECK ERROR] path must be under /dev: %s\n' \
+            "$device_path" >&2
+        exit 1
+        ;;
+esac
+
+if [[ ! -e "$device_path" ]]; then
+    printf '[DEVICE CHECK ERROR] device node not found: %s\n' \
+        "$device_path" >&2
+    exit 1
+fi
+
+if [[ -c "$device_path" ]]; then
+    device_type='character'
+elif [[ -b "$device_path" ]]; then
+    device_type='block'
+else
+    printf '[DEVICE CHECK ERROR] path is not a device node: %s\n' \
+        "$device_path" >&2
+    exit 1
+fi
+
+readable='no'
+writable='no'
+[[ -r "$device_path" ]] && readable='yes'
+[[ -w "$device_path" ]] && writable='yes'
+
+printf '[DEVICE FOUND] path=%s type=%s readable=%s writable=%s\n' \
+    "$device_path" "$device_type" "$readable" "$writable"
+ls -l -- "$device_path"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./device_node_check.sh /dev/null
+[DEVICE FOUND] path=/dev/null type=character readable=yes writable=yes
+crw-rw-rw- 1 root root 1, 3 Sep 16 09:18 /dev/null
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ null_status="$?"
+printf 'null device check status=%s\n' "$null_status"
+null device check status=0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./device_node_check.sh /dev/full
+[DEVICE FOUND] path=/dev/full type=character readable=yes writable=yes
+crw-rw-rw- 1 root root 1, 7 Sep 16 09:18 /dev/full
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ full_check_status="$?"
+printf 'full device check status=%s\n' "$full_check_status"
+full device check status=0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./device_node_check.sh /dev/full
+[DEVICE FOUND] path=/dev/full type=character readable=yes writable=yes
+crw-rw-rw- 1 root root 1, 7 Sep 16 09:18 /dev/full
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ full_check_status="$?"
+printf 'full device check status=%s\n' "$full_check_status"
+full device check status=0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./device_node_check.sh /dev/day21-missing
+[DEVICE CHECK ERROR] device node not found: /dev/day21-missing
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ missing_check_status="$?"
+printf 'missing node check status=%s\n' "$missing_check_status"
+missing node check status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./device_node_check.sh /dev/shm
+[DEVICE CHECK ERROR] path is not a device node: /dev/shm
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ non_device_status="$?"
+printf 'non-device path status=%s\n' "$non_device_status"
+non-device path status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./device_node_check.sh /tmp/day21-file
+[DEVICE CHECK ERROR] path must be under /dev: /tmp/day21-file
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ outside_status="$?"
+printf 'outside path status=%s\n' "$outside_status"
+outside path status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./device_node_check.sh
+[DEVICE CHECK ERROR] device path is required
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ empty_status="$?"
+printf 'empty input status=%s\n' "$empty_status"
+empty input status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n device_node_check.sh
+./device_node_check.sh /dev/zero
+[DEVICE FOUND] path=/dev/zero type=character readable=yes writable=yes
+crw-rw-rw- 1 root root 1, 5 Sep 16 09:18 /dev/zero
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+head -c 8 /dev/zero | od -An -t u1
+   0   0   0   0   0   0   0   0
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/device_node_check.sh
+?? robot-system-learning/linux/device_node_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+1. `/dev` 设备节点是什么？应用、设备节点与内核设备接口是什么关系？
+2. 字符设备、块设备和普通文件的整体区别是什么？
+3. 哪些输出证明 `/dev/null`、`/dev/zero` 和 `/dev/full` 是字符设备？
+4. `/dev/null`、`/dev/zero` 和 `/dev/full` 的实验行为分别是什么？
+5. 为什么 `/dev/full` 显示可写，却仍然写入失败？
+6. 设备节点不存在、权限不足和设备操作失败有什么区别？
+7. `device_node_check.sh` 从接收输入到找到设备或报错的整体流程是什么？
