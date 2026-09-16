@@ -44,6 +44,7 @@
     │   ├── day5_find_logs.sh
     │   ├── day6_log_analyzer.sh
     │   ├── day8_diagnostic_pipeline.sh
+    │   ├── device_node_check.sh
     │   ├── robot_env.sh
     │   ├── demo
     │   │   └── day3

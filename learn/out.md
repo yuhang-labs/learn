@@ -3181,10 +3181,25 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ git -C "$HOME/w
   robot-system-learning/linux/device_node_check.sh
 ?? robot-system-learning/linux/device_node_check.sh
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
-1. `/dev` 设备节点是什么？应用、设备节点与内核设备接口是什么关系？
-2. 字符设备、块设备和普通文件的整体区别是什么？
-3. 哪些输出证明 `/dev/null`、`/dev/zero` 和 `/dev/full` 是字符设备？
-4. `/dev/null`、`/dev/zero` 和 `/dev/full` 的实验行为分别是什么？
-5. 为什么 `/dev/full` 显示可写，却仍然写入失败？
-6. 设备节点不存在、权限不足和设备操作失败有什么区别？
-7. `device_node_check.sh` 从接收输入到找到设备或报错的整体流程是什么？
+1. `/dev` 设备节点是什么？应用、设备节点与内核设备接口是什么关系？应用通过打开、读取或写入 /dev 设备节点发起请求，内核根据节点把请求交给对应的设备接口处理，再把结果或错误返回给应用。
+2. 字符设备、块设备和普通文件的整体区别是什么？字符设备通常按字节流处理；块设备按数据块访问，常用于存储；普通文件的数据由文件系统保存。
+3. 哪些输出证明 `/dev/null`、`/dev/zero` 和 `/dev/full` 是字符设备？三组证据都能证明设备类型：
+- ls -l 开头为 c
+- stat 显示“字符特殊文件”
+- file 显示 character special
+4. `/dev/null`、`/dev/zero` 和 `/dev/full` 的实验行为分别是什么？三个伪设备的行为：
+- /dev/null：写入的数据被丢弃，读取立即结束。
+- /dev/zero：读取时持续返回值为零的字节。
+- /dev/full：写入时固定返回“设备上没有空间”
+5. 为什么 `/dev/full` 显示可写，却仍然写入失败？/dev/full 的“可写”表示当前用户拥有尝试写入的权限，不保证设备接受数据。实际写入由设备规则决定，所以返回失败。
+6. 设备节点不存在、权限不足和设备操作失败有什么区别？三类错误发生在不同阶段：
+- 节点不存在：路径都找不到。
+- 权限不足：节点存在，但当前用户不能访问。
+- 操作失败：节点存在、权限允许，但设备拒绝本次操作。
+7. `device_node_check.sh` 从接收输入到找到设备或报错的整体流程是什么？接收路径
+→ 检查是否为空
+→ 检查是否位于 /dev
+→ 检查对象是否存在
+→ 判断字符设备或块设备
+→ 检查当前读写权限
+→ 输出节点信息
