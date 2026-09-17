@@ -56,6 +56,7 @@
     │   ├── route_ping_check.sh
     │   ├── service_log_collect.sh
     │   ├── socket_listener_check.sh
+    │   ├── usb_device_check.sh
     │   ├── README.md
     │   └── somefile
     └── ros2

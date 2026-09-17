@@ -3205,3 +3205,183 @@ seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 → 输出节点信息
 
 # Day22 用户操作输出记录
+seeway@test:~/workspace/learn/learn$ lsusb
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 001 Device 002: ID 046d:c534 Logitech, Inc. Unifying Receiver
+Bus 001 Device 003: ID 05e3:0608 Genesys Logic, Inc. Hub
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+seeway@test:~/workspace/learn/learn$
+seeway@test:~/workspace/learn/learn$ command -v lsusb
+/usr/bin/lsusb
+seeway@test:~/workspace/learn/learn$
+选择的完整行：Bus 001 Device 002: ID 046d:c534 Logitech, Inc. Unifying Receiver
+Bus：001
+Device：002
+VID:PID：046d:c534
+描述：Logitech, Inc. Unifying Receiver
+这个描述是什么设备啊，我不懂你需要讲解给我
+seeway@test:~/workspace/learn/learn$ lsusb -t
+/:  Bus 02.Port 1: Dev 1, Class=root_hub, Driver=xhci_hcd/4p, 20000M/x2
+/:  Bus 01.Port 1: Dev 1, Class=root_hub, Driver=xhci_hcd/16p, 480M
+    |__ Port 8: Dev 2, If 1, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 8: Dev 2, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 14: Dev 3, If 0, Class=Hub, Driver=hub/4p, 480M
+seeway@test:~/workspace/learn/learn$
+对于下面这一行：
+/:  Bus 02.Port 1: Dev 1, Class=root_hub, Driver=xhci_hcd/4p, 20000M/x2
+class是root_hub，driver是xhci_hcd/4p，速率是 20000M/x2
+seeway@test:~/workspace/learn$ lsusb
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 001 Device 002: ID 046d:c534 Logitech, Inc. Unifying Receiver
+Bus 001 Device 003: ID 05e3:0608 Genesys Logic, Inc. Hub
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+seeway@test:~/workspace/learn$ lsusb -t
+/:  Bus 02.Port 1: Dev 1, Class=root_hub, Driver=xhci_hcd/4p, 20000M/x2
+/:  Bus 01.Port 1: Dev 1, Class=root_hub, Driver=xhci_hcd/16p, 480M
+    |__ Port 8: Dev 2, If 1, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 8: Dev 2, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 14: Dev 3, If 0, Class=Hub, Driver=hub/4p, 480M
+seeway@test:~/workspace/learn$
+样例 Bus：002、001
+样例 Device：001、001、002、003
+样例 VID:PID：1d6b:0003，046d:c534 ，05e3:0608，1d6b:0002
+样例设备类别：root_hub，Human，Hub
+样例驱动：xhci_hcd/4p，xhci_hcd/16p，usbhid
+样例速率：20000M/x2，480M，12M
+seeway@test:~/workspace/learn/learn$ usb_id = '1d6b:0003'
+usb_id：未找到命令
+seeway@test:~/workspace/learn/learn$ usb_id='1d6b:0003'
+seeway@test:~/workspace/learn/learn$ lsusb -d "$usb_id"
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+seeway@test:~/workspace/learn/learn$ filter_status="$?"
+seeway@test:~/workspace/learn/learn$ printf 'selected USB filter status=%s\n' "$filter_status"
+selected USB filter status=0
+seeway@test:~/workspace/learn/learn$ lsusb -d 0000:0000
+seeway@test:~/workspace/learn/learn$ no_match_status="$?"
+seeway@test:~/workspace/learn/learn$ printf 'USB no-match status=%s\n' "$no_match_status"
+USB no-match status=1
+seeway@test:~/workspace/learn/learn$ lsusb -d not-an-id
+Usage: lsusb [options]...
+List USB devices
+  -v, --verbose
+      Increase verbosity (show descriptors)
+  -s [[bus]:][devnum]
+      Show only devices with specified device and/or
+      bus numbers (in decimal)
+  -d vendor:[product]
+      Show only devices with the specified vendor and
+      product ID numbers (in hexadecimal)
+  -D device
+      Selects which device lsusb will examine
+  -t, --tree
+      Dump the physical USB device hierarchy as a tree
+  -V, --version
+      Show version of program
+  -h, --help
+      Show usage and help
+seeway@test:~/workspace/learn/learn$ invalid_id_status="$?"
+printf 'invalid USB ID status=%s\n' "$invalid_id_status"
+invalid USB ID status=1
+seeway@test:~/workspace/learn/learn$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ bash -n usb_device_check.sh
+chmod u+x usb_device_check.sh
+ls -l usb_device_check.sh
+cat usb_device_check.sh
+-rwxr--r-- 1 seeway l 771 Sep 17 15:48 usb_device_check.sh
+#!/bin/bash
+
+usb_id="$1"
+
+if [[ -z "$usb_id" ]]; then
+    printf '%s\n' '[USB CHECK ERROR] VID:PID is required' >&2
+    exit 1
+fi
+
+if [[ ! "$usb_id" =~ ^[[:xdigit:]]{4}:[[:xdigit:]]{4}$ ]]; then
+    printf '[USB CHECK ERROR] invalid VID:PID: %s\n' "$usb_id" >&2
+    exit 1
+fi
+
+usb_output="$(lsusb 2>&1)"
+enumerate_status="$?"
+
+if [[ "$enumerate_status" -ne 0 ]]; then
+    printf '%s\n' '[USB CHECK ERROR] USB enumeration failed' >&2
+    printf '%s\n' "$usb_output" >&2
+    exit 2
+fi
+
+match_output="$(printf '%s\n' "$usb_output" | grep -i -F "ID $usb_id ")"
+
+if [[ -z "$match_output" ]]; then
+    printf '[USB CHECK ERROR] no enumerated device matched: %s\n' \
+        "$usb_id" >&2
+    exit 1
+fi
+
+printf '[USB FOUND] VID:PID=%s\n' "$usb_id"
+printf '%s\n' "$match_output"
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./usb_device_check.sh not-an-id
+invalid_script_status="$?"
+printf 'invalid script input status=%s\n' "$invalid_script_status"
+[USB CHECK ERROR] invalid VID:PID: not-an-id
+invalid script input status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./usb_device_check.sh
+empty_script_status="$?"
+printf 'empty script input status=%s\n' "$empty_script_status"
+[USB CHECK ERROR] VID:PID is required
+empty script input status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./usb_device_check.sh "$usb_id"
+found_status="$?"
+printf 'USB found status=%s\n' "$found_status
+[USB FOUND] VID:PID=1d6b:0003
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+> ^C
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ ./usb_device_check.sh 0000:0000
+missing_status="$?"
+printf 'USB missing status=%s\n' "$missing_status"
+[USB CHECK ERROR] no enumerated device matched: 0000:0000
+USB missing status=1
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+1. USB 枚举是什么？`lsusb` 在这个流程中提供什么证据？“枚举”表示主机已经发现 USB 设备并取得基本身份信息,lsusb信息提供主机发现的usb设备信息
+2. `lsusb` 一行中的 Bus、Device、`VID:PID` 和描述分别表示什么？哪些值可能随重新连接变化？Bus是总线信息、Device是总线下的设备信息，`VID` 是厂商 ID，`PID` 是产品 ID，组合写成四位十六进制数，描述是厂家提供的设备信息。Bus 和 Device 编号重新连接后可能变化；VID:PID 通常标识产品型号，不是每台设备唯一编号。
+3. `lsusb` 与 `lsusb -t` 展示信息的重点有什么不同？`lsusb` 默认输出偏向“有哪些设备和它们的 ID”。`lsusb -t` 偏向“设备接在哪一层、属于什么类别、绑定什么驱动、显示什么速率”。
+4. 为什么 `lsusb` 能找到设备，仍不能证明应用一定能使用它？lsusb 找到设备证明设备已被 USB 枚举；但不能证明驱动、权限和应用通信正常。
+5. `usb_device_check.sh` 如何区分输入错误、没有匹配设备和 USB 枚举环境失败？检查输入参数格式是否是16禁止VID：PID格式，用于区分空、错误参数格式、正确格式。执行lsusb去查看枚举环境是否正确，错误返回状态码2.枚举成功之后查看匹配VID：PID的设备，找到就输出设备信息，找不到返回错误码。空输入/格式错误返回 1；枚举环境失败返回 2；枚举成功但无匹配返回 1；找到设备返回 0。
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ lsusb --version
+lsusb (usbutils) 014
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$ lsusb
+enumerate_status="$?"
+printf 'lsusb enumerate status=%s\n' "$enumerate_status"
+
+lsusb -t
+tree_status="$?"
+printf 'lsusb tree status=%s\n' "$tree_status"
+
+cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
+usb_id='046d:c534'
+./usb_device_check.sh "$usb_id"
+found_status="$?"
+printf 'USB found status=%s\n' "$found_status"
+
+bash -n usb_device_check.sh
+git -C "$HOME/workspace/learn/learn" status --short -- \
+  robot-system-learning/linux/usb_device_check.sh
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 001 Device 002: ID 046d:c534 Logitech, Inc. Unifying Receiver
+Bus 001 Device 003: ID 05e3:0608 Genesys Logic, Inc. Hub
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+lsusb enumerate status=0
+/:  Bus 02.Port 1: Dev 1, Class=root_hub, Driver=xhci_hcd/4p, 20000M/x2
+/:  Bus 01.Port 1: Dev 1, Class=root_hub, Driver=xhci_hcd/16p, 480M
+    |__ Port 8: Dev 2, If 1, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 8: Dev 2, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 14: Dev 3, If 0, Class=Hub, Driver=hub/4p, 480M
+lsusb tree status=0
+[USB FOUND] VID:PID=046d:c534
+Bus 001 Device 002: ID 046d:c534 Logitech, Inc. Unifying Receiver
+USB found status=0
+?? robot-system-learning/linux/usb_device_check.sh
+seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
