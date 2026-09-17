@@ -1,241 +1,209 @@
-Day22 详细学习安排：USB 识别与 lsusb
+Day23 详细学习安排：dmesg 与设备事件
 
 一、今日目标
 
-- 理解 USB 枚举过程，能读懂 `lsusb` 的身份字段和 `lsusb -t` 的连接层级信息。
-- 理解“已被 USB 枚举”不等于驱动、权限和应用功能都正常。
-- 创建 `usb_device_check.sh` 按 `VID:PID` 检查设备，并区分输入错误、没有匹配和枚举环境失败。
+- 理解 `dmesg` 读取内核环形缓冲区，能从相关行中按时间顺序识别设备发现、身份信息和驱动处理。
+- 区分 Day22 的 USB 当前枚举结果与 Day23 的内核事件记录，并理解两者都不能单独证明应用功能正常。
+- 创建 `device_event_check.sh`，安全过滤设备事件，并区分输入错误、没有匹配和内核日志读取受限。
 
 说明：
 
-- Day21 已完成 `/dev` 设备节点学习；今天转入 USB 识别，不重复设备节点读写。
-- Day23 才学习 `dmesg` 与设备事件，今天不读取内核日志。
-- 今天只做只读查询，不插拔设备，不使用 `sudo`，不修改 USB 权限、驱动或系统配置。
-- 不使用 `lsusb -v`，不访问 `/dev/bus/usb`，不记录 USB 序列号。
-- 如果 `lsusb` 因当前环境权限或 libusb 初始化问题失败，保留真实错误，使用本文教学样例学习；禁止把样例写成实机结果。
-- 如果系统没有 `lsusb`，记录 command not found 后停止 USB 实机命令，不自行安装软件。
-- AI 提供完整命令和脚本；你需要亲自执行、观察结果，并理解整体诊断顺序。
-- 不要求背诵 USB 协议、设备类别编号、速率标准或脚本语法。
-- 不要求填写每日总结。
+- Day22 已完成 USB 枚举学习；今天在此基础上查看内核记录的设备事件。
+- Day24 才学习 `/sys` 与 `/proc`，今天不提前读取这些系统接口。
+- 今天不插拔 USB 设备，不使用 `sudo`，不修改 `kernel.dmesg_restrict`、用户组、权限或系统配置。
+- 不保存或提交完整 `dmesg`，只在终端显示最多 20 行经过限制的设备相关结果。
+- 不记录序列号；脚本会排除包含 `SerialNumber` 的行。
+- 如果 `dmesg` 返回“不允许的操作”或 `Operation not permitted`，这是有效的权限边界证据，不表示系统没有设备事件。
+- 权限受限时使用本文明确标注的教学样例，不把样例冒充本机日志。
+- AI 提供完整命令和脚本；你需要亲自执行并理解整体顺序，不要求从空白默写。
+- 不要求背诵时间戳格式、驱动名称、正则表达式或脚本语法。
+- 不要求说明两份日志分别用于什么场景，也不要求填写每日总结。
 - 今天只学习 Linux，不新增 C++、CAN 或 ROS2 内容。
-- 建议用时 45～60 分钟。
+- 建议用时 40～55 分钟。
 - 所有真实输出和技术问题答案写入 `out.md`。
 
-二、理解 USB 枚举与应用使用的关系
+二、理解 dmesg 与设备事件
 
 任务 1：建立整体概念
 
 ```text
-USB 设备连接到主机控制器
-            ↓
-内核枚举设备并读取基本描述信息
-            ↓
-分配当前总线号和设备号，取得 VID:PID
-            ↓
-lsusb 展示当前枚举结果
-            ↓
-驱动、权限和应用功能还需要分别确认
+设备或控制器发生事件
+          ↓
+内核识别并处理事件
+          ↓
+内核把相关消息写入环形缓冲区
+          ↓
+dmesg 读取当前仍保留的内核消息
+          ↓
+按时间顺序检查发现、身份和驱动处理
 ```
 
 重点理解：
 
-- “枚举”表示主机已经发现 USB 设备并取得基本身份信息。
-- `VID` 是厂商 ID，`PID` 是产品 ID，组合写成四位十六进制数，例如 `1234:5678`。
-- Bus 和 Device 是本次连接中由系统分配的位置编号，设备重新连接后可能变化。
-- 相同型号的多个设备通常具有相同 `VID:PID`，因此 `VID:PID` 不是每台物理设备唯一的序列号。
-- `lsusb` 找到设备，只能证明枚举层面可见；它不能单独证明驱动正确、当前用户有访问权限或应用可以正常通信。
+- `dmesg` 是读取内核消息的工具，不是主动检测或修复设备的命令。
+- 内核环形缓冲区容量有限，旧消息可能被新消息覆盖；它不是永久、完整的历史档案。
+- 一组设备事件通常要按前后顺序阅读，不能只凭单独一行判断全过程。
+- 内核记录设备事件，只证明内核在对应时刻观察或处理了某件事，不保证当前设备仍在，也不保证应用功能正常。
+- 普通用户是否能读取内核缓冲区由系统安全策略决定。
 
 验证标准：
 
-- 能按“连接 → 内核枚举 → `lsusb` 展示 → 继续确认驱动、权限和功能”的顺序解释。
+- 能按“设备事件 → 内核处理 → 环形缓冲区 → `dmesg` 读取”的顺序解释。
 
-三、确认工具并执行第一次枚举
+三、确认工具和读取权限
 
-任务 2：检查 `lsusb` 并保留真实结果
+任务 2：只探测一次 `dmesg` 读取结果
 
 执行：
 
 ```bash
-command -v lsusb
+command -v dmesg
 tool_status="$?"
-printf 'lsusb tool status=%s\n' "$tool_status"
+printf 'dmesg tool status=%s\n' "$tool_status"
 
-lsusb --version
+dmesg --version
 
-lsusb
-enumerate_status="$?"
-printf 'lsusb enumerate status=%s\n' "$enumerate_status"
+dmesg_output="$(dmesg --color=never 2>&1)"
+dmesg_status="$?"
+printf 'dmesg read status=%s\n' "$dmesg_status"
+
+if [[ "$dmesg_status" -eq 0 ]]; then
+    printf '%s\n' '[DMESG READ OK] kernel messages are readable'
+else
+    printf '%s\n' "$dmesg_output"
+fi
 ```
 
 结果判断：
 
-- `command -v` 输出路径且 `tool_status=0`，表示命令已安装。
-- `lsusb` 输出若干 `Bus ... Device ... ID ...` 行且状态为 `0`，进入“实际枚举路径”。
-- 如果 `lsusb` 返回 `unable to initialize libusb`、权限错误或其他非 0 状态，进入“受限环境路径”。
-- 如果 `tool_status` 非 0，不继续执行后面的实机 USB 查询，也不自行安装软件；保留错误并说明需要教师处理环境。
+- `tool_status=0` 只表示系统安装了 `dmesg`。
+- `dmesg_status=0` 表示当前用户成功读取内核缓冲区，进入“实际日志路径”。
+- 非 0 状态并显示“不允许的操作”或 `Operation not permitted`，进入“权限受限路径”。
+- 工具存在与日志可读是两个不同条件。
 
-重点理解：
+安全要求：
 
-- 命令存在只证明工具已安装，不代表当前运行环境允许它访问 USB 枚举信息。
-- 枚举失败是环境证据，不能据此断言电脑没有 USB 设备。
-
-验证标准：
-
-- 保留工具路径、版本、`lsusb` 原始输出或原始错误，以及对应状态。
-
-四、读取 lsusb 列表字段
-
-任务 3：实际枚举成功时，选择一行识别字段
-
-`lsusb` 的常见行格式：
-
-```text
-Bus 001 Device 004: ID 1234:5678 Vendor Product
-```
-
-字段含义：
-
-- `Bus 001`：当前 USB 总线号。
-- `Device 004`：设备在该总线上的当前设备号。
-- `ID 1234:5678`：`VID:PID`，用于识别厂商和产品型号。
-- 最后的文字：usbutils 数据库提供的厂商或产品描述；可能完整、简略或缺失。
-
-如果任务 2 枚举成功，从你自己的输出中选择一行，并记录：
-
-```text
-选择的完整行：
-Bus：
-Device：
-VID:PID：
-描述：
-```
-
-不要记录 `lsusb -v` 输出，不要寻找或记录序列号。
+- 不把变量 `dmesg_output` 的全部内容打印或写入仓库。
+- 不使用 `sudo dmesg`，不修改系统安全设置来绕过限制。
 
 验证标准：
 
-- 能从一行真实输出中准确指出四类信息。
-- 不把 Bus/Device 编号误认为稳定设备身份。
+- 保留命令路径、版本、读取状态，以及成功提示或原始权限错误。
 
-五、查看 USB 连接层级
+四、实际日志路径：过滤设备相关事件
 
-任务 4：实际枚举成功时查看树形结果
+任务 3：仅在 `dmesg_status=0` 时执行
 
 执行：
 
 ```bash
-lsusb -t
-tree_status="$?"
-printf 'lsusb tree status=%s\n' "$tree_status"
-```
+device_lines="$(printf '%s\n' "$dmesg_output" |
+  grep -Ei -- 'usb|xhci|hid' |
+  grep -vi -F -- 'SerialNumber' |
+  tail -n 20)"
 
-常见字段：
-
-- `Bus`、`Port`、`Dev`：当前连接层级和位置。
-- `Class`：设备或接口类别，例如 Hub、Human Interface Device。
-- `Driver`：当前绑定的内核驱动；显示为空或 `(none)` 时，需要后续继续定位。
-- `12M`、`480M`、`5000M` 等：该连接显示的速率。
-
-重点理解：
-
-- `lsusb` 默认输出偏向“有哪些设备和它们的 ID”。
-- `lsusb -t` 偏向“设备接在哪一层、属于什么类别、绑定什么驱动、显示什么速率”。
-- 树中出现驱动仍不等于应用功能一定正常。
-
-验证标准：
-
-- 保留完整树形输出，并从中选择一项指出其 Class、Driver 和速率。
-
-六、受限环境替代材料
-
-任务 5：仅当真实枚举失败时使用教学样例
-
-下面内容是教学样例，不是你的电脑实际输出：
-
-```text
-[教学样例：lsusb]
-Bus 001 Device 004: ID 1234:5678 Example Corp. Input Device
-
-[教学样例：lsusb -t]
-/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/8p, 480M
-    |__ Port 003: Dev 004, If 0, Class=Human Interface Device, Driver=usbhid, 12M
-```
-
-根据样例写出：
-
-```text
-样例 Bus：
-样例 Device：
-样例 VID:PID：
-样例设备类别：
-样例驱动：
-样例速率：
+if [[ -n "$device_lines" ]]; then
+    printf '%s\n' "$device_lines"
+else
+    printf '%s\n' '[NO MATCH] no retained USB-related kernel message'
+fi
 ```
 
 记录要求：
 
-- 先粘贴你自己的 `lsusb` 错误和非 0 状态。
-- 再写“以下结论来自教学样例，不是实机枚举结果”。
-- 不得把 `1234:5678` 或 Example Corp. 写成你的真实设备。
+- 最多保留输出的 20 行，不粘贴完整 `dmesg`。
+- 从相邻行中选择一小段，按实际顺序写出内核先后观察到了什么。
+- 如果过滤结果为空，只记录 `[NO MATCH]`，不能据此断言系统从未发生 USB 事件。
+
+常见字段：
+
+- 方括号中的数字通常表示相对本次启动的时间位置。
+- `usb 1-8` 一类内容表示内核使用的 USB 连接路径，不等同于 `lsusb` 的 Bus/Device 稳定身份。
+- `new ... USB device` 表示发现设备事件。
+- `idVendor`、`idProduct` 表示设备报告的厂商和产品 ID。
+- `Product`、`Manufacturer` 是设备提供的描述信息，可能缺失。
+- `xhci_hcd`、`usbhid`、`hid-generic` 等名称表明相应内核组件参与处理。
 
 验证标准：
 
-- 能正确读取样例字段，同时明确实机枚举仍受环境限制。
+- 只保留受限结果，并能按输出实际顺序说明至少两个连续步骤。
 
-七、按 VID:PID 过滤真实设备
+五、权限受限路径：读取教学事件序列
 
-任务 6：仅在实际枚举成功时执行
+任务 4：仅在 `dmesg_status` 非 0 时使用
 
-把下面的 `1234:5678` 替换为任务 3 中真实设备的 `VID:PID`，不要照抄示例值：
+下面是教学样例，不是你的电脑实际日志：
 
-```bash
-usb_id='1234:5678'
-lsusb -d "$usb_id"
-filter_status="$?"
-printf 'selected USB filter status=%s\n' "$filter_status"
+```text
+[教学样例，非本机日志]
+[    1.100000] usb 1-4: new full-speed USB device number 2 using xhci_hcd
+[    1.240000] usb 1-4: New USB device found, idVendor=1234, idProduct=5678
+[    1.250000] usb 1-4: Product: Example Input Device
+[    1.300000] hid-generic 0003:1234:5678.0001: input,hidraw0: USB HID v1.11 Device
 ```
 
-然后验证一个格式正确但预期没有匹配的 ID：
+按顺序填写：
 
-```bash
-lsusb -d 0000:0000
-no_match_status="$?"
-printf 'USB no-match status=%s\n' "$no_match_status"
+```text
+第 1 步：
+第 2 步：
+第 3 步：
+第 4 步：
+连接路径：
+VID:PID：
+参与处理的内核组件：
 ```
 
-最后验证格式错误：
+正确的整体顺序应包含：
 
-```bash
-lsusb -d not-an-id
-invalid_id_status="$?"
-printf 'invalid USB ID status=%s\n' "$invalid_id_status"
+1. 主机控制器发现一个新 USB 设备。
+2. 内核取得 `idVendor=1234` 和 `idProduct=5678`。
+3. 内核取得产品描述 Example Input Device。
+4. HID 相关组件继续处理该设备接口。
+
+记录要求：
+
+- 先保留你自己的权限错误和状态。
+- 明确写出“以下分析来自教学样例，不是本机日志”。
+- 不把样例 ID、路径或设备名称写成自己的真实设备信息。
+
+验证标准：
+
+- 能按时间顺序读出教学事件，同时保留本机实际读取受限的结论。
+
+六、连接 Day22 与 Day23 的证据
+
+任务 5：理解当前快照与事件过程
+
+```text
+Day22：lsusb
+当前查询时刻有哪些 USB 设备被枚举
+
+Day23：dmesg
+当前缓冲区仍保留了哪些内核事件消息
 ```
-
-预期：
-
-- 真实 `VID:PID` 过滤后只显示对应型号的已枚举设备，状态为 `0`。
-- `0000:0000` 通常没有匹配输出，状态为非 0；如果你的环境意外出现匹配，保留真实结果并说明。
-- `not-an-id` 会被识别为输入格式错误，显示帮助或错误，状态为非 0。
 
 重点理解：
 
-- “没有匹配设备”表示当前枚举列表中找不到该 `VID:PID`。
-- “格式错误”表示命令无法把输入解析为合法 `VID:PID`。
-- 两者都可能返回非 0，但失败阶段不同。
+- `lsusb` 是当前枚举结果的快照，Bus 和 Device 反映查询时的分配结果。
+- `dmesg` 中相邻消息可以展示内核处理事件的先后过程，但旧消息可能已被覆盖，也可能因权限无法读取。
+- `lsusb` 当前找到设备，不保证对应的早期事件仍留在缓冲区。
+- `dmesg` 中曾出现设备，也不保证设备当前仍连接。
+- 两种证据都不能代替应用层的真实通信验证。
 
 验证标准：
 
-- 保留真实匹配、没有匹配和格式错误三项结果及状态。
+- 后续回答能准确说明快照、事件顺序以及各自的证据边界。
 
-八、创建 USB 枚举检查脚本
+七、创建设备事件检查脚本
 
-任务 7：创建 `usb_device_check.sh`
+任务 6：创建 `device_event_check.sh`
 
 执行：
 
 ```bash
 cd "$HOME/workspace/learn/learn/robot-system-learning/linux"
-vim usb_device_check.sh
+vim device_event_check.sh
 ```
 
 在 Vim 中写入下面的完整内容：
@@ -243,55 +211,63 @@ vim usb_device_check.sh
 ```bash
 #!/bin/bash
 
-usb_id="$1"
+keyword="$1"
 
-if [[ -z "$usb_id" ]]; then
-    printf '%s\n' '[USB CHECK ERROR] VID:PID is required' >&2
+if [[ -z "$keyword" ]]; then
+    printf '%s\n' '[DEVICE EVENT ERROR] keyword is required' >&2
     exit 1
 fi
 
-if [[ ! "$usb_id" =~ ^[[:xdigit:]]{4}:[[:xdigit:]]{4}$ ]]; then
-    printf '[USB CHECK ERROR] invalid VID:PID: %s\n' "$usb_id" >&2
-    exit 1
-fi
+case "$keyword" in
+    usb|xhci|hid|day23-no-match)
+        ;;
+    *)
+        printf '[DEVICE EVENT ERROR] unsupported keyword: %s\n' \
+            "$keyword" >&2
+        exit 1
+        ;;
+esac
 
-usb_output="$(lsusb 2>&1)"
-enumerate_status="$?"
+kernel_output="$(dmesg --color=never 2>&1)"
+dmesg_status="$?"
 
-if [[ "$enumerate_status" -ne 0 ]]; then
-    printf '%s\n' '[USB CHECK ERROR] USB enumeration failed' >&2
-    printf '%s\n' "$usb_output" >&2
+if [[ "$dmesg_status" -ne 0 ]]; then
+    printf '%s\n' '[DEVICE EVENT ERROR] kernel messages are not readable' >&2
+    printf '%s\n' "$kernel_output" >&2
     exit 2
 fi
 
-match_output="$(printf '%s\n' "$usb_output" | grep -i -F "ID $usb_id ")"
+match_output="$(printf '%s\n' "$kernel_output" |
+  grep -i -F -- "$keyword" |
+  grep -vi -F -- 'SerialNumber' |
+  tail -n 20)"
 
 if [[ -z "$match_output" ]]; then
-    printf '[USB CHECK ERROR] no enumerated device matched: %s\n' \
-        "$usb_id" >&2
+    printf '[DEVICE EVENT ERROR] no retained event matched: %s\n' \
+        "$keyword" >&2
     exit 1
 fi
 
-printf '[USB FOUND] VID:PID=%s\n' "$usb_id"
+printf '[DEVICE EVENT FOUND] keyword=%s\n' "$keyword"
 printf '%s\n' "$match_output"
 ```
 
 保存后执行：
 
 ```bash
-bash -n usb_device_check.sh
-chmod u+x usb_device_check.sh
-ls -l usb_device_check.sh
-cat usb_device_check.sh
+bash -n device_event_check.sh
+chmod u+x device_event_check.sh
+ls -l device_event_check.sh
+cat device_event_check.sh
 ```
 
 脚本整体逻辑：
 
-1. 检查是否提供 `VID:PID`。
-2. 检查输入是否为 `四位十六进制:四位十六进制`。
-3. 执行一次 `lsusb`，枚举环境失败时保留原始错误并返回状态 `2`。
-4. 枚举成功后，按 `VID:PID` 查找匹配行。
-5. 找到时输出 `[USB FOUND]`；没有匹配时返回状态 `1`。
+1. 拒绝空输入和不支持的关键词。
+2. 读取一次内核环形缓冲区。
+3. 读取受限时保留原始错误并返回状态 `2`。
+4. 读取成功后只过滤允许的关键词，排除 `SerialNumber`，最多输出 20 行。
+5. 有匹配返回 `0`，没有保留匹配事件返回 `1`。
 
 验证标准：
 
@@ -299,76 +275,88 @@ cat usb_device_check.sh
 - owner 具有执行权限。
 - 脚本内容与上面的完整版本一致。
 
-九、验证脚本结果分支
+八、验证脚本输入分支
 
-任务 8：执行与你当前环境相符的验证
-
-所有环境都先验证无效输入：
+任务 7：所有环境都执行
 
 ```bash
-./usb_device_check.sh not-an-id
-invalid_script_status="$?"
-printf 'invalid script input status=%s\n' "$invalid_script_status"
+./device_event_check.sh
+empty_status="$?"
+printf 'empty keyword status=%s\n' "$empty_status"
 
-./usb_device_check.sh
-empty_script_status="$?"
-printf 'empty script input status=%s\n' "$empty_script_status"
-```
-
-如果任务 2 的实际枚举成功，再执行：
-
-```bash
-./usb_device_check.sh "$usb_id"
-found_status="$?"
-printf 'USB found status=%s\n' "$found_status"
-
-./usb_device_check.sh 0000:0000
-missing_status="$?"
-printf 'USB missing status=%s\n' "$missing_status"
+./device_event_check.sh network
+unsupported_status="$?"
+printf 'unsupported keyword status=%s\n' "$unsupported_status"
 ```
 
 预期：
 
-- 真实 `VID:PID` 输出 `[USB FOUND]`，状态为 `0`。
-- 没有匹配的合法 ID 输出 no enumerated device matched，状态为 `1`。
-- 格式错误和空输入均在执行 `lsusb` 前被拒绝，状态为 `1`。
-
-如果任务 2 的实际枚举失败，则执行：
-
-```bash
-./usb_device_check.sh 0000:0000
-environment_status="$?"
-printf 'USB environment status=%s\n' "$environment_status"
-```
-
-预期：
-
-- 脚本输出 USB enumeration failed 和原始 `lsusb` 错误，状态为 `2`。
-- 这证明脚本没有把“环境无法枚举”误报成“设备没有匹配”。
+- 空输入输出 keyword is required，状态为 `1`。
+- `network` 不在允许范围，输出 unsupported keyword，状态为 `1`。
+- 两项都在读取 `dmesg` 前停止。
 
 验证标准：
 
-- 无效输入分支正确。
-- 枚举成功环境完成“找到”和“未找到”分支；受限环境完成“枚举失败”分支。
+- 保留两项错误和状态 `1`。
+
+九、验证与当前权限相符的脚本分支
+
+任务 8：根据任务 2 的读取状态选择一条路径
+
+如果 `dmesg_status=0`，执行：
+
+```bash
+./device_event_check.sh usb
+usb_event_status="$?"
+printf 'USB event status=%s\n' "$usb_event_status"
+
+./device_event_check.sh day23-no-match
+no_match_status="$?"
+printf 'event no-match status=%s\n' "$no_match_status"
+```
+
+预期：
+
+- 当前缓冲区保留 USB 消息时，第一项输出 `[DEVICE EVENT FOUND]` 和最多 20 行，状态为 `0`。
+- `day23-no-match` 输出 no retained event matched，状态为 `1`。
+- 如果第一项没有匹配，也可能返回 `1`；这只表示当前缓冲区没有保留匹配消息。
+
+如果 `dmesg_status` 非 0，执行：
+
+```bash
+./device_event_check.sh usb
+environment_status="$?"
+printf 'dmesg environment status=%s\n' "$environment_status"
+```
+
+预期：
+
+- 输出 kernel messages are not readable 和原始权限错误。
+- `environment_status=2`。
+- 脚本没有把权限受限误报成没有匹配事件。
+
+验证标准：
+
+- 输入错误与环境错误被区分；读取成功环境再区分有匹配和无匹配。
 
 十、回归与 Git 范围检查
 
-任务 9：确认脚本未被后续测试改坏
+任务 9：确认脚本未被测试改坏
 
 执行：
 
 ```bash
-bash -n usb_device_check.sh
+bash -n device_event_check.sh
 
 git -C "$HOME/workspace/learn/learn" status --short -- \
-  robot-system-learning/linux/usb_device_check.sh
+  robot-system-learning/linux/device_event_check.sh
 ```
 
 预期：
 
 - Shell 语法检查仍然通过。
-- Git 状态只显示 `usb_device_check.sh` 为新增文件。
-- 今天的操作不会生成 USB 数据文件、日志、报告或编译产物。
+- Git 状态只显示 `device_event_check.sh` 为新增文件。
+- 没有生成或提交完整内核日志、报告或临时数据文件。
 
 验证标准：
 
@@ -378,57 +366,54 @@ git -C "$HOME/workspace/learn/learn" status --short -- \
 
 把答案写入 `out.md`，只回答整体逻辑：
 
-1. USB 枚举是什么？`lsusb` 在这个流程中提供什么证据？
-2. `lsusb` 一行中的 Bus、Device、`VID:PID` 和描述分别表示什么？哪些值可能随重新连接变化？
-3. `lsusb` 与 `lsusb -t` 展示信息的重点有什么不同？
-4. 为什么 `lsusb` 能找到设备，仍不能证明应用一定能使用它？
-5. `usb_device_check.sh` 如何区分输入错误、没有匹配设备和 USB 枚举环境失败？
+1. `dmesg` 读取的是什么？为什么其中的消息不一定是永久、完整的历史记录？
+2. 在实际过滤结果或教学样例中，设备事件按什么顺序发生？哪些字段提供了设备身份或驱动处理证据？
+3. `lsusb` 的当前枚举结果与 `dmesg` 的设备事件消息有什么区别？为什么二者都不能证明应用功能正常？
+4. `device_event_check.sh` 如何区分输入错误、没有匹配事件和内核消息读取受限？
 
 说明：
 
-- 不考 USB 协议细节、类别编号、速率标准、正则表达式或脚本参数拼写。
-- 不要求说明日志用于什么场景。
+- 不考时间戳换算、驱动内部实现、内核配置参数、grep 参数或脚本语法。
+- 不要求说明两份日志分别用于什么场景。
 - 不要求填写每日总结。
 
 十二、操作与问题记录要求
 
-AI 已在 `out.md` 中创建 `# Day22 用户操作输出记录` 标题。请在该标题下记录：
+AI 已在 `out.md` 中创建 `# Day23 用户操作输出记录` 标题。请在该标题下记录：
 
-- `lsusb` 路径、版本、首次枚举输出或原始错误，以及状态。
-- 枚举成功时：选中设备的四类字段、`lsusb -t` 输出、真实 ID 过滤、无匹配和格式错误结果。
-- 枚举失败时：明确标注的教学样例字段答案，不冒充实机结果。
-- `usb_device_check.sh` 内容、语法和权限。
-- 与当前环境相符的脚本正常、异常或环境失败结果。
+- `dmesg` 路径、版本、读取状态，以及成功提示或原始权限错误。
+- 读取成功时：最多 20 行过滤结果和一段按顺序说明的设备事件。
+- 读取受限时：明确标注的教学样例答案，不冒充本机日志。
+- `device_event_check.sh` 内容、语法和权限。
+- 空输入、不支持关键词，以及与当前权限相符的脚本结果。
 - 最终语法回归和目标脚本 Git 状态。
-- 对 5 个技术问题的回答。
+- 对 4 个技术问题的回答。
 
-不要提前修改 Linux README。Day22 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
+不要提前修改 Linux README。Day23 完成并通过检查后，再由 AI 按《学习问题记录模板.md》归档。
 
 十三、Git 提交要求
 
-- 开始学习前，由 AI 将 Day22 学习安排和 `out.md` 标题提交并推送。
-- Day22 完成、检查并归档后，由 AI 提交学习记录和 `usb_device_check.sh`。
+- 开始学习前，由 AI 将 Day23 学习安排和 `out.md` 标题提交并推送。
+- Day23 完成、检查并归档后，由 AI 提交学习记录和 `device_event_check.sh`。
 - 不使用 `git add .`。
-- 不提交 USB 序列号、`lsusb -v` 输出、日志、报告、C++ 编译产物或 `temp.txt`。
+- 不提交完整 `dmesg`、USB 序列号、日志文件、报告、C++ 编译产物或 `temp.txt`。
 - 学习安排、两个模板、`AGENTS.md` 和 `out.md` 必须继续由 Git 管理。
 
-十四、Day22 简短执行计划
+十四、Day23 简短执行计划
 
-1. 理解枚举流程 → 验证：能说明 `lsusb` 证据的范围。
-2. 执行只读识别 → 验证：取得真实枚举结果，或如实记录环境错误并使用教学样例。
-3. 读取列表与树形字段 → 验证：能区分身份信息和连接层级信息。
-4. 创建检查脚本 → 验证：输入、枚举和匹配三阶段清楚。
-5. 验证结果分支 → 验证：不会混淆无匹配、格式错误和环境失败。
-6. 完成记录 → 验证：目标脚本范围正确，5 题已回答。
+1. 理解内核事件记录 → 验证：能说明设备事件、环形缓冲区和 `dmesg` 的关系。
+2. 探测读取权限 → 验证：读取成功时只过滤相关行，受限时如实保留错误并分析教学样例。
+3. 创建检查脚本 → 验证：输入、读取环境和匹配结果三个阶段清楚。
+4. 验证结果分支 → 验证：不会混淆无匹配与权限受限。
+5. 完成记录 → 验证：目标脚本范围正确，4 题已回答。
 
-十五、Day22 完成标准
+十五、Day23 完成标准
 
-- 理解 USB 枚举和 `lsusb` 的整体关系。
-- 能读懂 `lsusb` 的 Bus、Device、`VID:PID` 和描述。
-- 能读懂 `lsusb -t` 的层级、Class、Driver 和速率。
-- 已理解设备被枚举不等于驱动、权限和应用功能正常。
-- `usb_device_check.sh` 存在、语法正确且具有 owner 执行权限。
-- 枚举成功时完成找到、未找到和无效输入验证；枚举受限时如实保留错误并完成教学样例和环境失败验证。
-- 全程只读查询，未插拔设备，未修改 USB 权限、驱动或系统配置。
-- `out.md` 包含真实操作输出和 5 个技术问题答案。
-- Git 提交不包含 USB 序列号、详细描述符、日志、报告、编译程序或 `temp.txt`。
+- 理解 `dmesg` 读取内核环形缓冲区，消息可能被覆盖或因权限无法读取。
+- 能从实际过滤结果或教学样例中按顺序识别设备发现、身份信息和驱动处理。
+- 已理解 `lsusb` 当前快照与 `dmesg` 事件消息的差别和证据边界。
+- `device_event_check.sh` 存在、语法正确且具有 owner 执行权限。
+- 输入错误验证正确；读取成功时完成匹配与无匹配验证，读取受限时取得明确环境错误和状态 `2`。
+- 全程未使用 `sudo`，未修改内核日志权限或系统安全设置。
+- `out.md` 包含真实操作输出和 4 个技术问题答案。
+- Git 提交不包含完整内核日志、序列号、日志文件、报告、编译程序或 `temp.txt`。

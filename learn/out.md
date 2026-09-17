@@ -3385,3 +3385,5 @@ Bus 001 Device 002: ID 046d:c534 Logitech, Inc. Unifying Receiver
 USB found status=0
 ?? robot-system-learning/linux/usb_device_check.sh
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
+
+# Day23 用户操作输出记录
