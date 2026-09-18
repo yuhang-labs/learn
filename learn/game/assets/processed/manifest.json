@@ -1,0 +1,238 @@
+{
+  "source": "ChatGPT Image 2026年9月18日 14_01_47.png",
+  "sourceSha256": "cd2baff61983f5db900a7dc30bed2d1a4a63547545e95460a92f00e3c36cedb8",
+  "frameSize": [
+    128,
+    128
+  ],
+  "frameAnchor": [
+    64,
+    112
+  ],
+  "maps": {
+    "world-map": {
+      "file": "world-map.png",
+      "crop": [
+        0,
+        0,
+        1536,
+        499
+      ],
+      "size": [
+        1536,
+        499
+      ],
+      "source": "daqin-reference-sheet.png",
+      "sourceSha256": "e5ab3e0112bcc3cef514306adac45fb23f8afbc63088d46902746c3bc70e3c8f"
+    },
+    "city-scene": {
+      "file": "city-scene.png",
+      "crop": [
+        0,
+        500,
+        975,
+        1024
+      ],
+      "size": [
+        975,
+        524
+      ],
+      "source": "daqin-reference-sheet.png",
+      "sourceSha256": "e5ab3e0112bcc3cef514306adac45fb23f8afbc63088d46902746c3bc70e3c8f"
+    }
+  },
+  "troops": {
+    "cavalry": {
+      "idle": {
+        "sheet": "troops/cavalry/idle.png",
+        "frames": 8,
+        "sourceCrop": [
+          56,
+          551,
+          516,
+          627
+        ],
+        "loop": true,
+        "suggestedFps": 6
+      },
+      "move": {
+        "sheet": "troops/cavalry/move.png",
+        "frames": 8,
+        "sourceCrop": [
+          56,
+          637,
+          516,
+          719
+        ],
+        "loop": true,
+        "suggestedFps": 6
+      },
+      "attack": {
+        "sheet": "troops/cavalry/attack.png",
+        "frames": 7,
+        "sourceCrop": [
+          56,
+          730,
+          516,
+          816
+        ],
+        "loop": false,
+        "suggestedFps": 6
+      },
+      "death": {
+        "sheet": "troops/cavalry/death.png",
+        "frames": 6,
+        "sourceCrop": [
+          56,
+          846,
+          516,
+          898
+        ],
+        "loop": false,
+        "suggestedFps": 4
+      },
+      "poses": {
+        "sheet": "troops/cavalry/poses.png",
+        "frames": 8,
+        "sourceCrop": [
+          56,
+          918,
+          516,
+          985
+        ],
+        "loop": false,
+        "suggestedFps": 6
+      }
+    },
+    "archer": {
+      "idle": {
+        "sheet": "troops/archer/idle.png",
+        "frames": 8,
+        "sourceCrop": [
+          593,
+          551,
+          1005,
+          627
+        ],
+        "loop": true,
+        "suggestedFps": 6
+      },
+      "move": {
+        "sheet": "troops/archer/move.png",
+        "frames": 8,
+        "sourceCrop": [
+          593,
+          637,
+          1005,
+          719
+        ],
+        "loop": true,
+        "suggestedFps": 6
+      },
+      "attack": {
+        "sheet": "troops/archer/attack.png",
+        "frames": 8,
+        "sourceCrop": [
+          593,
+          730,
+          1005,
+          816
+        ],
+        "loop": false,
+        "suggestedFps": 6
+      },
+      "death": {
+        "sheet": "troops/archer/death.png",
+        "frames": 5,
+        "sourceCrop": [
+          593,
+          846,
+          1005,
+          898
+        ],
+        "loop": false,
+        "suggestedFps": 4
+      },
+      "poses": {
+        "sheet": "troops/archer/poses.png",
+        "frames": 6,
+        "sourceCrop": [
+          593,
+          918,
+          1005,
+          985
+        ],
+        "loop": false,
+        "suggestedFps": 6
+      }
+    },
+    "spearman": {
+      "idle": {
+        "sheet": "troops/spearman/idle.png",
+        "frames": 9,
+        "sourceCrop": [
+          1075,
+          551,
+          1524,
+          627
+        ],
+        "loop": true,
+        "suggestedFps": 6
+      },
+      "move": {
+        "sheet": "troops/spearman/move.png",
+        "frames": 9,
+        "sourceCrop": [
+          1075,
+          637,
+          1524,
+          719
+        ],
+        "loop": true,
+        "suggestedFps": 6
+      },
+      "attack": {
+        "sheet": "troops/spearman/attack.png",
+        "frames": 6,
+        "sourceCrop": [
+          1075,
+          730,
+          1524,
+          816
+        ],
+        "loop": false,
+        "suggestedFps": 6
+      },
+      "death": {
+        "sheet": "troops/spearman/death.png",
+        "frames": 6,
+        "sourceCrop": [
+          1075,
+          846,
+          1524,
+          898
+        ],
+        "loop": false,
+        "suggestedFps": 4
+      },
+      "poses": {
+        "sheet": "troops/spearman/poses.png",
+        "frames": 8,
+        "sourceCrop": [
+          1075,
+          918,
+          1524,
+          985
+        ],
+        "loop": false,
+        "suggestedFps": 6
+      }
+    }
+  },
+  "notes": [
+    "Native-resolution crops; not 4096x2048 or 2048x2048.",
+    "Background keying can soften pale weapon/armour edges.",
+    "Rows are supplied pose samples; action timing/directional continuity is not guaranteed.",
+    "City buildings are baked into the scene; no separate occlusion or collision masks."
+  ]
+}

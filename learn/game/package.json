@@ -1,0 +1,5 @@
+{
+  "name": "daqin-world-conquest", "version": "4.0.0", "private": true,
+  "scripts": {"start": "node server.js", "test": "node --test engine.test.js rules.test.js server.test.js"},
+  "dependencies": {"ws": "^8.18.3"}, "engines": {"node": ">=18"}
+}

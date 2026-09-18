@@ -5,6 +5,7 @@
 - out.md存放用户根据《当前学习任务安排.txt》实际操作输出的内容
 - 当前学习任务安排.txt 存放用户当前学习内容
 - 学习任务模板.md存放学习任务的模板
+- game/ 存放《大秦·天下归一》古代世界征服小游戏，独立于学习日记录
 - AGENTS.md文件的优先级最高，必须优先遵守
 
 ## 项目文件树
@@ -18,6 +19,43 @@
 ├── 学习问题记录模板.md
 ├── AGENTS.md
 ├── out.md
+├── game
+│   ├── assets
+│   │   ├── daqin-reference-sheet.png
+│   │   ├── ChatGPT Image 2026年9月18日 14_01_47.png
+│   │   └── processed
+│   │       ├── README.md
+│   │       ├── manifest.json
+│   │       ├── world-map.png
+│   │       ├── city-scene.png
+│   │       ├── troop-preview.jpg
+│   │       └── troops
+│   │           ├── cavalry（图集与编号单帧）
+│   │           ├── archer（图集与编号单帧）
+│   │           └── spearman（图集与编号单帧）
+│   ├── tools
+│   │   ├── prepare_assets.py
+│   │   ├── browser_check.cjs
+│   │   ├── browser_edges.cjs
+│   │   ├── browser_display.cjs
+│   │   ├── stress.cjs
+│   │   └── browser_stress.cjs
+│   ├── index.html
+│   ├── style.css
+│   ├── app.js
+│   ├── engine.js
+│   ├── tactical.js
+│   ├── navigation.js
+│   ├── assets.js
+│   ├── server.js
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── engine.test.js
+│   ├── rules.test.js
+│   ├── server.test.js
+│   ├── DEVELOPMENT.md
+│   ├── ACCEPTANCE.md
+│   └── README.md
 └── robot-system-learning
     ├── can
     │   └── README.md
