@@ -44,6 +44,18 @@
     const f=s.factions[owner];if(f.gold<32||f.food<24)return '招兵需要 32 金、24 粮';
     f.gold-=32;f.food-=24;c.troops[type]+=20;log(s,`${c.name}征募${TYPES[type]}20人（32金、24粮）`);c.recruitAt=s.time+12/c.barracks;return null;
   }
+  function recruitAll(s,type,owner=s.player){
+    if(s.ended||![0,1,2].includes(type))return '请选择有效兵种';
+    const cities=s.cities.filter(c=>c.owner===owner).sort((a,b)=>a.id-b.id),f=s.factions[owner];let recruited=0;
+    for(const c of cities){
+      if(fighting(s,c.id)||c.recruitAt>s.time)continue;
+      if(f.gold<32||f.food<24)break;
+      if(!recruit(s,c.id,type,owner))recruited++;
+    }
+    if(recruited)return null;
+    if(f.gold<32||f.food<24)return '招兵需要 32 金、24 粮';
+    return '没有兵营就绪且未交战的己方城市';
+  }
   function guard(s,id,hid,owner=s.player){
     const c=s.cities[id],h=s.heroes[hid];if(s.ended||!c||c.owner!==owner||!ready(s,h)||h.owner!==owner||h.city!==id)return '将领须在本城且已结束休养';
     if(fighting(s,id))return '交战期间不能更换守将';c.guard=hid;if(owner===s.player)s.tutorial.guard=true;return null;
@@ -230,6 +242,7 @@
     switch(c.type){
       case 'build':error=build(s,c.city,c.key,actor);break;
       case 'recruit':error=recruit(s,c.city,c.troop,actor);break;
+      case 'recruitAll':error=recruitAll(s,c.troop,actor);break;
       case 'guard':error=guard(s,c.city,c.hero,actor);break;
       case 'formation':error=formation(s,c.city,c.value,actor);break;
       case 'dispatch':{
@@ -250,6 +263,6 @@
     for(const id of seen){const side=fieldSide(s,id,o);if(side<0)continue;const units=fieldUnits(s,id),index=new Nav.Index(units),b=s.battles.find(b=>b.city===id),a=b&&s.armies.find(a=>a.id===b.army);view.fields[id]={side,round:b?.round||0,units:units.filter(u=>Field.visible(units,side,u,index)).map(u=>{const v={id:u.id,side:u.side,owner:u.side===1?s.cities[id].owner:a?.owner,type:u.type,count:u.count,x:u.x,y:u.y,moving:!!u.moving,attacking:!!u.attacking};if(u.side===side){v.order=u.order;v.goal=u.goal;v.target=u.target;}return v;})};}
     return JSON.parse(JSON.stringify(view));
   }
-  const api={SAVE_VERSION,F,NAMES,POS,ROADS,TYPES,BUILD,total,adjacent,income,create,buildCost,build,recruit,guard,formation,foodCost,send,tick,step,serialize,restore,ready,power,ai,fieldUnits,fieldSide,fieldOrder,fieldVisible,worldVisible,applyCommand,projectState,eliminate};
+  const api={SAVE_VERSION,F,NAMES,POS,ROADS,TYPES,BUILD,total,adjacent,income,create,buildCost,build,recruit,recruitAll,guard,formation,foodCost,send,tick,step,serialize,restore,ready,power,ai,fieldUnits,fieldSide,fieldOrder,fieldVisible,worldVisible,applyCommand,projectState,eliminate};
   if(typeof module!=='undefined')module.exports=api;root.Daqin=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

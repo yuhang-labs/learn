@@ -38,6 +38,7 @@
 │   │   ├── browser_check.cjs
 │   │   ├── browser_edges.cjs
 │   │   ├── browser_display.cjs
+│   │   ├── browser_world_ui.cjs
 │   │   ├── stress.cjs
 │   │   └── browser_stress.cjs
 │   ├── index.html

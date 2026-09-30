@@ -3387,3 +3387,33 @@ USB found status=0
 seeway@test:~/workspace/learn/learn/robot-system-learning/linux$
 
 # Day23 用户操作输出记录
+seeway@test:~/workspace/learn$ dmesg --version
+dmesg，来自 util-linux 2.37.2
+seeway@test:~/workspace/learn$ dmesg
+dmesg: 读取内核缓冲区失败: 不允许的操作
+seeway@test:~/workspace/learn$ command -v dmesg
+/usr/bin/dmesg
+seeway@test:~/workspace/learn$
+seeway@test:~/workspace/learn$ device_lines="$(printf '%s\n' "$dmesg_output" |
+  grep -Ei -- 'usb|xhci|hid' |
+  grep -vi -F -- 'SerialNumber' |
+  tail -n 20)"
+seeway@test:~/workspace/learn$
+if [[ -n "$device_lines" ]]; then
+    printf '%s\n' "$device_lines"
+else
+    printf '%s\n' '[NO MATCH] no retained USB-related kernel message'
+fi
+[NO MATCH] no retained USB-related kernel message
+seeway@test:~/workspace/learn$
+[    1.100000] usb 1-4: new full-speed USB device number 2 using xhci_hcd
+[    1.240000] usb 1-4: New USB device found, idVendor=1234, idProduct=5678
+[    1.250000] usb 1-4: Product: Example Input Device
+[    1.300000] hid-generic 0003:1234:5678.0001: input,hidraw0: USB HID v1.11 Device
+第 1 步：new full-speed USB device number 2 using xhci_hcd
+第 2 步：New USB device found, idVendor=1234, idProduct=5678
+第 3 步：Product: Example Input Device
+第 4 步：hid-generic 0003:1234:5678.0001: input,hidraw0: USB HID v1.11 Device
+连接路径：总线0003：总线设备下的0001
+VID:PID：1234:5678
+参与处理的内核组件：我不能区分，请教学

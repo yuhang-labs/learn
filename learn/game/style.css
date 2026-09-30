@@ -13,3 +13,16 @@ main:has(> #details:not([hidden])){grid-template-columns:280px minmax(0,1fr)}
 .unit-cards span{white-space:nowrap}
 .order-buttons{flex-wrap:wrap}
 @media(min-width:1600px){main:has(> #details:not([hidden])){grid-template-columns:300px minmax(0,1fr)}#details{width:auto}#minimap{width:210px}}
+
+/* World overview and dispatch dialog. */
+main:has(> #details:not([hidden])){grid-template-columns:310px minmax(0,1fr)}
+#details{padding:12px}
+.overview-title{display:flex;align-items:center;justify-content:space-between}.overview-title h2{margin:2px 0 8px}.overview-title span,.overview-resources{color:var(--gold)}
+.overview-resources{margin:0 0 10px;font-size:13px}.bulk-recruit{display:grid;grid-template-columns:1fr 105px;gap:7px;margin-bottom:10px}.bulk-recruit select,.bulk-recruit button{min-width:0;padding:7px}
+.city-overview-list{display:grid;gap:7px}.city-summary{border:1px solid #40536a;background:#0a1c2e}.city-summary.active{border-color:var(--gold)}
+.city-summary-head{width:100%;display:flex;align-items:center;justify-content:space-between;border:0;border-radius:0;padding:8px 9px;background:#102b44;text-align:left}.city-summary-head span{font-size:11px;color:var(--muted)}
+.city-troops{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:7px 9px 5px;color:var(--gold);font-size:12px}.city-troops span{text-align:center;white-space:nowrap}
+.recruit-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:5px 8px 8px}.recruit-row button{min-width:0;padding:5px 2px;font-size:11px;white-space:nowrap}
+.city-expanded{border-top:1px solid #40536a;padding:2px 9px 10px}.city-expanded .wide{margin-top:8px}.city-expanded .building{padding:6px 0}.city-expanded .recruit-row{display:none}
+#dispatch{width:560px}.dispatch-troops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.dispatch-troops label{margin:4px 0}.dispatch-presets,.dispatch-summary,.dialog-actions{display:flex;align-items:center;gap:8px}.dispatch-presets{margin:10px 0}.dispatch-summary{justify-content:space-between;color:var(--gold);padding:10px 0;border-top:1px solid #40536a}.dialog-actions{justify-content:flex-end;margin-top:12px}#dispatch-error{min-height:20px;margin:2px 0;color:#ffc6a8}
+@media(min-width:1600px){main:has(> #details:not([hidden])){grid-template-columns:330px minmax(0,1fr)}}
